@@ -12,6 +12,16 @@ cd ani-cli-dotnet
 ```
 El script abrirá un menú donde podrás **Instalar**, **Actualizar** o **Desinstalar** AniCS.
 
+### En Windows (Instalador Automático)
+Si usas Windows 10/11, puedes usar el script de PowerShell incluido para compilar el ejecutable y agregarlo automáticamente a tu `PATH`:
+
+```powershell
+git clone https://github.com/SteveenR-A/ani-cli-dotnet.git
+cd ani-cli-dotnet
+.\install.ps1
+```
+Una vez que el script finalice, solo cierra tu consola, ábrela de nuevo, y podrás usar el comando `anics` desde cualquier lugar.
+
 ### Instalación Manual (Cualquier Sistema)
 
 ```bash
