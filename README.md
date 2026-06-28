@@ -1,6 +1,18 @@
 # AniCS — Manual de Uso
 
-## Instalación rápida
+## Instalación (Linux & Windows)
+
+### En Linux (Instalador Automático)
+Si usas Arch Linux, CachyOS, Ubuntu, Debian, o Fedora, puedes usar nuestro instalador dinámico que verifica dependencias e instala la aplicación automáticamente:
+
+```bash
+git clone https://github.com/SteveenR-A/ani-cli-dotnet.git
+cd ani-cli-dotnet
+./install.sh
+```
+El script abrirá un menú donde podrás **Instalar**, **Actualizar** o **Desinstalar** AniCS.
+
+### Instalación Manual (Cualquier Sistema)
 
 ```bash
 git clone https://github.com/SteveenR-A/ani-cli-dotnet.git
@@ -8,7 +20,7 @@ cd ani-cli-dotnet
 dotnet run
 ```
 
-### Compilar ejecutable nativo (recomendado para uso diario)
+### Compilar ejecutable nativo (Recomendado)
 
 ```bash
 dotnet publish -c Release -r linux-x64
