@@ -114,10 +114,17 @@ AniCS incluye un menú que permite elegir si quieres **Reproducir** o **Descarga
 
 ## Requisitos
 
+### Software
 - .NET 10 SDK
-- mpv (Obligatorio para la mejor experiencia)
+- mpv (Obligatorio para reproducir video nativamente)
 - yt-dlp (Obligatorio para resolver servidores externos y descargar)
-- Kitty Terminal (opcional, para imágenes de portada)
+- Kitty Terminal (Opcional, para imágenes de portada en Linux/macOS)
+
+### Dependencias (NuGet)
+El proyecto utiliza los siguientes paquetes de NuGet (se instalan automáticamente al compilar):
+- `HtmlAgilityPack` (Para el parsing del DOM y HTML)
+- `Microsoft.Net.Http.Headers` (Para manejo avanzado de cabeceras HTTP)
+- `Spectre.Console` (Para la interfaz y componentes de la terminal)
 
 ---
 
