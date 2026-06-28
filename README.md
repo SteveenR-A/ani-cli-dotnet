@@ -3,7 +3,8 @@
 ## Instalación rápida
 
 ```bash
-cd /home/androw/Documentos/ani-cli-dotnet/AniCS
+git clone https://github.com/SteveenR-A/ani-cli-dotnet.git
+cd ani-cli-dotnet
 dotnet run
 ```
 
