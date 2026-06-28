@@ -204,11 +204,7 @@ public class Program
 
         var anime = results.First(r => r.Title == selected);
 
-        // Show thumbnail with Kitty Protocol
-        if (!string.IsNullOrEmpty(anime.ThumbnailUrl))
-            await KittyGraphics.DisplayImageAsync(_http, anime.ThumbnailUrl);
-
-        AnsiConsole.Write(new Rule($"[bold]{Markup.Escape(anime.Title)}[/]").RuleStyle("deepskyblue1"));
+        await DisplayAnimeInfoAsync(anime);
 
         // Load episodes
         List<AniCS.Models.Episode> episodes = [];
@@ -336,17 +332,7 @@ public class Program
         var item = orderedResults[selectedIndex];
         var anime = new AniCS.Models.AnimeResult { Title = item.Title, Url = item.Url, ThumbnailUrl = item.ThumbnailUrl };
 
-        string localImagePath = Path.Combine(Path.GetTempPath(), "anics_thumb.jpg");
-        try {
-            var imgBytes = await _http.GetByteArrayAsync(anime.ThumbnailUrl);
-            File.WriteAllBytes(localImagePath, imgBytes);
-        } catch { }
-
-        AnsiConsole.Write(new Rule($"[bold]{Markup.Escape(anime.Title)}[/]").RuleStyle("deepskyblue1"));
-        AnsiConsole.MarkupLine($"[bold]Imagen guardada en:[/] [link]{localImagePath}[/]");
-        AnsiConsole.MarkupLine($"[bold]Anime:[/] {Markup.Escape(anime.Title)}");
-        AnsiConsole.MarkupLine($"[bold]Sinopsis:[/] Emisión el {Markup.Escape(item.Day)}");
-        AnsiConsole.WriteLine();
+        await DisplayAnimeInfoAsync(anime, $"Emisión el {Markup.Escape(item.Day)}");
 
         // Load episodes
         List<AniCS.Models.Episode> episodes = [];
@@ -410,6 +396,7 @@ public class Program
         var selectedEntry = entries[options.IndexOf(selected)];
 
         var dummyAnime = new AniCS.Models.AnimeResult { Title = selectedEntry.AnimeTitle, Url = selectedEntry.AnimeUrl };
+        await DisplayAnimeInfoAsync(dummyAnime, "Desde el historial de visualización");
 
         List<AniCS.Models.Episode> episodes = [];
         await AnsiConsole.Status()

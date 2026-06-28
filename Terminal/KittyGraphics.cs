@@ -13,7 +13,7 @@ public static class KittyGraphics
         
         try
         {
-            var imageBytes = await client.GetByteArrayAsync(imageUrl);
+            var imageBytes = await DataCache.GetImageAsync(client, imageUrl);
             var base64 = Convert.ToBase64String(imageBytes);
 
             // Kitty Graphics Protocol escape sequence

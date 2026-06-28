@@ -285,6 +285,25 @@ public class JKAnimeExtractor : BaseExtractor
         return servers;
     }
 
+    // ── Get Synopsis ──────────────────────────────────────────────
+    public override async Task<string> GetSynopsisAsync(string animeUrl)
+    {
+        var doc = await GetDocumentAsync(animeUrl, BaseUrl);
+        if (doc == null) return string.Empty;
+
+        // In JKAnime, the synopsis is usually in a <p rel="sinopsis"> 
+        // or just a <p> inside a <div class="sinopsis-box">
+        var pNode = doc.DocumentNode.SelectSingleNode("//p[@rel='sinopsis']") ??
+                    doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'sinopsis-box')]//p");
+
+        if (pNode != null)
+        {
+            return WebUtility.HtmlDecode(pNode.InnerText.Trim());
+        }
+
+        return "Sinopsis no disponible.";
+    }
+
     // ── Resolve Video URL ─────────────────────────────────────────
     public override async Task<string> ResolveVideoUrlAsync(string url)
     {

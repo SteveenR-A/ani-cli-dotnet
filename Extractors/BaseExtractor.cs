@@ -42,6 +42,8 @@ public abstract class BaseExtractor : IAnimeExtractor
     public abstract Task<List<VideoServer>> GetVideoServersAsync(string episodeUrl);
     public abstract Task<string> ResolveVideoUrlAsync(string url);
 
+    public virtual Task<string> GetSynopsisAsync(string animeUrl) => Task.FromResult(string.Empty);
+
     /// <summary>
     /// Downloads a webpage and returns its content. Rotates User-Agent automatically.
     /// Includes retry logic (up to 2 times) inspired by yt-dlp.
