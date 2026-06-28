@@ -243,7 +243,10 @@ public class JKAnimeExtractor : BaseExtractor
             if (!string.IsNullOrEmpty(src))
             {
                 var name = nameMap.TryGetValue(id, out var n) ? n : $"Servidor {id}";
-                servers.Add(new VideoServer { Name = name, Url = src.Replace(@"\/", "/") });
+                bool isSupported = name.Equals("Desu", StringComparison.OrdinalIgnoreCase) || 
+                                   name.Equals("Magi", StringComparison.OrdinalIgnoreCase) ||
+                                   name.Equals("Mediafire", StringComparison.OrdinalIgnoreCase);
+                servers.Add(new VideoServer { Name = name, Url = src.Replace(@"\/", "/"), IsDirectPlaySupported = isSupported });
             }
         }
 
@@ -261,7 +264,10 @@ public class JKAnimeExtractor : BaseExtractor
                     if (!string.IsNullOrEmpty(remote64))
                     {
                         var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(remote64));
-                        servers.Add(new VideoServer { Name = name, Url = decoded });
+                        bool isSupported = name.Equals("Desu", StringComparison.OrdinalIgnoreCase) || 
+                                           name.Equals("Magi", StringComparison.OrdinalIgnoreCase) ||
+                                           name.Equals("Mediafire", StringComparison.OrdinalIgnoreCase);
+                        servers.Add(new VideoServer { Name = name, Url = decoded, IsDirectPlaySupported = isSupported });
                     }
                 }
             }
@@ -273,7 +279,7 @@ public class JKAnimeExtractor : BaseExtractor
         {
             var iframeSrc = SearchRegex(@"<iframe[^>]+class=""player_conte""[^>]+src=""([^""]+)""", epHtml);
             if (!string.IsNullOrEmpty(iframeSrc))
-                servers.Add(new VideoServer { Name = "Desu (Fallback)", Url = iframeSrc });
+                servers.Add(new VideoServer { Name = "Desu (Fallback)", Url = iframeSrc, IsDirectPlaySupported = true });
         }
 
         return servers;

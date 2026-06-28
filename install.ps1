@@ -4,8 +4,17 @@ Write-Host "       AniCS - Instalador Windows      " -ForegroundColor Cyan
 Write-Host "=====================================" -ForegroundColor Cyan
 
 $InstallDir = "$env:LOCALAPPDATA\AniCS\bin"
-$RepoDir = "$env:LOCALAPPDATA\AniCS\source"
+$DefaultRepoDir = "$env:LOCALAPPDATA\AniCS\source"
 $RepoUrl = "https://github.com/SteveenR-A/ani-cli-dotnet.git"
+
+# Detectar si estamos ejecutando desde el repositorio local con el código fuente
+$IsLocalRepo = $false
+if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "AniCS.csproj"))) {
+    $IsLocalRepo = $true
+    $SourceDir = $PSScriptRoot
+} else {
+    $SourceDir = $DefaultRepoDir
+}
 
 function Check-Dotnet {
     try {
@@ -22,14 +31,19 @@ function Install-AniCS {
     Check-Dotnet
 
     Write-Host "`n--- Paso 1: Obteniendo Código Fuente ---" -ForegroundColor Cyan
-    if (Test-Path $RepoDir) {
-        Write-Host "Actualizando repositorio local..."
-        Set-Location $RepoDir
-        git pull | Out-Null
+    if ($IsLocalRepo) {
+        Write-Host "Usando código fuente local desde $SourceDir"
+        Set-Location $SourceDir
     } else {
-        Write-Host "Clonando repositorio..."
-        git clone $RepoUrl $RepoDir | Out-Null
-        Set-Location $RepoDir
+        if (Test-Path $SourceDir) {
+            Write-Host "Actualizando repositorio local..."
+            Set-Location $SourceDir
+            git pull | Out-Null
+        } else {
+            Write-Host "Clonando repositorio..."
+            git clone $RepoUrl $SourceDir | Out-Null
+            Set-Location $SourceDir
+        }
     }
 
     Write-Host "`n--- Paso 2: Compilando AniCS ---" -ForegroundColor Cyan
@@ -63,19 +77,29 @@ function Install-AniCS {
 }
 
 function Update-AniCS {
-    if (-not (Test-Path $RepoDir)) {
-        Write-Host "[ERROR] AniCS no parece estar instalado mediante este script." -ForegroundColor Red
-        $resp = Read-Host "¿Deseas hacer una instalación limpia? [S/n]"
-        if ($resp -eq "" -or $resp -match "^[Ss]") {
-            Install-AniCS
+    if ($IsLocalRepo) {
+        Check-Dotnet
+        Write-Host "`nActualizando AniCS desde repositorio local..." -ForegroundColor Cyan
+        Set-Location $SourceDir
+        if (Test-Path (Join-Path $SourceDir ".git")) {
+            Write-Host "Haciendo git pull..."
+            git pull | Out-Null
         }
-        return
-    }
+    } else {
+        if (-not (Test-Path $SourceDir)) {
+            Write-Host "[ERROR] AniCS no parece estar instalado mediante este script." -ForegroundColor Red
+            $resp = Read-Host "¿Deseas hacer una instalación limpia? [S/n]"
+            if ($resp -eq "" -or $resp -match "^[Ss]") {
+                Install-AniCS
+            }
+            return
+        }
 
-    Check-Dotnet
-    Write-Host "`nActualizando AniCS..." -ForegroundColor Cyan
-    Set-Location $RepoDir
-    git pull | Out-Null
+        Check-Dotnet
+        Write-Host "`nActualizando AniCS..." -ForegroundColor Cyan
+        Set-Location $SourceDir
+        git pull | Out-Null
+    }
 
     Write-Host "Compilando nueva versión..."
     dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true | Out-Null
@@ -97,9 +121,12 @@ function Uninstall-AniCS {
         Write-Host "Ejecutable y carpeta binaria eliminados." -ForegroundColor Green
     }
 
-    if (Test-Path $RepoDir) {
-        Remove-Item -Path $RepoDir -Recurse -Force
-        Write-Host "Código fuente eliminado." -ForegroundColor Green
+    # Solo eliminamos la carpeta de código fuente descargada por el script (evita borrar el repo si es local)
+    if (-not $IsLocalRepo -and (Test-Path $SourceDir) -and ($SourceDir -eq $DefaultRepoDir)) {
+        Remove-Item -Path $SourceDir -Recurse -Force
+        Write-Host "Código fuente descargado eliminado." -ForegroundColor Green
+    } else {
+        Write-Host "Código fuente local conservado." -ForegroundColor Yellow
     }
 
     # Quitar del PATH

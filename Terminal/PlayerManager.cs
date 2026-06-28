@@ -13,14 +13,14 @@ public enum PlayerType { Mpv, Vlc, Auto }
 /// </summary>
 public static class PlayerManager
 {
-    private static readonly string[] PlayerPriority = ["mpv", "vlc", "ffplay"];
+    private static readonly string[] PlayerPriority = ["mpv", "mpvnet", "vlc", "ffplay"];
 
     public static PlayerType Detect()
     {
         foreach (var player in PlayerPriority)
         {
             if (IsInstalled(player))
-                return player == "mpv" ? PlayerType.Mpv : PlayerType.Vlc;
+                return (player == "mpv" || player == "mpvnet") ? PlayerType.Mpv : PlayerType.Vlc;
         }
         return PlayerType.Auto;
     }
@@ -69,7 +69,7 @@ public static class PlayerManager
         return player switch
         {
             PlayerType.Mpv => (
-                "mpv",
+                IsInstalled("mpv") ? "mpv" : "mpvnet",
                 $"--force-window=yes" +
                 $" --cache=yes --demuxer-max-bytes=400M --demuxer-readahead-secs=120" + // Aggressive buffering
                 $" --demuxer-lavf-o=http_persistent=0" + // Fixes HLS disconnects
@@ -86,7 +86,7 @@ public static class PlayerManager
         };
     }
 
-    private static bool IsInstalled(string name)
+    public static bool IsInstalled(string name)
     {
         try
         {

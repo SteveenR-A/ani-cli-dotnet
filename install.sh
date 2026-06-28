@@ -4,8 +4,18 @@
 # Supports Arch Linux, CachyOS, Ubuntu, Debian, Fedora, etc.
 
 BIN_PATH="/usr/local/bin/anics"
-REPO_DIR="$HOME/.local/share/anics-source"
+DEFAULT_REPO_DIR="$HOME/.local/share/anics-source"
 REPO_URL="https://github.com/SteveenR-A/ani-cli-dotnet.git"
+
+# Detectar si estamos ejecutando desde el repositorio local
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+IS_LOCAL_REPO=false
+if [ -f "$SCRIPT_DIR/AniCS.csproj" ]; then
+    IS_LOCAL_REPO=true
+    SOURCE_DIR="$SCRIPT_DIR"
+else
+    SOURCE_DIR="$DEFAULT_REPO_DIR"
+fi
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -73,14 +83,19 @@ install() {
     check_and_install_deps
 
     echo -e "\n${BLUE}--- Paso 2: Obteniendo Código Fuente ---${NC}"
-    if [ -d "$REPO_DIR" ]; then
-        echo "Actualizando repositorio..."
-        cd "$REPO_DIR"
-        git pull
+    if [ "$IS_LOCAL_REPO" = true ]; then
+        echo "Usando código fuente local desde $SOURCE_DIR"
+        cd "$SOURCE_DIR"
     else
-        echo "Clonando repositorio..."
-        git clone "$REPO_URL" "$REPO_DIR"
-        cd "$REPO_DIR"
+        if [ -d "$SOURCE_DIR" ]; then
+            echo "Actualizando repositorio..."
+            cd "$SOURCE_DIR"
+            git pull
+        else
+            echo "Clonando repositorio..."
+            git clone "$REPO_URL" "$SOURCE_DIR"
+            cd "$SOURCE_DIR"
+        fi
     fi
 
     echo -e "\n${BLUE}--- Paso 3: Compilando AniCS ---${NC}"
@@ -96,18 +111,26 @@ install() {
 }
 
 update() {
-    if [ ! -d "$REPO_DIR" ]; then
-        echo -e "${RED}AniCS no parece estar instalado mediante este script.${NC}"
-        read -p "¿Deseas hacer una instalación limpia? [S/n]: " resp
-        if [[ "$resp" == "S" || "$resp" == "s" || "$resp" == "" ]]; then
-            install
+    if [ "$IS_LOCAL_REPO" = true ]; then
+        echo -e "${BLUE}Actualizando AniCS desde repositorio local...${NC}"
+        cd "$SOURCE_DIR"
+        if [ -d "$SOURCE_DIR/.git" ]; then
+            echo "Haciendo git pull..."
+            git pull
         fi
-        exit 0
+    else
+        if [ ! -d "$SOURCE_DIR" ]; then
+            echo -e "${RED}AniCS no parece estar instalado mediante este script.${NC}"
+            read -p "¿Deseas hacer una instalación limpia? [S/n]: " resp
+            if [[ "$resp" == "S" || "$resp" == "s" || "$resp" == "" ]]; then
+                install
+            fi
+            exit 0
+        fi
+        echo -e "${BLUE}Actualizando AniCS...${NC}"
+        cd "$SOURCE_DIR"
+        git pull
     fi
-
-    echo -e "${BLUE}Actualizando AniCS...${NC}"
-    cd "$REPO_DIR"
-    git pull
     
     echo -e "Compilando nueva versión..."
     dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
@@ -124,9 +147,9 @@ uninstall() {
         echo "Ejecutable eliminado."
     fi
 
-    if [ -d "$REPO_DIR" ]; then
-        rm -rf "$REPO_DIR"
-        echo "Código fuente eliminado."
+    if [ "$IS_LOCAL_REPO" = false ] && [ -d "$SOURCE_DIR" ] && [ "$SOURCE_DIR" = "$DEFAULT_REPO_DIR" ]; then
+        rm -rf "$SOURCE_DIR"
+        echo "Código fuente descargado eliminado."
     fi
 
     if [ -n "$PM_REMOVE" ]; then

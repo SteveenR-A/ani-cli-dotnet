@@ -191,7 +191,7 @@ public class Program
         }
 
         var titles = results.Select(r => r.Title).ToList();
-        titles.Add("[red]← Volver al menú principal[/]");
+        titles.Add("[red]Volver al menú principal[/]");
 
         var selected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -200,7 +200,7 @@ public class Program
                 .HighlightStyle(Style.Parse("deepskyblue1 bold"))
                 .AddChoices(titles));
 
-        if (selected == "[red]← Volver al menú principal[/]") return;
+        if (selected == "[red]Volver al menú principal[/]") return;
 
         var anime = results.First(r => r.Title == selected);
 
@@ -232,7 +232,7 @@ public class Program
         }
 
         var epTitles = episodes.Select(e => $"Ep {e.EpisodeNumber} — {e.Title}".TrimEnd('—', ' ')).ToList();
-        epTitles.Add("[red]← Volver al menú principal[/]");
+        epTitles.Add("[red]Volver al menú principal[/]");
 
         while (true)
         {
@@ -243,7 +243,7 @@ public class Program
                     .HighlightStyle(Style.Parse("green bold"))
                     .AddChoices(epTitles));
 
-            if (epSelected == "[red]← Volver al menú principal[/]") return;
+            if (epSelected == "[red]Volver al menú principal[/]") return;
 
             var epIndex = epTitles.IndexOf(epSelected);
 
@@ -274,7 +274,7 @@ public class Program
         var options = results.Select(r => 
             $"[green]Ep {(string.IsNullOrEmpty(r.EpisodeNumber) ? "—" : r.EpisodeNumber),-3}[/] │ {r.Title}"
         ).ToList();
-        options.Add("[red]← Volver al menú principal[/]");
+        options.Add("[red]Volver al menú principal[/]");
 
         var selected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -283,7 +283,7 @@ public class Program
                 .HighlightStyle(Style.Parse("deepskyblue1 bold"))
                 .AddChoices(options));
 
-        if (selected == "[red]← Volver al menú principal[/]") return;
+        if (selected == "[red]Volver al menú principal[/]") return;
 
         var index = options.IndexOf(selected);
         var episode = results[index];
@@ -317,28 +317,71 @@ public class Program
             return;
         }
 
-        var table = new Table()
-            .Border(TableBorder.Rounded)
-            .Title("[bold deepskyblue1]Cartelera Semanal — Modo Scoop[/]")
-            .AddColumn(new TableColumn("[bold]Día[/]").Centered())
-            .AddColumn(new TableColumn("[bold]Anime[/]"));
+        var daysOfWeek = new List<string> { "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo" };
+        var orderedResults = results.OrderByDescending(x => daysOfWeek.IndexOf(x.Day.ToLowerInvariant())).ToList();
 
-        var colors = new[] { "deepskyblue1", "green", "yellow", "orange1", "magenta1", "red", "cornflowerblue" };
-        int colorIdx = 0;
-        string? lastDay = null;
+        var options = orderedResults.Select(r => $"[grey]{Markup.Escape(r.Day)}[/] - {Markup.Escape(r.Title)}").ToList();
+        options.Add("[red]Volver al menú principal[/]");
 
-        foreach (var r in results.OrderBy(x => x.Day))
-        {
-            if (r.Day != lastDay)
+        var selected = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold deepskyblue1]Cartelera Semanal (Más recientes primero)[/]")
+                .PageSize(15)
+                .HighlightStyle(Style.Parse("green bold"))
+                .AddChoices(options));
+
+        if (selected == "[red]Volver al menú principal[/]") return;
+
+        var selectedIndex = options.IndexOf(selected);
+        var item = orderedResults[selectedIndex];
+        var anime = new AniCS.Models.AnimeResult { Title = item.Title, Url = item.Url, ThumbnailUrl = item.ThumbnailUrl };
+
+        string localImagePath = Path.Combine(Path.GetTempPath(), "anics_thumb.jpg");
+        try {
+            var imgBytes = await _http.GetByteArrayAsync(anime.ThumbnailUrl);
+            File.WriteAllBytes(localImagePath, imgBytes);
+        } catch { }
+
+        AnsiConsole.Write(new Rule($"[bold]{Markup.Escape(anime.Title)}[/]").RuleStyle("deepskyblue1"));
+        AnsiConsole.MarkupLine($"[bold]Imagen guardada en:[/] [link]{localImagePath}[/]");
+        AnsiConsole.MarkupLine($"[bold]Anime:[/] {Markup.Escape(anime.Title)}");
+        AnsiConsole.MarkupLine($"[bold]Sinopsis:[/] Emisión el {Markup.Escape(item.Day)}");
+        AnsiConsole.WriteLine();
+
+        // Load episodes
+        List<AniCS.Models.Episode> episodes = [];
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .SpinnerStyle(Style.Parse("deepskyblue1"))
+            .StartAsync("Cargando episodios...", async _ =>
             {
-                colorIdx = (colorIdx + 1) % colors.Length;
-                lastDay = r.Day;
+                episodes = await _active.GetEpisodesAsync(anime.Url);
+            });
+
+        if (episodes.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]No se pudo obtener la lista de episodios automáticamente.[/]");
+            if (AnsiConsole.Confirm("¿Reproducir URL de la página del anime directamente?"))
+            {
+                await PlayEpisodesLoop([new AniCS.Models.Episode { Url = anime.Url, Title = "Direct URL", EpisodeNumber = "1" }], 0, anime, false);
             }
-            var c = colors[colorIdx];
-            table.AddRow($"[bold {c}]{Markup.Escape(r.Day)}[/]", Markup.Escape(r.Title));
+            return;
         }
 
-        AnsiConsole.Write(table);
+        var epOptions = episodes.Select(e => Markup.Escape(e.Title)).Reverse().ToList();
+        epOptions.Add("[red]Cancelar[/]");
+
+        var epSelected = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Selecciona un episodio:")
+                .PageSize(12)
+                .HighlightStyle(Style.Parse("deepskyblue1 bold"))
+                .AddChoices(epOptions));
+
+        if (epSelected == "[red]Cancelar[/]") return;
+
+        var epIndex = episodes.FindIndex(e => Markup.Escape(e.Title) == epSelected);
+        await PlayEpisodesLoop(episodes, epIndex, anime);
     }
 
     // ── History ───────────────────────────────────────────────────
@@ -353,7 +396,7 @@ public class Program
 
         var options = entries.Select(e => 
             $"{Markup.Escape(e.AnimeTitle)} [grey](Último Ep: {Markup.Escape(e.LastEpisodeNumber)})[/]").ToList();
-        options.Add("[red]← Volver al menú principal[/]");
+        options.Add("[red]Volver al menú principal[/]");
 
         var selected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -362,7 +405,7 @@ public class Program
                 .HighlightStyle(Style.Parse("green bold"))
                 .AddChoices(options));
 
-        if (selected == "[red]← Volver al menú principal[/]") return;
+        if (selected == "[red]Volver al menú principal[/]") return;
 
         var selectedEntry = entries[options.IndexOf(selected)];
 
@@ -391,7 +434,7 @@ public class Program
                 title += " [yellow](Último visto)[/]";
             return title;
         }).ToList();
-        epTitles.Add("[red]← Volver al menú principal[/]");
+        epTitles.Add("[red]Volver al menú principal[/]");
 
         while (true)
         {
@@ -402,7 +445,7 @@ public class Program
                     .HighlightStyle(Style.Parse("green bold"))
                     .AddChoices(epTitles));
 
-            if (epSelected == "[red]← Volver al menú principal[/]") return;
+            if (epSelected == "[red]Volver al menú principal[/]") return;
 
             var epIndex = epTitles.IndexOf(epSelected);
             bool exitToMain = await PlayEpisodesLoop(episodes, epIndex, dummyAnime, allowBinge: true);
@@ -429,8 +472,10 @@ public class Program
         if (servers.Count == 1)
             return servers[0]; // Auto-seleccionar si solo hay 1
 
-        var serverNames = servers.Select(s => s.Name).ToList();
-        serverNames.Add("[red]← Cancelar[/]");
+        var serverNames = servers.Select(s => 
+            s.IsDirectPlaySupported ? $"[green]{s.Name}[/]" : $"[blue]{s.Name}[/]"
+        ).ToList();
+        serverNames.Add("[red]Cancelar[/]");
 
         var sSelected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -439,9 +484,9 @@ public class Program
                 .HighlightStyle(Style.Parse("yellow bold"))
                 .AddChoices(serverNames));
 
-        if (sSelected == "[red]← Cancelar[/]") return null;
+        if (sSelected == "[red]Cancelar[/]") return null;
 
-        return servers.First(s => s.Name == sSelected);
+        return servers.First(s => sSelected.Contains(s.Name));
     }
 
     // ── Common URL Resolving ─────────────────────────────────────────────
@@ -520,9 +565,9 @@ public class Program
             var action = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title($"[bold]¿Qué hacer con {Markup.Escape(episode.Title)} (Ep {episode.EpisodeNumber})?[/]")
-                    .AddChoices("▶ Reproducir", "⬇ Descargar", "← Cancelar"));
+                    .AddChoices("▶ Reproducir", "⬇ Descargar", "Cancelar"));
 
-            if (action == "← Cancelar") return false;
+            if (action == "Cancelar") return false;
 
             if (action == "⬇ Descargar")
             {
@@ -558,10 +603,10 @@ public class Program
                 new SelectionPrompt<string>()
                     .Title("[bold]¿Qué deseas hacer ahora?[/]")
                     .HighlightStyle(Style.Parse("cyan bold"))
-                    .AddChoices("▶ Siguiente Episodio", "↺ Repetir Episodio", "← Volver a lista de episodios", "← Volver al menú principal"));
+                    .AddChoices("▶ Siguiente Episodio", "↺ Repetir Episodio", "Volver a lista de episodios", "Volver al menú principal"));
 
-            if (postAction == "← Volver al menú principal") return true;
-            if (postAction == "← Volver a lista de episodios") return false;
+            if (postAction == "Volver al menú principal") return true;
+            if (postAction == "Volver a lista de episodios") return false;
             if (postAction == "↺ Repetir Episodio") continue; // loop again with same index
 
             if (postAction == "▶ Siguiente Episodio")

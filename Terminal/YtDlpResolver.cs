@@ -72,11 +72,13 @@ public static class YtDlpResolver
             var refererArg = string.IsNullOrEmpty(referer) ? "" : $"--add-header \"Referer:{referer}\" ";
             var titleArg   = string.IsNullOrEmpty(title)   ? "" : $"--title \"{title}\" ";
 
+            var mpvBin = PlayerManager.Detect() == PlayerType.Mpv && !PlayerManager.IsInstalled("mpv") ? "mpvnet" : "mpv";
+
             // Use shell pipeline: yt-dlp -o - URL | mpv -
             Process.Start(new ProcessStartInfo
             {
                 FileName  = "bash",
-                Arguments = $"-c \"yt-dlp {refererArg}-o - '{pageUrl}' | mpv {titleArg}--force-window=yes -\"",
+                Arguments = $"-c \"yt-dlp {refererArg}-o - '{pageUrl}' | {mpvBin} {titleArg}--force-window=yes -\"",
                 UseShellExecute = true
             });
         }
