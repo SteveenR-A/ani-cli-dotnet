@@ -619,4 +619,58 @@ public class Program
         }
         return false;
     }
+
+    private static async Task DisplayAnimeInfoAsync(AniCS.Models.AnimeResult anime, string? extraInfo = null)
+    {
+        if (!string.IsNullOrEmpty(anime.ThumbnailUrl))
+        {
+            await AniCS.Terminal.KittyGraphics.DisplayImageAsync(_http, anime.ThumbnailUrl);
+            
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+            {
+                string localImagePath = Path.Combine(Path.GetTempPath(), "anics_thumb.jpg");
+                try {
+                    var imgBytes = await DataCache.GetImageAsync(_http, anime.ThumbnailUrl);
+                    if (imgBytes.Length > 0)
+                    {
+                        File.WriteAllBytes(localImagePath, imgBytes);
+                        AnsiConsole.MarkupLine($"[bold]Imagen guardada en:[/] [link]{localImagePath}[/]");
+                    }
+                } catch { }
+            }
+        }
+
+        AnsiConsole.Write(new Rule($"[bold]{Markup.Escape(anime.Title)}[/]").RuleStyle("deepskyblue1"));
+        AnsiConsole.MarkupLine($"[bold]Anime:[/] {Markup.Escape(anime.Title)}");
+        
+        if (!string.IsNullOrEmpty(extraInfo))
+            AnsiConsole.MarkupLine($"[bold]Info:[/] {Markup.Escape(extraInfo)}");
+
+        string synopsis = string.Empty;
+        if (DataCache.Synopsis.TryGetValue(anime.Url, out var cached))
+        {
+            synopsis = cached;
+        }
+        else
+        {
+            await AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .SpinnerStyle(Style.Parse("deepskyblue1"))
+                .StartAsync("Obteniendo sinopsis...", async _ =>
+                {
+                    synopsis = await _active.GetSynopsisAsync(anime.Url);
+                    if (!string.IsNullOrEmpty(synopsis)) DataCache.Synopsis[anime.Url] = synopsis;
+                });
+        }
+
+        if (!string.IsNullOrEmpty(synopsis))
+        {
+            var panel = new Panel(Markup.Escape(synopsis))
+                .Header("[bold]Sinopsis[/]")
+                .BorderColor(Color.DeepSkyBlue1)
+                .Padding(1, 1, 1, 1);
+            AnsiConsole.Write(panel);
+        }
+        AnsiConsole.WriteLine();
+    }
 }
