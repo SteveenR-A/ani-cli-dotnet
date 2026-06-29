@@ -78,10 +78,16 @@ public static class DetailsPrompt
     {
         if (items == null || items.Count == 0) return null;
 
-        // Dynamic page size based on terminal height to utilize full vertical space
-        if (AnsiConsole.Console.Profile.Height > 0)
+        // Dynamic page size based on terminal height to utilize full vertical space.
+        // Console.WindowHeight is more reliable than AnsiConsole.Console.Profile.Height
+        // because Spectre's Profile.Height may not be updated after the terminal is resized
+        // or may return 0 in some terminal emulators.
+        // Subtract 7: title(1) + separator(1) + up-indicator(1) + down-indicator(1) + empty(1) + controls(1) + margin(1)
         {
-            pageSize = Math.Max(8, AnsiConsole.Console.Profile.Height - 8);
+            int termHeight = Console.WindowHeight;
+            if (termHeight <= 0) termHeight = AnsiConsole.Console.Profile.Height;
+            if (termHeight > 0)
+                pageSize = Math.Max(8, termHeight - 7);
         }
 
         var synopsisCache = new Dictionary<T, string>();
