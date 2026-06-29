@@ -31,12 +31,16 @@ public class AnimeAV1Extractor : BaseExtractor
 
             var url = linkNode.GetAttributeValue("href", "");
             if (string.IsNullOrEmpty(url) || !url.StartsWith("/media/")) continue;
+            
+            var descNode = node.SelectSingleNode(".//p[contains(@class, 'line-clamp')]");
+            var description = descNode != null ? System.Net.WebUtility.HtmlDecode(descNode.InnerText.Trim()) : "";
 
             results.Add(new AnimeResult
             {
-                Title = titleNode.InnerText.Trim(),
+                Title = System.Net.WebUtility.HtmlDecode(titleNode.InnerText.Trim()),
                 Url = BaseUrl + url,
-                ThumbnailUrl = imgNode?.GetAttributeValue("src", "") ?? ""
+                ThumbnailUrl = imgNode?.GetAttributeValue("src", "") ?? "",
+                Description = description
             });
         }
 
@@ -93,26 +97,37 @@ public class AnimeAV1Extractor : BaseExtractor
         var doc = await GetDocumentAsync(animeUrl, BaseUrl);
         if (doc == null) return episodes;
 
+        var added = new HashSet<string>();
+        
+        // 1. Try to extract from raw SvelteKit data (bypasses 50-episode pagination limit)
+        var html = doc.DocumentNode.OuterHtml;
+        var svelteMatches = System.Text.RegularExpressions.Regex.Matches(html, @"number:(\d+)");
+        foreach (System.Text.RegularExpressions.Match m in svelteMatches)
+        {
+            var text = m.Groups[1].Value;
+            var href = new Uri(new Uri(BaseUrl), new Uri(animeUrl).AbsolutePath + "/" + text).AbsolutePath;
+            
+            if (!added.Contains(href))
+            {
+                added.Add(href);
+                episodes.Add(new Episode { Title = $"Episodio {text}", Url = BaseUrl + href, EpisodeNumber = text });
+            }
+        }
+
+        // 2. Fallback to extracting from HTML <a> tags in case it's a movie or single episode format
         var links = doc.DocumentNode.SelectNodes("//a[contains(@href, '/media/') and not(contains(@class, 'btn'))]");
         if (links != null)
         {
-            var added = new HashSet<string>();
             foreach (var link in links)
             {
                 var href = link.GetAttributeValue("href", "");
                 if (href.StartsWith("/media/") && !added.Contains(href))
                 {
-                    // Check if it's an episode number block
-                    var text = link.InnerText.Trim();
-                    if (int.TryParse(text, out _))
+                    var lastSegment = href.TrimEnd('/').Split('/').LastOrDefault();
+                    if (int.TryParse(lastSegment, out _))
                     {
                         added.Add(href);
-                        episodes.Add(new Episode
-                        {
-                            Title = $"Episodio {text}",
-                            Url = BaseUrl + href,
-                            EpisodeNumber = text
-                        });
+                        episodes.Add(new Episode { Title = $"Episodio {lastSegment}", Url = BaseUrl + href, EpisodeNumber = lastSegment });
                     }
                 }
             }
@@ -124,31 +139,60 @@ public class AnimeAV1Extractor : BaseExtractor
         }
         else
         {
-            episodes.Reverse(); // Modern sites usually have 1, 2, 3... we want 1 at index 0. Actually, if they are ordered 1..12 in HTML, no reverse is needed.
+            // Reverse so Episode 1168 is at index 0 (latest first)
+            episodes = episodes.OrderByDescending(e => int.Parse(e.EpisodeNumber)).ToList();
         }
 
         return episodes;
     }
 
-    public override Task<List<VideoServer>> GetVideoServersAsync(string episodeUrl)
+    public override async Task<List<VideoServer>> GetVideoServersAsync(string episodeUrl)
     {
-        return Task.FromResult(new List<VideoServer>
+        var servers = new List<VideoServer>();
+        var html = await DownloadWebpageAsync(episodeUrl, BaseUrl);
+        if (string.IsNullOrEmpty(html)) return servers;
+
+        var mp4UploadRegex = System.Text.RegularExpressions.Regex.Match(html, @"https?://(?:www\.)?mp4upload\.com/embed[^""'\s]*");
+        if (mp4UploadRegex.Success)
+            servers.Add(new VideoServer { Name = "MP4Upload", Url = mp4UploadRegex.Value });
+
+        var megaRegex = System.Text.RegularExpressions.Regex.Match(html, @"https?://mega\.nz/embed[^""'\s]*");
+        if (megaRegex.Success)
+            servers.Add(new VideoServer { Name = "Mega", Url = megaRegex.Value });
+
+        var zillaRegex = System.Text.RegularExpressions.Regex.Match(html, @"https?://player\.zilla-networks\.com/play/[^""'\s]*");
+        if (zillaRegex.Success)
+            servers.Add(new VideoServer { Name = "Zilla", Url = zillaRegex.Value });
+
+        var teraboxRegex = System.Text.RegularExpressions.Regex.Match(html, @"https?://(?:www\.)?terabox\.com/sharing/embed[^""'\s]*");
+        if (teraboxRegex.Success)
+            servers.Add(new VideoServer { Name = "TeraBox", Url = teraboxRegex.Value });
+
+        if (servers.Count == 0)
         {
-            new VideoServer { Name = "AnimeAV1 Default", Url = episodeUrl }
-        });
+            servers.Add(new VideoServer { Name = "AnimeAV1 Default", Url = episodeUrl });
+        }
+
+        return servers;
     }
 
     public override async Task<string> ResolveVideoUrlAsync(string url)
     {
+        // If the URL is already an external server (like mp4upload), return it so mpv/yt-dlp can handle it.
+        if (url.Contains("mp4upload.com") || url.Contains("mega.nz") || url.Contains("zilla-networks") || url.Contains("terabox.com"))
+        {
+            return url;
+        }
+
         var html = await DownloadWebpageAsync(url, BaseUrl);
         if (string.IsNullOrEmpty(html)) return string.Empty;
 
         // In SvelteKit / NextJS, data might be embedded in script tags or JSON.
         // Let's try to find m3u8 directly first
-        var m3u8Regex = Regex.Match(html, @"https?://[^""'\s]+\.m3u8[^""'\s]*");
+        var m3u8Regex = System.Text.RegularExpressions.Regex.Match(html, @"https?://[^""'\s]+\.m3u8[^""'\s]*");
         if (m3u8Regex.Success) return m3u8Regex.Value;
 
-        var mp4Regex = Regex.Match(html, @"https?://[^""'\s]+\.mp4[^""'\s]*");
+        var mp4Regex = System.Text.RegularExpressions.Regex.Match(html, @"https?://[^""'\s]+\.mp4[^""'\s]*");
         if (mp4Regex.Success) return mp4Regex.Value;
 
         return string.Empty;

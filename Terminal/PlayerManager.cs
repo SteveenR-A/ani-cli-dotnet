@@ -68,6 +68,8 @@ public static class PlayerManager
             var exe = IsInstalled("mpv") ? "mpv" : "mpvnet";
             args.Add("--force-window=yes");
             args.Add("--cache=yes");
+            args.Add("--cache-pause-wait=5");
+            args.Add("--demuxer-readahead-secs=20");
             args.Add("--demuxer-max-back-bytes=200M");
             args.Add("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
             
