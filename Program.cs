@@ -200,7 +200,7 @@ public class Program
         }
 
         var titles = results.Select(r => r.Title).ToList();
-        titles.Add("[red]Volver al menú principal[/]");
+        titles.Insert(0, "[red]Volver al menú principal[/]");
 
         var selected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -237,7 +237,7 @@ public class Program
         }
 
         var epTitles = episodes.Select(e => $"Ep {e.EpisodeNumber} — {e.Title}".TrimEnd('—', ' ')).ToList();
-        epTitles.Add("[red]Volver al menú principal[/]");
+        epTitles.Insert(0, "[red]Volver al menú principal[/]");
 
         while (true)
         {
@@ -279,7 +279,7 @@ public class Program
         var options = results.Select(r => 
             $"[green]Ep {(string.IsNullOrEmpty(r.EpisodeNumber) ? "—" : r.EpisodeNumber),-3}[/] │ {r.Title}"
         ).ToList();
-        options.Add("[red]Volver al menú principal[/]");
+        options.Insert(0, "[red]Volver al menú principal[/]");
 
         var selected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -326,7 +326,7 @@ public class Program
         var orderedResults = results.OrderByDescending(x => daysOfWeek.IndexOf(x.Day.ToLowerInvariant())).ToList();
 
         var options = orderedResults.Select(r => $"[grey]{Markup.Escape(r.Day)}[/] - {Markup.Escape(r.Title)}").ToList();
-        options.Add("[red]Volver al menú principal[/]");
+        options.Insert(0, "[red]Volver al menú principal[/]");
 
         var selected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -364,7 +364,7 @@ public class Program
         }
 
         var epOptions = episodes.Select(e => Markup.Escape(e.Title)).Reverse().ToList();
-        epOptions.Add("[red]Cancelar[/]");
+        epOptions.Insert(0, "[red]Cancelar[/]");
 
         var epSelected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
