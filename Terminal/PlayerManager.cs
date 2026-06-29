@@ -35,17 +35,18 @@ public static class PlayerManager
 
         try
         {
-            using var p = new Process
+            var startInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName               = exe,
-                    Arguments              = args,
-                    UseShellExecute        = false, // Necesario para redirigir la salida
-                    RedirectStandardOutput = true,
-                    RedirectStandardError  = true
-                }
+                FileName               = exe,
+                UseShellExecute        = false
             };
+
+            foreach (var arg in args)
+            {
+                startInfo.ArgumentList.Add(arg);
+            }
+
+            using var p = new Process { StartInfo = startInfo };
 
             Spectre.Console.AnsiConsole.MarkupLine("[dim italic]Reproductor en curso... Cierra la ventana del video para volver a AniCS.[/]");
             p.Start();
@@ -58,32 +59,39 @@ public static class PlayerManager
         }
     }
 
-    private static (string exe, string args) BuildCommand(PlayerType player, string url, string? title, string? referer)
+    private static (string exe, List<string> args) BuildCommand(PlayerType player, string url, string? title, string? referer)
     {
-        var refererArg = string.IsNullOrEmpty(referer)
-            ? ""
-            : $" --http-header-fields=\"Referer: {referer}\"";
+        var args = new List<string>();
 
-        var userAgent = "--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36\"";
-
-        return player switch
+        if (player == PlayerType.Mpv)
         {
-            PlayerType.Mpv => (
-                IsInstalled("mpv") ? "mpv" : "mpvnet",
-                $"--force-window=yes" +
-                $" --cache=yes --demuxer-max-bytes=400M --demuxer-readahead-secs=120" + // Aggressive buffering
-                $" --demuxer-lavf-o=http_persistent=0" + // Fixes HLS disconnects
-                $" {userAgent}" +
-                $"{(title != null ? $" --title=\"{title}\"" : "")}" +
-                $"{refererArg}" +
-                $" \"{url}\""
-            ),
-            PlayerType.Vlc => (
-                "vlc",
-                $"\"{url}\""
-            ),
-            _ => ("xdg-open", $"\"{url}\"")
-        };
+            var exe = IsInstalled("mpv") ? "mpv" : "mpvnet";
+            args.Add("--force-window=yes");
+            args.Add("--cache=yes");
+            args.Add("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
+            
+            if (!string.IsNullOrEmpty(title))
+            {
+                args.Add($"--title={title}");
+            }
+            if (!string.IsNullOrEmpty(referer))
+            {
+                args.Add($"--http-header-fields=Referer: {referer}");
+            }
+            
+            args.Add(url);
+            return (exe, args);
+        }
+        else if (player == PlayerType.Vlc)
+        {
+            args.Add(url);
+            return ("vlc", args);
+        }
+        else
+        {
+            args.Add(url);
+            return ("xdg-open", args);
+        }
     }
 
     public static bool IsInstalled(string name)

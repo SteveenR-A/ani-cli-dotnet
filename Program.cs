@@ -33,7 +33,7 @@ public class Program
                 .LeftJustified()
                 .Color(Color.DeepSkyBlue1));
 
-        AnsiConsole.Write(new Rule("[deepskyblue1]ani-cli · versión .NET 10 · Kitty Edition[/]")
+        AnsiConsole.Write(new Rule("[deepskyblue1]ani-cli · versión .NET 10[/]")
             .LeftJustified().RuleStyle("grey23"));
 
         AnsiConsole.WriteLine();
@@ -95,8 +95,15 @@ public class Program
                     HandleHistory();
                     break;
 
-                case "source":
-                    HandleSource(arg);
+                case "fuente":
+                case "f":
+                    HandleSource();
+                    break;
+
+                case "clearcache":
+                case "cc":
+                    DataCache.ClearRamCache();
+                    AnsiConsole.MarkupLine("[green]Caché de memoria RAM limpiado con éxito.[/]");
                     break;
 
                 case "clear":
@@ -126,7 +133,9 @@ public class Program
         table.AddRow("[bold]latest[/]",             "[grey]l[/]",   "Últimos episodios estrenados");
         table.AddRow("[bold]scoop[/]",              "[grey]sc[/]",  "Cartelera semanal de estrenos");
         table.AddRow("[bold]history[/]",            "[grey]h[/]",   "Ver historial de animes vistos");
+        table.AddRow("[bold]fuente[/]",             "[grey]f[/]",   "Cambiar la fuente activa");
         table.AddRow("[bold]clear[/]",              "[grey]cls[/]", "Limpiar pantalla");
+        table.AddRow("[bold]clearcache[/]",         "[grey]cc[/]",  "Limpiar caché de RAM (forzar actualización)");
         table.AddRow("[bold]exit[/]",               "[grey]q[/]",   "Salir de la aplicación");
 
         AnsiConsole.Write(table);
@@ -134,7 +143,7 @@ public class Program
         // ── Fuentes disponibles ──────────────────────────────────
         var sources = new Table()
             .Border(TableBorder.Rounded)
-            .Title("[deepskyblue1 bold]Fuentes — source [[nombre]][/]")
+            .Title("[deepskyblue1 bold]Fuentes — f[/]")
             .AddColumn(new TableColumn("[bold]Nombre[/]"))
             .AddColumn(new TableColumn("[bold]Dominio[/]"))
             .AddColumn(new TableColumn("[bold]Estado[/]").Centered());
@@ -150,7 +159,7 @@ public class Program
         }
 
         AnsiConsole.Write(sources);
-        AnsiConsole.MarkupLine($"  [dim]Ejemplo:[/] [bold]source jkanime[/]   [dim]o[/]   [bold]source animeav1[/]");
+        AnsiConsole.MarkupLine($"  [dim]Ejemplo:[/] [bold]f[/] [dim](Abre el selector de fuentes)[/]");
         AnsiConsole.WriteLine();
 
         // ── Servidores Soportados ────────────────────────────────
@@ -181,7 +190,7 @@ public class Program
             .SpinnerStyle(Style.Parse("deepskyblue1"))
             .StartAsync($"Buscando en [yellow]{_active.Domain}[/]...", async _ =>
             {
-                results = await _active.SearchAsync(query);
+                results = await DataCache.GetOrFetchDataAsync($"search_{_active.Domain}_{query}", TimeSpan.FromMinutes(5), () => _active.SearchAsync(query));
             });
 
         if (results.Count == 0)
@@ -213,7 +222,7 @@ public class Program
             .SpinnerStyle(Style.Parse("deepskyblue1"))
             .StartAsync("Cargando episodios...", async _ =>
             {
-                episodes = await _active.GetEpisodesAsync(anime.Url);
+                episodes = await DataCache.GetOrFetchDataAsync($"eps_{anime.Url}", TimeSpan.FromMinutes(5), () => _active.GetEpisodesAsync(anime.Url));
             });
 
         if (episodes.Count == 0)
@@ -258,7 +267,7 @@ public class Program
             .SpinnerStyle(Style.Parse("deepskyblue1"))
             .StartAsync($"Obteniendo estrenos de [yellow]{_active.Domain}[/]...", async _ =>
             {
-                results = await _active.GetLatestReleasesAsync();
+                results = await DataCache.GetOrFetchDataAsync($"latest_{_active.Domain}", TimeSpan.FromMinutes(5), () => _active.GetLatestReleasesAsync());
             });
 
         if (results.Count == 0)
@@ -304,7 +313,7 @@ public class Program
             .SpinnerStyle(Style.Parse("deepskyblue1"))
             .StartAsync($"Cargando cartelera semanal de [yellow]{_active.Domain}[/]...", async _ =>
             {
-                results = await _active.GetWeeklyScoopAsync();
+                results = await DataCache.GetOrFetchDataAsync($"scoop_{_active.Domain}", TimeSpan.FromMinutes(5), () => _active.GetWeeklyScoopAsync());
             });
 
         if (results.Count == 0)
@@ -341,7 +350,7 @@ public class Program
             .SpinnerStyle(Style.Parse("deepskyblue1"))
             .StartAsync("Cargando episodios...", async _ =>
             {
-                episodes = await _active.GetEpisodesAsync(anime.Url);
+                episodes = await DataCache.GetOrFetchDataAsync($"eps_{anime.Url}", TimeSpan.FromMinutes(5), () => _active.GetEpisodesAsync(anime.Url));
             });
 
         if (episodes.Count == 0)
@@ -477,24 +486,21 @@ public class Program
     }
 
     // ── Common URL Resolving ─────────────────────────────────────────────
-    private static void HandleSource(string arg)
+    private static void HandleSource()
     {
-        if (string.IsNullOrEmpty(arg))
-        {
-            AnsiConsole.MarkupLine($"Fuente activa: [bold yellow]{_active.Domain}[/]");
-            AnsiConsole.MarkupLine("Fuentes disponibles: [bold]jkanime[/], [bold]animeav1[/]");
-            return;
-        }
+        var sourceNames = _extractors.Select(e => e.Domain).ToList();
+        sourceNames.Add("[red]Cancelar[/]");
 
-        var match = _extractors.FirstOrDefault(e =>
-            e.Domain.Contains(arg.ToLowerInvariant(), StringComparison.OrdinalIgnoreCase));
+        var selected = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold]Selecciona una fuente:[/]")
+                .PageSize(10)
+                .HighlightStyle(Style.Parse("yellow bold"))
+                .AddChoices(sourceNames));
 
-        if (match == null)
-        {
-            AnsiConsole.MarkupLine($"[red]Fuente no encontrada:[/] '{Markup.Escape(arg)}'");
-            return;
-        }
+        if (selected == "[red]Cancelar[/]") return;
 
+        var match = _extractors.First(e => e.Domain == selected);
         _active = match;
         AnsiConsole.MarkupLine($"[green]Fuente cambiada a:[/] [bold]{_active.Domain}[/]");
     }
@@ -647,21 +653,13 @@ public class Program
             AnsiConsole.MarkupLine($"[bold]Info:[/] {Markup.Escape(extraInfo)}");
 
         string synopsis = string.Empty;
-        if (DataCache.Synopsis.TryGetValue(anime.Url, out var cached))
-        {
-            synopsis = cached;
-        }
-        else
-        {
-            await AnsiConsole.Status()
-                .Spinner(Spinner.Known.Dots)
-                .SpinnerStyle(Style.Parse("deepskyblue1"))
-                .StartAsync("Obteniendo sinopsis...", async _ =>
-                {
-                    synopsis = await _active.GetSynopsisAsync(anime.Url);
-                    if (!string.IsNullOrEmpty(synopsis)) DataCache.Synopsis[anime.Url] = synopsis;
-                });
-        }
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .SpinnerStyle(Style.Parse("deepskyblue1"))
+            .StartAsync("Obteniendo sinopsis...", async _ =>
+            {
+                synopsis = await DataCache.GetOrFetchDataAsync($"synopsis_{anime.Url}", TimeSpan.FromMinutes(5), () => _active.GetSynopsisAsync(anime.Url));
+            });
 
         if (!string.IsNullOrEmpty(synopsis))
         {
