@@ -28,35 +28,6 @@ public static class DetailsPrompt
                (termProgram != null && (termProgram.Contains("kitty", StringComparison.OrdinalIgnoreCase) || termProgram.Contains("ghostty", StringComparison.OrdinalIgnoreCase)));
     }
 
-    private static void TransmitImageIfSupported(string imagePath, string imageUrl)
-    {
-        if (!IsKittyGraphicsSupported()) return;
-
-        lock (ImageIdCache)
-        {
-            if (ImageIdCache.ContainsKey(imageUrl)) return; // Already transmitted
-        }
-
-        try
-        {
-            var bytes = File.ReadAllBytes(imagePath);
-            var base64 = Convert.ToBase64String(bytes);
-            uint id;
-            lock (ImageIdCache)
-            {
-                id = _nextImageId++;
-                ImageIdCache[imageUrl] = id;
-            }
-
-            // Transmit only (a=t)
-            Console.Write($"\x1b_Ga=t,i={id},f=100;{base64}\x1b\\");
-        }
-        catch
-        {
-            // Ignore transmission errors
-        }
-    }
-
     private class KittyImageRenderable : IRenderable
     {
         private readonly uint _imageId;
@@ -78,7 +49,7 @@ public static class DetailsPrompt
         public IEnumerable<Segment> Render(RenderOptions options, int maxWidth)
         {
             var segments = new List<Segment>();
-            var escapeSequence = $"\x1b_Ga=p,i={_imageId},c={_width},r={_height};\x1b\\";
+            var escapeSequence = $"\x1b_Ga=p,i={_imageId},q=2,c={_width},r={_height};\x1b\\";
             segments.Add(new Segment(escapeSequence));
 
             for (int r = 0; r < _height; r++)
@@ -102,9 +73,16 @@ public static class DetailsPrompt
         Func<T, string> getThumbnailUrl,
         Func<T, Task<string>> getSynopsis,
         Func<T, string>? getDescription = null,
-        int pageSize = 10) where T : class
+        int pageSize = 10,
+        bool showImage = true) where T : class
     {
         if (items == null || items.Count == 0) return null;
+
+        // Dynamic page size based on terminal height to utilize full vertical space
+        if (AnsiConsole.Console.Profile.Height > 0)
+        {
+            pageSize = Math.Max(8, AnsiConsole.Console.Profile.Height - 8);
+        }
 
         var synopsisCache = new Dictionary<T, string>();
         
@@ -168,7 +146,7 @@ public static class DetailsPrompt
 
             // Load Image
             var imageUrl = getThumbnailUrl(item);
-            if (string.IsNullOrWhiteSpace(imageUrl))
+            if (!showImage || string.IsNullOrWhiteSpace(imageUrl))
             {
                 activeImagePath = null;
                 needsRedraw = true;
@@ -180,7 +158,6 @@ public static class DetailsPrompt
                 if (File.Exists(cachedPath))
                 {
                     activeImagePath = cachedPath;
-                    TransmitImageIfSupported(cachedPath, imageUrl);
                     needsRedraw = true;
                 }
                 else
@@ -196,7 +173,6 @@ public static class DetailsPrompt
                             if (bytes.Length > 0 && items[selectedIndex] == itemCopy)
                             {
                                 activeImagePath = cachedPath;
-                                TransmitImageIfSupported(cachedPath, imageUrl);
                                 needsRedraw = true;
                             }
                         }
@@ -212,19 +188,37 @@ public static class DetailsPrompt
         // Initialize first item loading
         StartLoading(currentItem);
 
-        Table BuildUI()
+        IRenderable BuildUI()
         {
             var terminalWidth = AnsiConsole.Console.Profile.Width;
             // Cap width to prevent massive stretched layouts
             if (terminalWidth <= 0) terminalWidth = 80;
             var isWide = terminalWidth >= 85;
 
+            // Calculate column widths dynamically based on terminal width
+            int listColumnWidth;
+            int detailsColumnWidth;
+
+            // Only show details if showImage is true (since image visualizer mode is sc only, and latest releases (l) has empty details)
+            bool displayDetails = showImage;
+
+            if (isWide && displayDetails)
+            {
+                listColumnWidth = Math.Clamp((int)(terminalWidth * 0.4), 40, 70);
+                detailsColumnWidth = terminalWidth - listColumnWidth - 2;
+            }
+            else
+            {
+                listColumnWidth = terminalWidth;
+                detailsColumnWidth = 0;
+            }
+
             // Split into two main columns: Left (List) and Right (Details)
             var outerTable = new Table().Border(TableBorder.None).Collapse();
-            outerTable.AddColumn(new TableColumn("List").Width(isWide ? 40 : terminalWidth));
-            if (isWide)
+            outerTable.AddColumn(new TableColumn("List").Width(listColumnWidth));
+            if (isWide && displayDetails)
             {
-                outerTable.AddColumn(new TableColumn("Details").Width(Math.Max(40, terminalWidth - 45)));
+                outerTable.AddColumn(new TableColumn("Details").Width(detailsColumnWidth));
             }
 
             // 1. Build List column
@@ -232,7 +226,7 @@ public static class DetailsPrompt
             
             // Header
             listRows.Add(new Markup($"[bold cyan]{promptTitle}[/]"));
-            listRows.Add(new Text(new string('─', isWide ? 38 : terminalWidth - 2), new Style(foreground: Color.Grey)));
+            listRows.Add(new Text(new string('─', listColumnWidth - 2), new Style(foreground: Color.Grey)));
 
             // Up Indicator
             if (topIndex > 0)
@@ -249,7 +243,7 @@ public static class DetailsPrompt
                 var displayTitle = getTitle(item);
                 
                 // Crop title if it is too long to fit in the list column
-                var maxLen = isWide ? 34 : terminalWidth - 6;
+                var maxLen = listColumnWidth - 6;
                 if (displayTitle.Length > maxLen)
                     displayTitle = displayTitle.Substring(0, maxLen - 3) + "...";
 
@@ -278,27 +272,34 @@ public static class DetailsPrompt
                 listGrid.AddRow(row);
 
             // 2. Build Details column (or embed details inside a bottom layout if not wide)
-            var detailsPanel = BuildDetailsPanel(getTitle(currentItem), activeSynopsis, activeImagePath, getDescription?.Invoke(currentItem), terminalWidth);
-
-            if (isWide)
+            if (displayDetails)
             {
-                outerTable.AddRow(listGrid, detailsPanel);
+                var detailsPanel = BuildDetailsPanel(getTitle(currentItem), activeSynopsis, activeImagePath, getDescription?.Invoke(currentItem), detailsColumnWidth);
+
+                if (isWide)
+                {
+                    outerTable.AddRow(listGrid, detailsPanel);
+                    return outerTable;
+                }
+                else
+                {
+                    // In narrow terminals, stack them vertically
+                    var stackTable = new Table().Border(TableBorder.None).Collapse();
+                    stackTable.AddColumn(new TableColumn("Content"));
+                    stackTable.AddRow(listGrid);
+                    stackTable.AddRow(new Text(new string('─', terminalWidth - 2), new Style(foreground: Color.Grey)));
+                    stackTable.AddRow(detailsPanel);
+                    return stackTable;
+                }
             }
             else
             {
-                // In narrow terminals, stack them vertically
-                var stackTable = new Table().Border(TableBorder.None).Collapse();
-                stackTable.AddColumn(new TableColumn("Content"));
-                stackTable.AddRow(listGrid);
-                stackTable.AddRow(new Text(new string('─', terminalWidth - 2), new Style(foreground: Color.Grey)));
-                stackTable.AddRow(detailsPanel);
-                return stackTable;
+                // Single column layout (List only) taking full terminal width and height!
+                return listGrid;
             }
-
-            return outerTable;
         }
 
-        Panel BuildDetailsPanel(string itemTitle, string synopsis, string? imagePath, string? description, int terminalWidth)
+        Panel BuildDetailsPanel(string itemTitle, string synopsis, string? imagePath, string? description, int detailsWidth)
         {
             var panelGrid = new Grid().AddColumn();
 
@@ -314,8 +315,10 @@ public static class DetailsPrompt
 
             // Image and Text block
             var blockTable = new Table().Border(TableBorder.None).Collapse();
-            bool hasImage = !string.IsNullOrEmpty(imagePath) && File.Exists(imagePath);
+            bool hasImage = showImage && !string.IsNullOrEmpty(imagePath) && File.Exists(imagePath);
 
+            var terminalWidth = AnsiConsole.Console.Profile.Width;
+            if (terminalWidth <= 0) terminalWidth = 80;
             bool isWide = terminalWidth >= 85;
 
             // Calculate widths dynamically to take advantage of the terminal window size
@@ -324,8 +327,8 @@ public static class DetailsPrompt
             if (isWide)
             {
                 textColumnWidth = hasImage 
-                    ? Math.Max(25, terminalWidth - 45 - 4 - imgColumnWidth) 
-                    : Math.Max(45, terminalWidth - 45 - 4);
+                    ? Math.Max(25, detailsWidth - 4 - imgColumnWidth) 
+                    : Math.Max(45, detailsWidth - 4);
             }
             else
             {
@@ -334,8 +337,15 @@ public static class DetailsPrompt
                     : Math.Max(45, terminalWidth - 4);
             }
 
-            blockTable.AddColumn(new TableColumn("Img").Width(imgColumnWidth));
-            blockTable.AddColumn(new TableColumn("Text").Width(textColumnWidth));
+            if (hasImage)
+            {
+                blockTable.AddColumn(new TableColumn("").Width(imgColumnWidth));
+                blockTable.AddColumn(new TableColumn("").Width(textColumnWidth));
+            }
+            else
+            {
+                blockTable.AddColumn(new TableColumn("").Width(textColumnWidth));
+            }
 
             IRenderable imageRenderable = new Text("");
             if (hasImage)
@@ -362,6 +372,24 @@ public static class DetailsPrompt
                                     if (ImageIdCache.TryGetValue(imageUrl, out var id))
                                     {
                                         imageId = id;
+                                    }
+                                    else
+                                    {
+                                        try
+                                        {
+                                            var bytes = File.ReadAllBytes(imagePath!);
+                                            var base64 = Convert.ToBase64String(bytes);
+                                            id = _nextImageId++;
+                                            ImageIdCache[imageUrl] = id;
+
+                                            // Transmit only (a=t) with q=2 to prevent response pollution of stdin
+                                            Console.Write($"\x1b_Ga=t,i={id},q=2,f=100;{base64}\x1b\\");
+                                            imageId = id;
+                                        }
+                                        catch
+                                        {
+                                            // Ignore transmission errors
+                                        }
                                     }
                                 }
                             }

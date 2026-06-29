@@ -213,8 +213,7 @@ public class Program
             r => r.Title,
             r => r.ThumbnailUrl,
             async r => await DataCache.GetOrFetchDataAsync($"synopsis_{r.Url}", TimeSpan.FromMinutes(5), () => _active.GetSynopsisAsync(r.Url)),
-            r => r.Description,
-            pageSize: 10
+            r => r.Description
         );
 
         if (anime == null) return;
@@ -252,7 +251,7 @@ public class Program
                 e => e.ThumbnailUrl,
                 e => Task.FromResult(string.Empty),
                 null,
-                pageSize: 10
+                showImage: false
             );
 
             if (selectedEpisode == null) return;
@@ -287,11 +286,12 @@ public class Program
             _http,
             $"Últimos Estrenos — {_active.Domain}",
             results,
-            r => $"Ep {(string.IsNullOrEmpty(r.EpisodeNumber) ? "—" : r.EpisodeNumber),-3} │ {r.Title}",
+            r => $"Ep {(string.IsNullOrEmpty(r.EpisodeNumber) ? "—" : r.EpisodeNumber),-4} │ {r.Title}",
             r => r.ThumbnailUrl,
             r => Task.FromResult(string.Empty),
             null,
-            pageSize: 12
+            pageSize: 12,
+            showImage: false
         );
 
         if (selectedEpisode == null) return;
@@ -331,8 +331,7 @@ public class Program
             r => $"[{r.Day}] {r.Title}",
             r => r.ThumbnailUrl,
             async r => await DataCache.GetOrFetchDataAsync($"synopsis_{r.Url}", TimeSpan.FromMinutes(5), () => _active.GetSynopsisAsync(r.Url)),
-            r => r.Day,
-            pageSize: 10
+            r => r.Day
         );
 
         if (selectedItem == null) return;
@@ -370,7 +369,7 @@ public class Program
             e => e.ThumbnailUrl,
             e => Task.FromResult(string.Empty),
             null,
-            pageSize: 10
+            showImage: false
         );
 
         if (selectedEpisode == null) return;
@@ -602,6 +601,7 @@ public class Program
     {
         var episode = episodes[currentIndex];
 
+        AnsiConsole.Clear();
         var selectedServer = await PromptServerSelection(episode.Url);
         if (selectedServer == null) return LoopAction.ExitWithFalse;
 

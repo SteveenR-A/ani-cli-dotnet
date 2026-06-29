@@ -118,9 +118,12 @@ public class JKAnimeExtractor : BaseExtractor
             var links = dayBlock.SelectNodes(".//div[@class='boxx']//a");
             if (links == null) continue;
 
+            var addedUrls = new HashSet<string>();
             foreach (var a in links)
             {
                 var href      = a.GetAttributeValue("href", "");
+                if (string.IsNullOrEmpty(href)) continue;
+                if (!addedUrls.Add(href)) continue;
                 var parentDiv = a.ParentNode?.ParentNode;
                 var title     = parentDiv?.GetAttributeValue("title", "")
                              ?? a.SelectSingleNode(".//strong")?.InnerText.Trim()
