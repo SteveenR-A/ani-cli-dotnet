@@ -1,6 +1,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <!-- Configuración principal del instalador -->
-  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.0.0.0" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d">
+  <!-- UpgradeCode debe ser único para esta app. Bitness="always64" es requerido para ProgramFiles64Folder -->
+  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.0.0.0" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" Scope="perMachine">
     <MajorUpgrade DowngradeErrorMessage="Ya tienes instalada una versión más reciente de AniCS." />
     
     <Feature Id="Main">
@@ -10,6 +11,7 @@
 
   <!-- Definición de dónde se instalará (Archivos de Programa) -->
   <Fragment>
+    <!-- Para apps 64-bit usamos ProgramFiles64Folder -->
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="AniCS" />
     </StandardDirectory>
