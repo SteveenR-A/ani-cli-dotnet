@@ -1,0 +1,31 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <!-- Configuración principal del instalador -->
+  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.0.0.0" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d">
+    <MajorUpgrade DowngradeErrorMessage="Ya tienes instalada una versión más reciente de AniCS." />
+    
+    <Feature Id="Main">
+      <ComponentGroupRef Id="AppComponents" />
+    </Feature>
+  </Package>
+
+  <!-- Definición de dónde se instalará (Archivos de Programa) -->
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="AniCS" />
+    </StandardDirectory>
+  </Fragment>
+
+  <!-- Qué archivos incluye el instalador y configuración del sistema -->
+  <Fragment>
+    <ComponentGroup Id="AppComponents" Directory="INSTALLFOLDER">
+      <Component>
+        <!-- Incluye el ejecutable que generaste con dotnet publish -->
+        <File Source="bin\Release\net10.0\win-x64\publish\AniCS.exe" />
+        
+        <!-- Esta línea mágica agrega la carpeta de AniCS al PATH de Windows automáticamente. 
+             Al desinstalar el MSI, también se quita del PATH sin dejar basura. -->
+        <Environment Id="UpdatePath" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>
