@@ -291,9 +291,10 @@ public class JKAnimeExtractor : BaseExtractor
         var doc = await GetDocumentAsync(animeUrl, BaseUrl);
         if (doc == null) return string.Empty;
 
-        // In JKAnime, the synopsis is usually in a <p rel="sinopsis"> 
+        // In JKAnime, the synopsis is usually in a <p class="scroll"> or <p rel="sinopsis"> 
         // or just a <p> inside a <div class="sinopsis-box">
-        var pNode = doc.DocumentNode.SelectSingleNode("//p[@rel='sinopsis']") ??
+        var pNode = doc.DocumentNode.SelectSingleNode("//p[@class='scroll']") ??
+                    doc.DocumentNode.SelectSingleNode("//p[@rel='sinopsis']") ??
                     doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'sinopsis-box')]//p");
 
         if (pNode != null)

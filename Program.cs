@@ -23,98 +23,105 @@ public class Program
 
     public static async Task Main(string[] args)
     {
-        _active = _extractors[0]; // default to JKAnime
-
-        AnsiConsole.Clear();
-
-        // ── ASCII Banner ──────────────────────────────────────────
-        AnsiConsole.Write(
-            new FigletText("AniCS")
-                .LeftJustified()
-                .Color(Color.DeepSkyBlue1));
-
-        AnsiConsole.Write(new Rule("[deepskyblue1]ani-cli · versión .NET 10[/]")
-            .LeftJustified().RuleStyle("grey23"));
-
-        AnsiConsole.WriteLine();
-
-        AnsiConsole.Write(new Panel(
-            "[bold green]Bienvenido a AniCS (Modo Interactivo)[/]\n" +
-            $"Fuente activa: [bold yellow]{_active.Domain}[/]  |  " +
-            $"yt-dlp: {(YtDlpResolver.IsAvailable() ? "[green]disponible ✓[/]" : "[grey]no instalado[/]")}  |  " +
-            "Escribe [bold yellow]help[/] para los comandos o [bold red]exit[/] para salir.")
+        try
         {
-            Border = BoxBorder.Rounded,
-            Padding = new Padding(1, 0)
-        });
+            _active = _extractors[0]; // default to JKAnime
 
-        AnsiConsole.WriteLine();
+            AnsiConsole.Clear();
 
-        // ── REPL Loop ─────────────────────────────────────────────
-        while (true)
-        {
-            var raw = AnsiConsole.Ask<string>("[bold deepskyblue1]anics[/] [grey]>[/] ").Trim();
-            var parts = raw.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 0) continue;
+            // ── ASCII Banner ──────────────────────────────────────────
+            AnsiConsole.Write(
+                new FigletText("AniCS")
+                    .LeftJustified()
+                    .Color(Color.DeepSkyBlue1));
 
-            var cmd = parts[0].ToLowerInvariant();
-            var arg = parts.Length > 1 ? parts[1] : string.Empty;
+            AnsiConsole.Write(new Rule("[deepskyblue1]ani-cli · versión .NET 10[/]")
+                .LeftJustified().RuleStyle("grey23"));
 
-            switch (cmd)
+            AnsiConsole.WriteLine();
+
+            AnsiConsole.Write(new Panel(
+                "[bold green]Bienvenido a AniCS (Modo Interactivo)[/]\n" +
+                $"Fuente activa: [bold yellow]{_active.Domain}[/]  |  " +
+                $"yt-dlp: {(YtDlpResolver.IsAvailable() ? "[green]disponible ✓[/]" : "[grey]no instalado[/]")}  |  " +
+                "Escribe [bold yellow]help[/] para los comandos o [bold red]exit[/] para salir.")
             {
-                case "exit":
-                case "quit":
-                case "q":
-                    AnsiConsole.MarkupLine("[dim]Hasta luego 👋[/]");
-                    return;
+                Border = BoxBorder.Rounded,
+                Padding = new Padding(1, 0)
+            });
 
-                case "help":
-                    ShowHelp();
-                    break;
+            AnsiConsole.WriteLine();
 
-                case "search":
-                case "s":
-                    if (string.IsNullOrWhiteSpace(arg))
-                        AnsiConsole.MarkupLine("[yellow]Uso:[/] search [grey]<título>[/]");
-                    else
-                        await HandleSearch(arg);
-                    break;
+            // ── REPL Loop ─────────────────────────────────────────────
+            while (true)
+            {
+                var raw = AnsiConsole.Ask<string>("[bold deepskyblue1]anics[/] [grey]>[/] ").Trim();
+                var parts = raw.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) continue;
 
-                case "latest":
-                case "l":
-                    await HandleLatest();
-                    break;
+                var cmd = parts[0].ToLowerInvariant();
+                var arg = parts.Length > 1 ? parts[1] : string.Empty;
 
-                case "scoop":
-                case "sc":
-                    await HandleScoop();
-                    break;
+                switch (cmd)
+                {
+                    case "exit":
+                    case "quit":
+                    case "q":
+                        AnsiConsole.MarkupLine("[dim]Hasta luego 👋[/]");
+                        return;
 
-                case "history":
-                case "h":
-                    await HandleHistory();
-                    break;
+                    case "help":
+                        ShowHelp();
+                        break;
 
-                case "fuente":
-                case "f":
-                    HandleSource();
-                    break;
+                    case "search":
+                    case "s":
+                        if (string.IsNullOrWhiteSpace(arg))
+                            AnsiConsole.MarkupLine("[yellow]Uso:[/] search [grey]<título>[/]");
+                        else
+                            await HandleSearch(arg);
+                        break;
 
-                case "clearcache":
-                case "cc":
-                    DataCache.ClearRamCache();
-                    AnsiConsole.MarkupLine("[green]Caché de memoria RAM limpiado con éxito.[/]");
-                    break;
+                    case "latest":
+                    case "l":
+                        await HandleLatest();
+                        break;
 
-                case "clear":
-                case "cls":
-                    AnsiConsole.Clear();
-                    break;
+                    case "scoop":
+                    case "sc":
+                        await HandleScoop();
+                        break;
 
-                default:
-                    AnsiConsole.MarkupLine($"[red]Comando desconocido:[/] '{Markup.Escape(cmd)}'. Escribe [bold]help[/].");
-                    break;
+                    case "history":
+                    case "h":
+                        await HandleHistory();
+                        break;
+
+                    case "fuente":
+                    case "f":
+                        HandleSource();
+                        break;
+
+                    case "clearcache":
+                    case "cc":
+                        DataCache.ClearRamCache();
+                        AnsiConsole.MarkupLine("[green]Caché de memoria RAM limpiado con éxito.[/]");
+                        break;
+
+                    case "clear":
+                    case "cls":
+                        AnsiConsole.Clear();
+                        break;
+
+                    default:
+                        AnsiConsole.MarkupLine($"[red]Comando desconocido:[/] '{Markup.Escape(cmd)}'. Escribe [bold]help[/].");
+                        break;
+                }
             }
+        }
+        finally
+        {
+            DataCache.ClearCacheDirectory();
         }
     }
 
@@ -199,19 +206,18 @@ public class Program
             return;
         }
 
-        var titles = results.Select(r => r.Title).ToList();
-        titles.Insert(0, "[red]Volver al menú principal[/]");
+        var anime = await AniCS.Terminal.DetailsPrompt.PromptWithDetailsAsync(
+            _http,
+            "Selecciona un anime",
+            results,
+            r => r.Title,
+            r => r.ThumbnailUrl,
+            async r => await DataCache.GetOrFetchDataAsync($"synopsis_{r.Url}", TimeSpan.FromMinutes(5), () => _active.GetSynopsisAsync(r.Url)),
+            r => r.Description,
+            pageSize: 10
+        );
 
-        var selected = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("[bold]Selecciona un anime:[/]")
-                .PageSize(12)
-                .HighlightStyle(Style.Parse("deepskyblue1 bold"))
-                .AddChoices(titles));
-
-        if (selected == "[red]Volver al menú principal[/]") return;
-
-        var anime = results.First(r => r.Title == selected);
+        if (anime == null) return;
 
         await DisplayAnimeInfoAsync(anime);
 
@@ -236,21 +242,22 @@ public class Program
             return;
         }
 
-        var epTitles = episodes.Select(e => $"Ep {e.EpisodeNumber} — {e.Title}".TrimEnd('—', ' ')).ToList();
-        epTitles.Insert(0, "[red]Volver al menú principal[/]");
-
         while (true)
         {
-            var epSelected = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[bold]Selecciona un episodio:[/]")
-                    .PageSize(15)
-                    .HighlightStyle(Style.Parse("green bold"))
-                    .AddChoices(epTitles));
+            var selectedEpisode = await AniCS.Terminal.DetailsPrompt.PromptWithDetailsAsync(
+                _http,
+                "Selecciona un episodio",
+                episodes,
+                e => $"Ep {e.EpisodeNumber} — {e.Title}".TrimEnd('—', ' '),
+                e => e.ThumbnailUrl,
+                e => Task.FromResult(string.Empty),
+                null,
+                pageSize: 10
+            );
 
-            if (epSelected == "[red]Volver al menú principal[/]") return;
+            if (selectedEpisode == null) return;
 
-            var epIndex = epTitles.IndexOf(epSelected);
+            var epIndex = episodes.IndexOf(selectedEpisode);
 
             bool exitToMain = await PlayEpisodesLoop(episodes, epIndex, anime, allowBinge: true);
             if (exitToMain) return;
@@ -276,31 +283,23 @@ public class Program
             return;
         }
 
-        var options = results.Select(r => 
-            $"[green]Ep {(string.IsNullOrEmpty(r.EpisodeNumber) ? "—" : r.EpisodeNumber),-3}[/] │ {r.Title}"
-        ).ToList();
-        options.Insert(0, "[red]Volver al menú principal[/]");
+        var selectedEpisode = await AniCS.Terminal.DetailsPrompt.PromptWithDetailsAsync(
+            _http,
+            $"Últimos Estrenos — {_active.Domain}",
+            results,
+            r => $"Ep {(string.IsNullOrEmpty(r.EpisodeNumber) ? "—" : r.EpisodeNumber),-3} │ {r.Title}",
+            r => r.ThumbnailUrl,
+            r => Task.FromResult(string.Empty),
+            null,
+            pageSize: 12
+        );
 
-        var selected = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title($"[bold deepskyblue1]Últimos Estrenos — {_active.Domain}[/]")
-                .PageSize(15)
-                .HighlightStyle(Style.Parse("deepskyblue1 bold"))
-                .AddChoices(options));
+        if (selectedEpisode == null) return;
 
-        if (selected == "[red]Volver al menú principal[/]") return;
+        AnsiConsole.Write(new Rule($"[bold]{Markup.Escape(selectedEpisode.Title)}[/]").RuleStyle("deepskyblue1"));
 
-        var index = options.IndexOf(selected);
-        var episode = results[index];
-
-        // Show thumbnail if available
-        if (!string.IsNullOrEmpty(episode.ThumbnailUrl))
-            await KittyGraphics.DisplayImageAsync(_http, episode.ThumbnailUrl);
-
-        AnsiConsole.Write(new Rule($"[bold]{Markup.Escape(episode.Title)}[/]").RuleStyle("deepskyblue1"));
-
-        var dummyAnime = new AniCS.Models.AnimeResult { Title = episode.Title, Url = episode.Url };
-        await PlayEpisodesLoop([episode], 0, dummyAnime, allowBinge: false);
+        var dummyAnime = new AniCS.Models.AnimeResult { Title = selectedEpisode.Title, Url = selectedEpisode.Url };
+        await PlayEpisodesLoop([selectedEpisode], 0, dummyAnime, allowBinge: false);
     }
 
     // ── Scoop ─────────────────────────────────────────────────────
@@ -325,20 +324,20 @@ public class Program
         var daysOfWeek = new List<string> { "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo" };
         var orderedResults = results.OrderByDescending(x => daysOfWeek.IndexOf(x.Day.ToLowerInvariant())).ToList();
 
-        var options = orderedResults.Select(r => $"[grey]{Markup.Escape(r.Day)}[/] - {Markup.Escape(r.Title)}").ToList();
-        options.Insert(0, "[red]Volver al menú principal[/]");
+        var selectedItem = await AniCS.Terminal.DetailsPrompt.PromptWithDetailsAsync(
+            _http,
+            "Cartelera Semanal (Más recientes primero)",
+            orderedResults,
+            r => $"[{r.Day}] {r.Title}",
+            r => r.ThumbnailUrl,
+            async r => await DataCache.GetOrFetchDataAsync($"synopsis_{r.Url}", TimeSpan.FromMinutes(5), () => _active.GetSynopsisAsync(r.Url)),
+            r => r.Day,
+            pageSize: 10
+        );
 
-        var selected = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("[bold deepskyblue1]Cartelera Semanal (Más recientes primero)[/]")
-                .PageSize(15)
-                .HighlightStyle(Style.Parse("green bold"))
-                .AddChoices(options));
+        if (selectedItem == null) return;
 
-        if (selected == "[red]Volver al menú principal[/]") return;
-
-        var selectedIndex = options.IndexOf(selected);
-        var item = orderedResults[selectedIndex];
+        var item = selectedItem;
         var anime = new AniCS.Models.AnimeResult { Title = item.Title, Url = item.Url, ThumbnailUrl = item.ThumbnailUrl };
 
         await DisplayAnimeInfoAsync(anime, $"Emisión el {Markup.Escape(item.Day)}");
@@ -363,19 +362,20 @@ public class Program
             return;
         }
 
-        var epOptions = episodes.Select(e => Markup.Escape(e.Title)).Reverse().ToList();
-        epOptions.Insert(0, "[red]Cancelar[/]");
+        var selectedEpisode = await AniCS.Terminal.DetailsPrompt.PromptWithDetailsAsync(
+            _http,
+            "Selecciona un episodio",
+            episodes,
+            e => $"Ep {e.EpisodeNumber} — {e.Title}".TrimEnd('—', ' '),
+            e => e.ThumbnailUrl,
+            e => Task.FromResult(string.Empty),
+            null,
+            pageSize: 10
+        );
 
-        var epSelected = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Selecciona un episodio:")
-                .PageSize(12)
-                .HighlightStyle(Style.Parse("deepskyblue1 bold"))
-                .AddChoices(epOptions));
+        if (selectedEpisode == null) return;
 
-        if (epSelected == "[red]Cancelar[/]") return;
-
-        var epIndex = episodes.FindIndex(e => Markup.Escape(e.Title) == epSelected);
+        var epIndex = episodes.IndexOf(selectedEpisode);
         await PlayEpisodesLoop(episodes, epIndex, anime);
     }
 
@@ -538,89 +538,125 @@ public class Program
         return (videoUrl, referer);
     }
 
+    private enum LoopAction
+    {
+        ExitWithTrue,
+        ExitWithFalse,
+        Repeat,
+        Next
+    }
+
+    private static int GetNextEpisodeIndex(List<AniCS.Models.Episode> episodes, int currentIndex)
+    {
+        bool isDescending = false;
+        if (episodes.Count > 1)
+        {
+            double.TryParse(episodes[0].EpisodeNumber, out double num0);
+            double.TryParse(episodes[episodes.Count - 1].EpisodeNumber, out double num1);
+            if (num0 > num1) isDescending = true;
+        }
+
+        return isDescending ? currentIndex - 1 : currentIndex + 1;
+    }
+
+    private static void HandleDownload(AniCS.Models.VideoServer selectedServer, string epVideoUrl, string epReferer, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode)
+    {
+        if (selectedServer.Name.Contains("Mega", StringComparison.OrdinalIgnoreCase))
+        {
+            AnsiConsole.MarkupLine("[yellow]Mega cifra sus videos. Para descargar, abre este enlace en tu navegador o usa megatools:[/]");
+            AnsiConsole.MarkupLine($"[blue underline]{Markup.Escape(selectedServer.Url)}[/]");
+        }
+        else
+        {
+            var defaultDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Descargas", "AniCS");
+            var dirPrompt = AnsiConsole.Prompt(
+                new TextPrompt<string>($"[bold]Ruta de descarga:[/] [grey](Presiona Enter para usar por defecto)[/]")
+                    .DefaultValue(defaultDir)
+                    .AllowEmpty());
+
+            var targetDir = string.IsNullOrWhiteSpace(dirPrompt) ? defaultDir : dirPrompt;
+
+            YtDlpResolver.Download(epVideoUrl, anime.Title, episode.EpisodeNumber, targetDir, epReferer);
+            _history.Record(anime.Title, anime.Url, episode.EpisodeNumber, epVideoUrl);
+        }
+    }
+
+    private static LoopAction PromptPostPlayAction()
+    {
+        var postAction = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold]¿Qué deseas hacer ahora?[/]")
+                .HighlightStyle(Style.Parse("cyan bold"))
+                .AddChoices("▶ Siguiente Episodio", "↺ Repetir Episodio", "Volver a lista de episodios", "Volver al menú principal"));
+
+        return postAction switch
+        {
+            "Volver al menú principal" => LoopAction.ExitWithTrue,
+            "Volver a lista de episodios" => LoopAction.ExitWithFalse,
+            "↺ Repetir Episodio" => LoopAction.Repeat,
+            _ => LoopAction.Next
+        };
+    }
+
+    private static async Task<LoopAction> PlaySingleEpisodeAsync(List<AniCS.Models.Episode> episodes, int currentIndex, AniCS.Models.AnimeResult anime, bool allowBinge)
+    {
+        var episode = episodes[currentIndex];
+
+        var selectedServer = await PromptServerSelection(episode.Url);
+        if (selectedServer == null) return LoopAction.ExitWithFalse;
+
+        var (epVideoUrl, epReferer) = await ResolveWithStatus(selectedServer.Url);
+        if (string.IsNullOrEmpty(epVideoUrl))
+        {
+            AnsiConsole.MarkupLine("[red]No se pudo resolver el enlace de video.[/]");
+            return LoopAction.ExitWithFalse;
+        }
+
+        var action = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title($"[bold]¿Qué hacer con {Markup.Escape(episode.Title)} (Ep {episode.EpisodeNumber})?[/]")
+                .AddChoices("▶ Reproducir", "⬇ Descargar", "Cancelar"));
+
+        if (action == "Cancelar") return LoopAction.ExitWithFalse;
+
+        if (action == "⬇ Descargar")
+        {
+            HandleDownload(selectedServer, epVideoUrl, epReferer, anime, episode);
+            return LoopAction.ExitWithFalse;
+        }
+
+        // Play
+        AnsiConsole.MarkupLine($"[dim]Iniciando reproductor:[/] [bold]{Markup.Escape(anime.Title)}[/] [grey]Ep.{Markup.Escape(episode.EpisodeNumber)}[/]");
+        PlayerManager.Play(epVideoUrl, $"AniCS — {anime.Title} Ep.{episode.EpisodeNumber}", epReferer);
+        _history.Record(anime.Title, anime.Url, episode.EpisodeNumber, epVideoUrl);
+
+        if (!allowBinge) return LoopAction.ExitWithFalse;
+
+        return PromptPostPlayAction();
+    }
+
     private static async Task<bool> PlayEpisodesLoop(List<AniCS.Models.Episode> episodes, int startIndex, AniCS.Models.AnimeResult anime, bool allowBinge = true)
     {
         int currentIndex = startIndex;
         while (currentIndex >= 0 && currentIndex < episodes.Count)
         {
-            var episode = episodes[currentIndex];
-
-            var selectedServer = await PromptServerSelection(episode.Url);
-            if (selectedServer == null) return false;
-
-            var (epVideoUrl, epReferer) = await ResolveWithStatus(selectedServer.Url);
-            if (string.IsNullOrEmpty(epVideoUrl))
+            var result = await PlaySingleEpisodeAsync(episodes, currentIndex, anime, allowBinge);
+            switch (result)
             {
-                AnsiConsole.MarkupLine("[red]No se pudo resolver el enlace de video.[/]");
-                return false;
-            }
-
-            var action = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title($"[bold]¿Qué hacer con {Markup.Escape(episode.Title)} (Ep {episode.EpisodeNumber})?[/]")
-                    .AddChoices("▶ Reproducir", "⬇ Descargar", "Cancelar"));
-
-            if (action == "Cancelar") return false;
-
-            if (action == "⬇ Descargar")
-            {
-                if (selectedServer.Name.Contains("Mega", StringComparison.OrdinalIgnoreCase))
-                {
-                    AnsiConsole.MarkupLine("[yellow]Mega cifra sus videos. Para descargar, abre este enlace en tu navegador o usa megatools:[/]");
-                    AnsiConsole.MarkupLine($"[blue underline]{Markup.Escape(selectedServer.Url)}[/]");
-                }
-                else
-                {
-                    var defaultDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Descargas", "AniCS");
-                    var dirPrompt = AnsiConsole.Prompt(
-                        new TextPrompt<string>($"[bold]Ruta de descarga:[/] [grey](Presiona Enter para usar por defecto)[/]")
-                            .DefaultValue(defaultDir)
-                            .AllowEmpty());
-
-                    var targetDir = string.IsNullOrWhiteSpace(dirPrompt) ? defaultDir : dirPrompt;
-
-                    YtDlpResolver.Download(epVideoUrl, anime.Title, episode.EpisodeNumber, targetDir, epReferer);
-                    _history.Record(anime.Title, anime.Url, episode.EpisodeNumber, epVideoUrl);
-                }
-                return false;
-            }
-
-            // Play
-            AnsiConsole.MarkupLine($"[dim]Iniciando reproductor:[/] [bold]{Markup.Escape(anime.Title)}[/] [grey]Ep.{Markup.Escape(episode.EpisodeNumber)}[/]");
-            PlayerManager.Play(epVideoUrl, $"AniCS — {anime.Title} Ep.{episode.EpisodeNumber}", epReferer);
-            _history.Record(anime.Title, anime.Url, episode.EpisodeNumber, epVideoUrl);
-
-            if (!allowBinge) return false;
-
-            var postAction = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[bold]¿Qué deseas hacer ahora?[/]")
-                    .HighlightStyle(Style.Parse("cyan bold"))
-                    .AddChoices("▶ Siguiente Episodio", "↺ Repetir Episodio", "Volver a lista de episodios", "Volver al menú principal"));
-
-            if (postAction == "Volver al menú principal") return true;
-            if (postAction == "Volver a lista de episodios") return false;
-            if (postAction == "↺ Repetir Episodio") continue; // loop again with same index
-
-            if (postAction == "▶ Siguiente Episodio")
-            {
-                // Determine order of the list
-                bool isDescending = false;
-                if (episodes.Count > 1)
-                {
-                    double.TryParse(episodes[0].EpisodeNumber, out double num0);
-                    double.TryParse(episodes[episodes.Count - 1].EpisodeNumber, out double num1);
-                    if (num0 > num1) isDescending = true;
-                }
-
-                if (isDescending) currentIndex--;
-                else currentIndex++;
-
-                if (currentIndex < 0 || currentIndex >= episodes.Count)
-                {
-                    AnsiConsole.MarkupLine("[yellow]Ya no hay más episodios en esta lista.[/]");
+                case LoopAction.ExitWithTrue:
+                    return true;
+                case LoopAction.ExitWithFalse:
                     return false;
-                }
+                case LoopAction.Repeat:
+                    continue;
+                case LoopAction.Next:
+                    currentIndex = GetNextEpisodeIndex(episodes, currentIndex);
+                    if (currentIndex < 0 || currentIndex >= episodes.Count)
+                    {
+                        AnsiConsole.MarkupLine("[yellow]Ya no hay más episodios en esta lista.[/]");
+                        return false;
+                    }
+                    break;
             }
         }
         return false;
@@ -628,6 +664,7 @@ public class Program
 
     private static async Task DisplayAnimeInfoAsync(AniCS.Models.AnimeResult anime, string? extraInfo = null)
     {
+        AnsiConsole.Clear();
         if (!string.IsNullOrEmpty(anime.ThumbnailUrl))
         {
             await AniCS.Terminal.KittyGraphics.DisplayImageAsync(_http, anime.ThumbnailUrl);
@@ -639,10 +676,15 @@ public class Program
                     var imgBytes = await DataCache.GetImageAsync(_http, anime.ThumbnailUrl);
                     if (imgBytes.Length > 0)
                     {
-                        File.WriteAllBytes(localImagePath, imgBytes);
+                        await File.WriteAllBytesAsync(localImagePath, imgBytes);
                         AnsiConsole.MarkupLine($"[bold]Imagen guardada en:[/] [link]{localImagePath}[/]");
                     }
-                } catch { }
+                }
+                catch (Exception)
+                {
+                    // Ignore exceptions during thumbnail downloading/saving as this is non-critical.
+                    // The application should still display the anime details even if the image cannot be saved.
+                }
             }
         }
 

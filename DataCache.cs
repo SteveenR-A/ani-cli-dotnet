@@ -25,33 +25,45 @@ public static class DataCache
         }
     }
 
+    public static string GetImageCachePath(string url)
+    {
+        if (string.IsNullOrEmpty(url)) return string.Empty;
+        var hash = Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(url)));
+        return Path.Combine(CacheDir, hash + ".img");
+    }
+
     /// <summary>
     /// Disk-based cache for images. Images are downloaded once and read from disk to save bandwidth and memory.
     /// </summary>
-    public static async Task<byte[]> GetImageAsync(HttpClient client, string url)
+    public static async Task<byte[]> GetImageAsync(HttpClient client, string url, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(url)) return [];
 
-        var hash = Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(url)));
-        var filePath = Path.Combine(CacheDir, hash + ".img");
+        var filePath = GetImageCachePath(url);
 
         if (File.Exists(filePath))
         {
             try
             {
-                return await File.ReadAllBytesAsync(filePath);
+                return await File.ReadAllBytesAsync(filePath, cancellationToken);
             }
             catch { /* Corrupted file or locked */ }
         }
 
         try
         {
-            var bytes = await client.GetByteArrayAsync(url);
-            await File.WriteAllBytesAsync(filePath, bytes);
+            var bytes = await client.GetByteArrayAsync(url, cancellationToken);
+            var dir = Path.GetDirectoryName(filePath);
+            if (dir != null && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            await File.WriteAllBytesAsync(filePath, bytes, cancellationToken);
             return bytes;
         }
         catch
         {
+            try { if (File.Exists(filePath)) File.Delete(filePath); } catch {}
             return [];
         }
     }
@@ -95,5 +107,23 @@ public static class DataCache
     public static void ClearRamCache()
     {
         _ramCache.Clear();
+    }
+
+    /// <summary>
+    /// Deletes all files in the cache directory and the directory itself.
+    /// </summary>
+    public static void ClearCacheDirectory()
+    {
+        try
+        {
+            if (Directory.Exists(CacheDir))
+            {
+                Directory.Delete(CacheDir, true);
+            }
+        }
+        catch
+        {
+            // Ignore directory deletion errors
+        }
     }
 }
