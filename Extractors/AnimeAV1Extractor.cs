@@ -89,7 +89,18 @@ public class AnimeAV1Extractor : BaseExtractor
         return episodes;
     }
 
-    public override Task<List<ScheduleItem>> GetWeeklyScoopAsync() => Task.FromResult(new List<ScheduleItem>());
+    public override Task<List<ScheduleItem>> GetWeeklyScoopAsync()
+    {
+        return Task.FromResult(new List<ScheduleItem>
+        {
+            new ScheduleItem
+            {
+                Day = "No Disponible",
+                Title = "AnimeAV1 oculta el horario en código cerrado. Usa Jkanime para el calendario (sc).",
+                Url = BaseUrl
+            }
+        });
+    }
 
     public override async Task<List<Episode>> GetEpisodesAsync(string animeUrl)
     {

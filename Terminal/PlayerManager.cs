@@ -48,6 +48,7 @@ public static class PlayerManager
 
             using var p = new Process { StartInfo = startInfo };
 
+            Spectre.Console.AnsiConsole.MarkupLine($"[dim italic]Reproduciendo:[/] [link={url}]{url}[/]");
             Spectre.Console.AnsiConsole.MarkupLine("[dim italic]Reproductor en curso... Cierra la ventana del video para volver a AniCS.[/]");
             p.Start();
             p.WaitForExit(); // Bloquea la app hasta que el video se cierre
