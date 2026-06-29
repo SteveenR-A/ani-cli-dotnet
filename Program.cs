@@ -92,7 +92,7 @@ public class Program
 
                 case "history":
                 case "h":
-                    HandleHistory();
+                    await HandleHistory();
                     break;
 
                 case "fuente":

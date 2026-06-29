@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AniCS.History;
 
@@ -9,6 +10,11 @@ public class WatchEntry
     public string LastEpisodeNumber { get; set; } = string.Empty;
     public string LastEpisodeUrl { get; set; } = string.Empty;
     public DateTime WatchedAt { get; set; } = DateTime.Now;
+}
+
+[JsonSerializable(typeof(List<WatchEntry>))]
+internal partial class WatchHistoryContext : JsonSerializerContext
+{
 }
 
 /// <summary>
@@ -34,7 +40,7 @@ public class WatchHistory
             if (File.Exists(HistoryFile))
             {
                 var json = File.ReadAllText(HistoryFile);
-                _entries = JsonSerializer.Deserialize<List<WatchEntry>>(json) ?? [];
+                _entries = JsonSerializer.Deserialize(json, WatchHistoryContext.Default.ListWatchEntry) ?? [];
             }
         }
         catch { _entries = []; }
@@ -45,7 +51,9 @@ public class WatchHistory
         try
         {
             Directory.CreateDirectory(HistoryDir);
-            var json = JsonSerializer.Serialize(_entries, new JsonSerializerOptions { WriteIndented = true });
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var context = new WatchHistoryContext(options);
+            var json = JsonSerializer.Serialize(_entries, context.ListWatchEntry);
             File.WriteAllText(HistoryFile, json);
         }
         catch { }
@@ -86,3 +94,4 @@ public class WatchHistory
     public WatchEntry? FindByTitle(string title) =>
         _entries.FirstOrDefault(e => e.AnimeTitle.Contains(title, StringComparison.OrdinalIgnoreCase));
 }
+

@@ -49,7 +49,31 @@ check_and_install_deps() {
     # Check dotnet SDK separately
     if ! command -v dotnet &> /dev/null; then
         echo -e "${RED}x dotnet-sdk no encontrado.${NC}"
-        missing+=("dotnet-sdk")
+        if command -v pacman &> /dev/null; then
+            missing+=("dotnet-sdk")
+        elif command -v apt &> /dev/null; then
+            if apt-cache show dotnet-sdk-10.0 &> /dev/null; then
+                missing+=("dotnet-sdk-10.0")
+            elif apt-cache show dotnet-sdk-9.0 &> /dev/null; then
+                missing+=("dotnet-sdk-9.0")
+            elif apt-cache show dotnet-sdk-8.0 &> /dev/null; then
+                missing+=("dotnet-sdk-8.0")
+            else
+                missing+=("dotnet-sdk-10.0")
+            fi
+        elif command -v dnf &> /dev/null; then
+            if dnf list dotnet-sdk-10.0 &> /dev/null; then
+                missing+=("dotnet-sdk-10.0")
+            elif dnf list dotnet-sdk-9.0 &> /dev/null; then
+                missing+=("dotnet-sdk-9.0")
+            elif dnf list dotnet-sdk-8.0 &> /dev/null; then
+                missing+=("dotnet-sdk-8.0")
+            else
+                missing+=("dotnet-sdk-10.0")
+            fi
+        else
+            missing+=("dotnet-sdk")
+        fi
     else
         echo -e "${GREEN}✓ dotnet-sdk detectado.${NC}"
     fi
@@ -111,6 +135,10 @@ install() {
 }
 
 update() {
+    echo -e "${BLUE}--- Paso 1: Verificando Dependencias ---${NC}"
+    check_and_install_deps
+
+    echo -e "\n${BLUE}--- Paso 2: Actualizando Código Fuente ---${NC}"
     if [ "$IS_LOCAL_REPO" = true ]; then
         echo -e "${BLUE}Actualizando AniCS desde repositorio local...${NC}"
         cd "$SOURCE_DIR"
@@ -132,9 +160,11 @@ update() {
         git pull
     fi
     
+    echo -e "\n${BLUE}--- Paso 3: Compilando AniCS ---${NC}"
     echo -e "Compilando nueva versión..."
     dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
     
+    echo -e "\n${BLUE}--- Paso 4: Instalando en el sistema ---${NC}"
     sudo cp "bin/Release/net10.0/linux-x64/publish/AniCS" "$BIN_PATH"
     sudo chmod +x "$BIN_PATH"
     echo -e "${GREEN}¡AniCS actualizado correctamente!${NC}"
