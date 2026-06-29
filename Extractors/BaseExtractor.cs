@@ -108,4 +108,9 @@ public abstract class BaseExtractor : IAnimeExtractor
         doc.LoadHtml(html);
         return doc;
     }
+
+    public virtual Task<List<AnimeResult>> GetPremieresAsync()
+    {
+        return Task.FromResult(new List<AnimeResult>());
+    }
 }

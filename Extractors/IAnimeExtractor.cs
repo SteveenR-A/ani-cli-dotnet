@@ -12,4 +12,5 @@ public interface IAnimeExtractor
     Task<List<VideoServer>> GetVideoServersAsync(string episodeUrl);
     Task<string> ResolveVideoUrlAsync(string url);
     Task<string> GetSynopsisAsync(string animeUrl);
+    Task<List<AnimeResult>> GetPremieresAsync();
 }

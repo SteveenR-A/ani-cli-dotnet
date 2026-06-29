@@ -71,17 +71,53 @@ public static class PlayerManager
             args.Add("--force-window=yes");
             args.Add("--cache=yes");
             args.Add("--cache-pause-wait=5");
-            args.Add("--demuxer-readahead-secs=20");
-            args.Add("--demuxer-max-back-bytes=200M");
+            
+            bool isJkAnime = referer != null && referer.Contains("jkanime.net", StringComparison.OrdinalIgnoreCase);
+            bool isMediafire = referer != null && referer.Contains("mediafire.com", StringComparison.OrdinalIgnoreCase);
+            
+            List<string> headers = new List<string>();
+            if (!string.IsNullOrEmpty(referer))
+            {
+                headers.Add($"Referer: {referer}");
+            }
+
+            if (isJkAnime || isMediafire)
+            {
+                // Modo Stealth/Navegador: evitar bloqueos por descargas masivas
+                args.Add("--demuxer-max-bytes=5M");
+                args.Add("--demuxer-readahead-secs=15");
+                args.Add("--cache-secs=30");
+                
+                // Flags de reconexión rápida sin hacer flood
+                args.Add("--demuxer-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_delay_max=5");
+                
+                // Cabeceras adicionales para simular el comportamiento embebido de Chrome
+                string origin = isJkAnime ? "https://jkanime.net" : "https://www.mediafire.com";
+                headers.Add($"Origin: {origin}");
+                headers.Add("Accept-Language: es-419,es;q=0.9,en;q=0.8");
+                headers.Add("Accept: */*");
+                headers.Add("Connection: keep-alive");
+                headers.Add("Sec-Fetch-Dest: video");
+                headers.Add("Sec-Fetch-Mode: no-cors");
+                headers.Add("Sec-Fetch-Site: cross-site");
+            }
+            else
+            {
+                // Configuración estándar para AnimeAV1 y otros
+                args.Add("--demuxer-readahead-secs=20");
+                args.Add("--demuxer-max-back-bytes=200M");
+            }
+
             args.Add("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
             
             if (!string.IsNullOrEmpty(title))
             {
                 args.Add($"--title={title}");
             }
-            if (!string.IsNullOrEmpty(referer))
+            
+            if (headers.Count > 0)
             {
-                args.Add($"--http-header-fields=Referer: {referer}");
+                args.Add($"--http-header-fields={string.Join(",", headers)}");
             }
             
             args.Add(url);

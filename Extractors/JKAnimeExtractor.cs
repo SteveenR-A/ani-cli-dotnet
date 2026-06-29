@@ -65,6 +65,38 @@ public class JKAnimeExtractor : BaseExtractor
         return results;
     }
 
+    // ── Premieres ──────────────────────────────────────────────────
+    public override async Task<List<AnimeResult>> GetPremieresAsync()
+    {
+        var results = new List<AnimeResult>();
+        var doc = await GetDocumentAsync($"{BaseUrl}/estrenos/");
+        if (doc == null) return results;
+
+        // La página de estrenos usa el mismo layout que la portada (dir1 > card > a)
+        var cards = doc.DocumentNode.SelectNodes(
+            "//div[contains(@class,'dir1')]//div[contains(@class,'ml-2') and contains(@class,'card')]//a");
+        
+        if (cards == null) return results;
+
+        foreach (var card in cards)
+        {
+            var href      = card.GetAttributeValue("href", "");
+            var titleNode = card.SelectSingleNode(".//h5[contains(@class,'card-title')]");
+            var imgNode   = card.SelectSingleNode(".//img[contains(@class,'card-img-top')]");
+
+            if (titleNode == null || string.IsNullOrEmpty(href)) continue;
+
+            results.Add(new AnimeResult
+            {
+                Title        = WebUtility.HtmlDecode(titleNode.InnerText.Trim()),
+                Url          = href,
+                ThumbnailUrl = imgNode?.GetAttributeValue("src", "") ?? ""
+            });
+        }
+
+        return results;
+    }
+
     // ── Latest ────────────────────────────────────────────────────
     public override async Task<List<Episode>> GetLatestReleasesAsync()
     {
@@ -327,7 +359,14 @@ public class JKAnimeExtractor : BaseExtractor
             var mfHtml = await DownloadWebpageAsync(url);
             if (string.IsNullOrEmpty(mfHtml)) return string.Empty;
 
-            var downloadLink = SearchRegex(@"href=""(https?://download[^""]+)""", mfHtml);
+            // Mediafire a veces cambia la estructura de sus URLs de descarga.
+            // La forma más segura de extraer el video es buscar el botón de descarga principal.
+            var downloadLink = SearchRegex(@"id=""downloadButton""[^>]*href=""([^""]+)""", mfHtml);
+            
+            // Fallback a la regla anterior por si acaso
+            if (string.IsNullOrEmpty(downloadLink))
+                downloadLink = SearchRegex(@"href=""(https?://download[^""]+)""", mfHtml);
+
             return downloadLink ?? string.Empty;
         }
 
