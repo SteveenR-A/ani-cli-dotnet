@@ -421,9 +421,9 @@ public static class DetailsPrompt
 
                             RenderableCache[imagePath!] = imageRenderable;
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            imageRenderable = new Markup("[red]Error cargando img[/]");
+                            imageRenderable = new Markup($"[red]Err: {Markup.Escape(ex.GetType().Name)}: {Markup.Escape(ex.Message.Length > 40 ? ex.Message[..40] : ex.Message)}[/]");
                         }
                     }
                 }
