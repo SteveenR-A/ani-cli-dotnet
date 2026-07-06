@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:AniCS.Desktop.Controls"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="AniCS.Desktop.Views.HomeView">
+    
+    <Grid RowDefinitions="Auto, *" Margin="20">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,15">
+            <TextBlock Text="Últimos Episodios" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center"/>
+            <Button Name="ReloadButton" Content="🔄 Recargar" FontSize="14" Padding="8,4" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" Click="OnReloadClicked"/>
+        </StackPanel>
+        
+        <Grid Grid.Row="1">
+            <TextBlock Name="StatusText" Text="Cargando animes..." FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="True"/>
+            <ScrollViewer>
+                <ItemsControl Name="AnimeList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:AnimeResult">
+                            <controls:AnimeBlockControl />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

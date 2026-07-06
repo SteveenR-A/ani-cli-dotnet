@@ -229,8 +229,6 @@ public class JKAnimeExtractor : BaseExtractor
                     HttpMethod.Post,
                     $"{BaseUrl}/ajax/episodes/{animeId}/1");
 
-                request.Headers.TryAddWithoutValidation("User-Agent",
-                    "Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0");
                 request.Headers.TryAddWithoutValidation("Referer", referer);
                 request.Headers.TryAddWithoutValidation("X-Requested-With", "XMLHttpRequest");
                 request.Headers.TryAddWithoutValidation("Cookie", cookies);
@@ -385,13 +383,6 @@ public class JKAnimeExtractor : BaseExtractor
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.TryAddWithoutValidation("User-Agent",
-                "Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0");
-            request.Headers.TryAddWithoutValidation("Accept",
-                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-            if (!string.IsNullOrEmpty(referer))
-                request.Headers.TryAddWithoutValidation("Referer", referer);
-
             var response = await Http.SendAsync(request);
             if (!response.IsSuccessStatusCode) return (string.Empty, string.Empty);
 

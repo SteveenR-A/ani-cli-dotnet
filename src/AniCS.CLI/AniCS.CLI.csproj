@@ -16,4 +16,8 @@
     <PackageReference Include="Spectre.Console.ImageSharp" Version="0.57.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AniCS.Core\AniCS.Core.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,76 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:AniCS.Desktop.Views"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+        x:Class="AniCS.Desktop.MainWindow"
+        Title="AniCS Desktop"
+        WindowStartupLocation="CenterScreen">
+        
+    <Grid RowDefinitions="Auto, *">
+        <!-- Top Navigation Bar -->
+        <Border Grid.Row="0" Background="{DynamicResource AppSurfaceColor}" Height="60" Padding="15,0">
+            <StackPanel Orientation="Horizontal" Spacing="20">
+                <Button Name="HamburgerButton" 
+                        Content="☰" 
+                        FontSize="24" 
+                        Background="Transparent" 
+                        Foreground="{DynamicResource AppPrimaryColor}" 
+                        Click="OnHamburgerClicked" 
+                        VerticalAlignment="Center"/>
+                <TextBlock Text="AniCS" 
+                           FontSize="28" 
+                           FontWeight="Bold" 
+                           Foreground="{DynamicResource AppPrimaryColor}" 
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content with SplitView -->
+        <SplitView Grid.Row="1" Name="MainSplitView" 
+                   IsPaneOpen="False" 
+                   DisplayMode="Overlay" 
+                   OpenPaneLength="250" 
+                   PaneBackground="{DynamicResource AppSurfaceColor}">
+            <SplitView.Pane>
+                <StackPanel Margin="20" Spacing="15">
+                    <Button Content="Inicio (Recientes)" 
+                            Classes="SidebarBtn"
+                            Background="Transparent"
+                            Foreground="{DynamicResource AppTitleColor}"
+                            FontSize="16"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Click="OnHomeClicked"/>
+                            
+                    <Button Content="Buscar Anime" 
+                            Classes="SidebarBtn"
+                            Background="Transparent"
+                            Foreground="{DynamicResource AppSubtextColor}"
+                            FontSize="16"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Click="OnSearchClicked"/>
+                            
+                    <Button Content="Calendario" 
+                            Classes="SidebarBtn"
+                            Background="Transparent"
+                            Foreground="{DynamicResource AppSubtextColor}"
+                            FontSize="16"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Click="OnCalendarClicked"/>
+                </StackPanel>
+            </SplitView.Pane>
+
+            <SplitView.Content>
+                <Border Background="{DynamicResource AppBackgroundColor}">
+                    <ContentControl Name="MainContent">
+                        <!-- Loaded dynamically -->
+                    </ContentControl>
+                </Border>
+            </SplitView.Content>
+        </SplitView>
+    </Grid>
+</Window>

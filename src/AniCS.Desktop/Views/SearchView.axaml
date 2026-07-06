@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:AniCS.Desktop.Controls"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="AniCS.Desktop.Views.SearchView">
+    
+    <Grid RowDefinitions="Auto, *" Margin="20">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,20">
+            <TextBox Name="SearchBox" Width="400" PlaceholderText="Buscar anime..." FontSize="18"/>
+            <Button Name="SearchButton" Content="Buscar" FontSize="18" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppTitleColor}" Click="OnSearchClicked"/>
+        </StackPanel>
+        
+        <Grid Grid.Row="1">
+            <TextBlock Name="StatusText" Text="" FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False"/>
+            <ScrollViewer>
+                <ItemsControl Name="AnimeList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:AnimeResult">
+                            <controls:AnimeBlockControl />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:converters="clr-namespace:AniCS.Desktop.Converters"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="AniCS.Desktop.Views.AnimeDetailsView"
+             x:DataType="models:AnimeResult">
+    
+    <UserControl.Resources>
+        <converters:AsyncImageLoader x:Key="AsyncImageLoader"/>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto, Auto, *" Margin="20">
+        <!-- Back Button -->
+        <Button Grid.Row="0" Content="← Volver" FontSize="16" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" BorderThickness="0" Margin="0,0,0,15" Cursor="Hand" Click="OnBackClicked"/>
+        
+        <!-- Header: Cover, Title, Synopsis -->
+        <Grid Grid.Row="1" ColumnDefinitions="200, *" Margin="0,0,0,20">
+            <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="200" Height="280" VerticalAlignment="Top">
+                <Image Name="CoverImage"
+                       converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}"
+                       Stretch="UniformToFill" />
+            </Border>
+            
+            <StackPanel Grid.Column="1" Margin="20,0,0,0">
+                <TextBlock Name="TitleText" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                <ScrollViewer MaxHeight="230">
+                    <TextBlock Name="SynopsisText" FontSize="16" Foreground="{DynamicResource AppSubtextColor}" TextWrapping="Wrap" Text="Cargando sinopsis..." />
+                </ScrollViewer>
+            </StackPanel>
+        </Grid>
+        
+        <!-- Episodes List -->
+        <Grid Grid.Row="2">
+            <TextBlock Name="StatusText" Text="Cargando episodios..." FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="True"/>
+            <ScrollViewer>
+                <ItemsControl Name="EpisodesList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:Episode">
+                            <Button Background="{DynamicResource AppSurfaceColor}" 
+                                    CornerRadius="4" 
+                                    Padding="15,10" 
+                                    Margin="0,0,0,5"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    BorderThickness="1"
+                                    BorderBrush="#333333"
+                                    Click="OnEpisodeClicked">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="{Binding EpisodeNumber}" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Width="40"/>
+                                    <TextBlock Text="{Binding Title}" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

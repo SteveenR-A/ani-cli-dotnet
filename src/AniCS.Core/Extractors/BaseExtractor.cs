@@ -54,28 +54,7 @@ public abstract class BaseExtractor : IAnimeExtractor
         {
             try
             {
-                var ua = UserAgents[_uaIndex % UserAgents.Length];
-                _uaIndex++;
-
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                // Header order matters for TLS fingerprinting — match Firefox/Chrome order
-                request.Headers.TryAddWithoutValidation("User-Agent", ua);
-                request.Headers.TryAddWithoutValidation("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
-                request.Headers.TryAddWithoutValidation("Accept-Language", "es-ES,es;q=0.9,en;q=0.8");
-                request.Headers.TryAddWithoutValidation("Accept-Encoding", "gzip, deflate, br");
-                request.Headers.TryAddWithoutValidation("DNT", "1");
-                request.Headers.TryAddWithoutValidation("Connection", "keep-alive");
-                request.Headers.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
-                request.Headers.TryAddWithoutValidation("Sec-Fetch-Dest", "document");
-                request.Headers.TryAddWithoutValidation("Sec-Fetch-Mode", "navigate");
-                request.Headers.TryAddWithoutValidation("Sec-Fetch-Site", string.IsNullOrEmpty(referer) ? "none" : "same-origin");
-
-                if (!string.IsNullOrEmpty(referer))
-                    request.Headers.TryAddWithoutValidation("Referer", referer);
-
-                var response = await Http.SendAsync(request);
-
-                // Graceful handling — don't crash on 404/403, just return empty
+                var response = await Http.GetAsync(url);
                 if (!response.IsSuccessStatusCode) return string.Empty;
 
                 return await response.Content.ReadAsStringAsync();

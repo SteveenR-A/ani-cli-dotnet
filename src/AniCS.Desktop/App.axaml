@@ -1,0 +1,23 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AniCS.Desktop.App"
+             RequestedThemeVariant="Dark">
+
+    <Application.Resources>
+        <FontFamily x:Key="JetBrainsFont">avares://AniCS.Desktop/Assets/Fonts#JetBrains Mono</FontFamily>
+        <SolidColorBrush x:Key="AppBackgroundColor">#1A1B26</SolidColorBrush>
+        <SolidColorBrush x:Key="AppSurfaceColor">#24283B</SolidColorBrush>
+        <SolidColorBrush x:Key="AppPrimaryColor">#7AA2F7</SolidColorBrush>
+        <SolidColorBrush x:Key="AppTextColor">#A9B1D6</SolidColorBrush>
+        <SolidColorBrush x:Key="AppTitleColor">#FFFFFF</SolidColorBrush>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="{StaticResource JetBrainsFont}"/>
+            <Setter Property="Background" Value="{StaticResource AppBackgroundColor}"/>
+            <Setter Property="Foreground" Value="{StaticResource AppTextColor}"/>
+        </Style>
+    </Application.Styles>
+</Application>

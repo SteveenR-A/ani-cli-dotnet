@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AniCS.CLI/AniCS.CLI.csproj" />
+    <Project Path="src/AniCS.Core/AniCS.Core.csproj" />
+    <Project Path="src/AniCS.Desktop/AniCS.Desktop.csproj" />
+  </Folder>
+</Solution>
