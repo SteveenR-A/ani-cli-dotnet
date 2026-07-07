@@ -338,6 +338,19 @@ public class JKAnimeExtractor : BaseExtractor
         return "Sinopsis no disponible.";
     }
 
+    public override async Task<string> GetThumbnailAsync(string animeUrl)
+    {
+        var doc = await GetDocumentAsync(animeUrl, BaseUrl);
+        if (doc == null) return string.Empty;
+
+        var ogImage = doc.DocumentNode.SelectSingleNode("//meta[@property='og:image']");
+        var url = ogImage?.GetAttributeValue("content", "");
+        if (!string.IsNullOrEmpty(url)) return url;
+
+        var picNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'anime__details__pic')]");
+        return picNode?.GetAttributeValue("data-setbg", "") ?? string.Empty;
+    }
+
     // ── Resolve Video URL ─────────────────────────────────────────
     public override async Task<string> ResolveVideoUrlAsync(string url)
     {

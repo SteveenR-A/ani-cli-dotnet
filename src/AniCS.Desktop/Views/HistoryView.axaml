@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:history="clr-namespace:AniCS.History;assembly=AniCS.Core"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="AniCS.Desktop.Views.HistoryView">
+    
+    <Grid RowDefinitions="Auto, *" Margin="20">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,15">
+            <TextBlock Text="Historial" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center"/>
+            <Button Name="ReloadButton" Content="🔄 Recargar" FontSize="14" Padding="8,4" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" VerticalAlignment="Center" Click="OnReloadClicked"/>
+        </StackPanel>
+        
+        <Grid Grid.Row="1">
+            <TextBlock Name="StatusText" Text="No hay historial." FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False"/>
+            
+            <ScrollViewer>
+                <ItemsControl Name="HistoryList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="history:WatchEntry">
+                            <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="8" Margin="0,0,0,10" Padding="15">
+                                <Grid ColumnDefinitions="*, Auto">
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding AnimeTitle}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding StringFormat='Último visto: Ep {0}' ,Path=LastEpisodeNumber}" FontSize="16" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,5,0,0"/>
+                                        <TextBlock Text="{Binding StringFormat='Fecha: {0:g}' ,Path=WatchedAt}" FontSize="14" Foreground="{DynamicResource AppSubtextColor}"/>
+                                    </StackPanel>
+                                    
+                                    <Button Grid.Column="1" Content="Ir al Anime" Click="OnGoToAnimeClicked" Tag="{Binding}" Background="#1E88E5" Foreground="White" VerticalAlignment="Center" Padding="15,10"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

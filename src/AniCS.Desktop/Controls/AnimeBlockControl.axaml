@@ -21,8 +21,8 @@
             Click="OnBlockClicked">
         
         <Grid ColumnDefinitions="200, *">
-            <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="200" Height="300">
-                <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
+            <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="200" VerticalAlignment="Top">
+                <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="Uniform" />
             </Border>
             
             <!-- Detalles -->

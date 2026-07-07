@@ -41,6 +41,22 @@ public partial class AnimeDetailsView : UserControl
     {
         var extractor = new JKAnimeExtractor(_httpClient);
         
+        if (string.IsNullOrEmpty(_anime.ThumbnailUrl))
+        {
+            try
+            {
+                var thumb = await extractor.GetThumbnailAsync(_anime.Url);
+                if (!string.IsNullOrEmpty(thumb))
+                {
+                    Dispatcher.UIThread.Invoke(() => {
+                        _anime.ThumbnailUrl = thumb;
+                        AniCS.Desktop.Converters.AsyncImageLoader.SetSourceUrl(CoverImage, thumb);
+                    });
+                }
+            }
+            catch { }
+        }
+
         try
         {
             var syn = await extractor.GetSynopsisAsync(_anime.Url);
@@ -115,6 +131,68 @@ public partial class AnimeDetailsView : UserControl
             finally
             {
                 btn.IsEnabled = true;
+            }
+        }
+    }
+    private async void OnDownloadEpisodeClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is Episode episode)
+        {
+            if (AniCS.Desktop.Services.DownloadManager.IsEpisodeDownloaded(_anime.Url, episode.EpisodeNumber))
+            {
+                StatusText.Text = "Este episodio ya está descargado.";
+                StatusText.IsVisible = true;
+                return;
+            }
+
+            StatusText.Text = $"Preparando descarga: {episode.Title}...";
+            StatusText.IsVisible = true;
+            btn.IsEnabled = false;
+            btn.Content = "⏳ Descargando...";
+
+            try
+            {
+                var extractor = new JKAnimeExtractor(_httpClient);
+                var servers = await extractor.GetVideoServersAsync(episode.Url);
+                
+                if (servers.Count > 0)
+                {
+                    var server = servers.Find(s => s.IsDirectPlaySupported) ?? servers[0];
+                    var videoUrl = await extractor.ResolveVideoUrlAsync(server.Url);
+
+                    if (!string.IsNullOrEmpty(videoUrl))
+                    {
+                        StatusText.IsVisible = false;
+                        var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+                        
+                        // Run in background without awaiting the UI thread
+                        _ = System.Threading.Tasks.Task.Run(async () =>
+                        {
+                            await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(videoUrl, _anime, episode, defaultDir, server.Url);
+                            Dispatcher.UIThread.Invoke(() => {
+                                btn.Content = "✅ Descargado";
+                            });
+                        });
+                    }
+                    else
+                    {
+                        StatusText.Text = "Error: No se pudo extraer el video para descargar.";
+                        btn.IsEnabled = true;
+                        btn.Content = "📥 Descargar";
+                    }
+                }
+                else
+                {
+                    StatusText.Text = "No se encontraron servidores de video.";
+                    btn.IsEnabled = true;
+                    btn.Content = "📥 Descargar";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = $"Error: {ex.Message}";
+                btn.IsEnabled = true;
+                btn.Content = "📥 Descargar";
             }
         }
     }

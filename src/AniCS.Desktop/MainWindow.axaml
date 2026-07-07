@@ -61,6 +61,24 @@
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left"
                             Click="OnCalendarClicked"/>
+
+                    <Button Content="Descargas" 
+                            Classes="SidebarBtn"
+                            Background="Transparent"
+                            Foreground="{DynamicResource AppSubtextColor}"
+                            FontSize="16"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Click="OnDownloadsClicked"/>
+                            
+                    <Button Content="Historial" 
+                            Classes="SidebarBtn"
+                            Background="Transparent"
+                            Foreground="{DynamicResource AppSubtextColor}"
+                            FontSize="16"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Click="OnHistoryClicked"/>
                 </StackPanel>
             </SplitView.Pane>
 

@@ -116,7 +116,7 @@ namespace AniCS.Terminal
             }
             else
             {
-                var defaultDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Descargas", "AniCS");
+                var defaultDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
                 var dirPrompt = AnsiConsole.Prompt(
                     new TextPrompt<string>($"[bold]Ruta de descarga:[/] [grey](Presiona Enter para usar por defecto)[/]")
                         .DefaultValue(defaultDir)

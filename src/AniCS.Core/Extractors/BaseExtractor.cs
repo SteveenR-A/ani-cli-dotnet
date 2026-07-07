@@ -43,6 +43,15 @@ public abstract class BaseExtractor : IAnimeExtractor
     public abstract Task<string> ResolveVideoUrlAsync(string url);
 
     public virtual Task<string> GetSynopsisAsync(string animeUrl) => Task.FromResult(string.Empty);
+    
+    public virtual async Task<string> GetThumbnailAsync(string animeUrl)
+    {
+        var doc = await GetDocumentAsync(animeUrl);
+        if (doc == null) return string.Empty;
+
+        var ogImage = doc.DocumentNode.SelectSingleNode("//meta[@property='og:image']");
+        return ogImage?.GetAttributeValue("content", "") ?? string.Empty;
+    }
 
     /// <summary>
     /// Downloads a webpage and returns its content. Rotates User-Agent automatically.

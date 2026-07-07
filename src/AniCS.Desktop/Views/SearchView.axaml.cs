@@ -15,6 +15,14 @@ public partial class SearchView : UserControl
         InitializeComponent();
     }
 
+    private void OnSearchBoxKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == Avalonia.Input.Key.Enter)
+        {
+            OnSearchClicked(sender, new RoutedEventArgs());
+        }
+    }
+
     private async void OnSearchClicked(object? sender, RoutedEventArgs e)
     {
         var query = SearchBox.Text;

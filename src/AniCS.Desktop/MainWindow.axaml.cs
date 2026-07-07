@@ -10,6 +10,8 @@ public partial class MainWindow : Window
     private SearchView _searchView = new SearchView();
 
     private CalendarView _calendarView = new CalendarView();
+    private DownloadsView _downloadsView = new DownloadsView();
+    private HistoryView _historyView = new HistoryView();
     private UserControl? _previousView;
 
     public MainWindow()
@@ -58,6 +60,23 @@ public partial class MainWindow : Window
     private void OnCalendarClicked(object? sender, RoutedEventArgs e)
     {
         MainContent.Content = _calendarView;
+        MainSplitView.IsPaneOpen = false;
+    }
+
+    private void OnDownloadsClicked(object? sender, RoutedEventArgs e)
+    {
+        // Reinstantiate to ensure data reload since constructor might only run once,
+        // or just rely on the view's OnLoaded. For simplicity we just use a new instance
+        // or the existing one depending on how we handle state. Since it has OnReloadClicked
+        // and OnLoaded, setting the content is fine, but Avalonia doesn't re-fire Loaded 
+        // if the control is just swapped in some cases, so let's instantiate new.
+        MainContent.Content = new DownloadsView();
+        MainSplitView.IsPaneOpen = false;
+    }
+
+    private void OnHistoryClicked(object? sender, RoutedEventArgs e)
+    {
+        MainContent.Content = new HistoryView();
         MainSplitView.IsPaneOpen = false;
     }
 }

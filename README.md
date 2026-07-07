@@ -108,7 +108,7 @@ AniCS incluye un menú que permite elegir si quieres **Reproducir** o **Descarga
 | **Mega**                 | ❌ No (cifrado JS)       | 🟡 Enlace Directo  |
 | **VOE / Filemoon**       | ❌ Protegido por CF      | ❌ Protegido       |
 
-> Para descargas, el sistema preguntará por una ruta, sugiriendo `~/Descargas/AniCS/` por defecto.
+> Para descargas, el sistema preguntará por una ruta, sugiriendo `~/Downloads/AniCS/` por defecto.
 
 ---
 

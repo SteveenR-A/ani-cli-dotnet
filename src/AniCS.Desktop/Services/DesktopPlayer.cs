@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AniCS.Desktop.Services;
 
@@ -91,6 +92,45 @@ public static class DesktopPlayer
             });
         }
         catch { }
+    }
+
+    public static async System.Threading.Tasks.Task DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null)
+    {
+        try
+        {
+            Directory.CreateDirectory(downloadDir);
+            var safeTitle = string.Join("_", anime.Title.Split(Path.GetInvalidFileNameChars()));
+            var filenamePattern = $"[AniCS] {safeTitle} - Ep {episode.EpisodeNumber}.%(ext)s";
+            var outputPath = Path.Combine(downloadDir, filenamePattern);
+
+            var refererArg = string.IsNullOrEmpty(referer) ? "" : $"--add-header \"Referer:{referer}\" ";
+
+            var p = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "yt-dlp",
+                    Arguments = $"{refererArg}-o \"{outputPath}\" \"{videoUrl}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+            p.Start();
+            await p.WaitForExitAsync();
+
+            if (p.ExitCode == 0)
+            {
+                var actualFileName = Directory.GetFiles(downloadDir, $"[AniCS] {safeTitle} - Ep {episode.EpisodeNumber}.*").FirstOrDefault();
+                if (actualFileName != null)
+                {
+                    DownloadManager.RecordDownload(anime.Title, anime.Url, anime.ThumbnailUrl, episode.EpisodeNumber, episode.Title, actualFileName);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al descargar: {ex.Message}");
+        }
     }
 
     private static bool IsInstalled(string command)
