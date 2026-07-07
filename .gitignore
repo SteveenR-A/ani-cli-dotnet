@@ -482,3 +482,14 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Video files (test downloads)
+*.mp4
+*.mkv
+*.avi
+*.webm
+*.mov
+*.ts
+*.flv
+*.part
+*.ytdl

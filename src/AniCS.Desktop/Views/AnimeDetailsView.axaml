@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:converters="clr-namespace:AniCS.Desktop.Converters"
              xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:views="clr-namespace:AniCS.Desktop.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="AniCS.Desktop.Views.AnimeDetailsView"
              x:DataType="models:AnimeResult">
@@ -37,7 +38,7 @@
                     <TextBlock Name="StatusText" Text="Cargando episodios..." FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="True"/>
                     <ItemsControl Name="EpisodesList">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="models:Episode">
+                            <DataTemplate x:DataType="views:EpisodeViewModel">
                                 <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,5">
                                     <Button Grid.Column="0" Background="{DynamicResource AppSurfaceColor}" 
                                             CornerRadius="4,0,0,4" 
@@ -52,13 +53,20 @@
                                             <TextBlock Text="{Binding Title}" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Grid.Column="1" Background="{DynamicResource AppSurfaceColor}" 
-                                            CornerRadius="0,4,4,0" 
-                                            Padding="15,10" 
-                                            Content="📥 Descargar"
-                                            BorderThickness="1"
-                                            BorderBrush="#333333"
-                                            Click="OnDownloadEpisodeClicked"/>
+                                    <Grid Grid.Column="1" ColumnDefinitions="*, Auto">
+                                        <Button Grid.Column="0" Background="{DynamicResource AppSurfaceColor}" 
+                                                CornerRadius="0,4,4,0" 
+                                                Padding="15,10" 
+                                                Content="{Binding DownloadText}"
+                                                IsEnabled="{Binding CanDownload}"
+                                                BorderThickness="1"
+                                                BorderBrush="#333333"
+                                                Click="OnDownloadEpisodeClicked"/>
+                                        <Button Grid.Column="1" Content="❌" IsVisible="{Binding IsDownloading}"
+                                                Click="OnCancelDownloadClicked"
+                                                Background="#E53935" Foreground="White"
+                                                Margin="5,0,0,0"/>
+                                    </Grid>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

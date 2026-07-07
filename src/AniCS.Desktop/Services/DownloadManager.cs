@@ -1,12 +1,73 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using AniCS.Models;
 
 namespace AniCS.Desktop.Services;
+
+public enum DownloadState
+{
+    Downloading,
+    Completed,
+    Error,
+    Cancelled
+}
+
+public class ActiveDownload : INotifyPropertyChanged
+{
+    public string AnimeTitle { get; set; } = string.Empty;
+    public string AnimeUrl { get; set; } = string.Empty;
+    public string ThumbnailUrl { get; set; } = string.Empty;
+    public string EpisodeNumber { get; set; } = string.Empty;
+    public string EpisodeTitle { get; set; } = string.Empty;
+
+    private double _progress;
+    public double Progress
+    {
+        get => _progress;
+        set { _progress = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); }
+    }
+
+    private DownloadState _state;
+    public DownloadState State
+    {
+        get => _state;
+        set { _state = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); }
+    }
+
+    public string StatusText => State switch
+    {
+        DownloadState.Downloading => $"Descargando... {Progress:F1}%",
+        DownloadState.Completed => "✅ Descargado",
+        DownloadState.Error => "❌ Error",
+        DownloadState.Cancelled => "🚫 Cancelado",
+        _ => State.ToString()
+    };
+
+    public CancellationTokenSource CancellationTokenSource { get; } = new CancellationTokenSource();
+
+    public void Cancel()
+    {
+        if (State == DownloadState.Downloading)
+        {
+            CancellationTokenSource.Cancel();
+            State = DownloadState.Cancelled;
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+}
 
 public class DownloadedEpisode
 {
@@ -24,8 +85,6 @@ public class DownloadedAnime
     public List<DownloadedEpisode> Episodes { get; set; } = new();
 }
 
-
-
 public static class DownloadManager
 {
     private static readonly string ConfigDir = Path.Combine(
@@ -33,6 +92,10 @@ public static class DownloadManager
     private static readonly string DownloadsFile = Path.Combine(ConfigDir, "downloads.json");
 
     private static List<DownloadedAnime> _downloads = new();
+    
+    public static ObservableCollection<ActiveDownload> ActiveDownloads { get; } = new();
+    
+    public static event EventHandler? DownloadsChanged;
 
     static DownloadManager()
     {
@@ -65,9 +128,6 @@ public static class DownloadManager
         catch { }
     }
 
-    /// <summary>
-    /// Checks if files still exist on disk. If user deleted them manually, removes them from the registry.
-    /// </summary>
     private static void CleanupMissingFiles()
     {
         bool changed = false;
@@ -88,6 +148,33 @@ public static class DownloadManager
         
         if (changed)
             Save();
+    }
+    
+    public static ActiveDownload? GetActiveDownload(string animeUrl, string episodeNumber)
+    {
+        return ActiveDownloads.FirstOrDefault(d => d.AnimeUrl == animeUrl && d.EpisodeNumber == episodeNumber);
+    }
+    
+    public static void AddActiveDownload(ActiveDownload download)
+    {
+        // Remove any existing active download for the same episode
+        var existing = GetActiveDownload(download.AnimeUrl, download.EpisodeNumber);
+        if (existing != null)
+        {
+            ActiveDownloads.Remove(existing);
+        }
+        
+        ActiveDownloads.Insert(0, download);
+        DownloadsChanged?.Invoke(null, EventArgs.Empty);
+    }
+    
+    public static void RemoveActiveDownload(ActiveDownload download)
+    {
+        if (ActiveDownloads.Contains(download))
+        {
+            ActiveDownloads.Remove(download);
+            DownloadsChanged?.Invoke(null, EventArgs.Empty);
+        }
     }
 
     public static void RecordDownload(string animeTitle, string animeUrl, string thumbnailUrl, string episodeNumber, string episodeTitle, string filePath)
@@ -122,6 +209,7 @@ public static class DownloadManager
             });
         }
         Save();
+        DownloadsChanged?.Invoke(null, EventArgs.Empty);
     }
 
     public static IReadOnlyList<DownloadedAnime> GetAll()
@@ -140,7 +228,16 @@ public static class DownloadManager
             {
                 if (File.Exists(ep.FilePath))
                 {
-                    try { File.Delete(ep.FilePath); } catch { }
+                    try 
+                    { 
+                        File.Delete(ep.FilePath); 
+                        var dir = Path.GetDirectoryName(ep.FilePath);
+                        if (dir != null && Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+                        {
+                            Directory.Delete(dir);
+                        }
+                    } 
+                    catch { }
                 }
                 anime.Episodes.Remove(ep);
                 if (anime.Episodes.Count == 0)
@@ -148,6 +245,7 @@ public static class DownloadManager
                     _downloads.Remove(anime);
                 }
                 Save();
+                DownloadsChanged?.Invoke(null, EventArgs.Empty);
             }
         }
     }
@@ -157,15 +255,22 @@ public static class DownloadManager
         var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
         if (anime != null)
         {
+            string? dir = null;
             foreach (var ep in anime.Episodes)
             {
                 if (File.Exists(ep.FilePath))
                 {
+                    dir ??= Path.GetDirectoryName(ep.FilePath);
                     try { File.Delete(ep.FilePath); } catch { }
                 }
             }
+            if (dir != null && Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+            {
+                try { Directory.Delete(dir); } catch { }
+            }
             _downloads.Remove(anime);
             Save();
+            DownloadsChanged?.Invoke(null, EventArgs.Empty);
         }
     }
 

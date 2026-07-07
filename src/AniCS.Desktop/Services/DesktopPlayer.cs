@@ -8,6 +8,30 @@ namespace AniCS.Desktop.Services;
 
 public static class DesktopPlayer
 {
+    private static readonly List<Process> _activeProcesses = new();
+
+    static DesktopPlayer()
+    {
+        AppDomain.CurrentDomain.ProcessExit += (s, e) => KillAll();
+        Console.CancelKeyPress += (s, e) => KillAll();
+    }
+
+    private static void KillAll()
+    {
+        lock (_activeProcesses)
+        {
+            foreach (var p in _activeProcesses.ToList())
+            {
+                try
+                {
+                    if (!p.HasExited) p.Kill(true);
+                }
+                catch { }
+            }
+            _activeProcesses.Clear();
+        }
+    }
+
     public static void Play(string url, string title, string? referer)
     {
         var exe = IsInstalled("mpv") ? "mpv" : IsInstalled("mpvnet") ? "mpvnet" : null;
@@ -44,7 +68,7 @@ public static class DesktopPlayer
             string origin = isJkAnime ? "https://jkanime.net" : "https://www.mediafire.com";
             // For mpv we can pass multiple headers joined by commas
             string headers = $"Referer: {referer},Origin: {origin},Accept-Language: es-419,es;q=0.9,en;q=0.8,Accept: */*,Connection: keep-alive,Sec-Fetch-Dest: video,Sec-Fetch-Mode: no-cors,Sec-Fetch-Site: cross-site";
-            
+
             // Remove previous Referer and add the combined one
             args.RemoveAll(a => a.StartsWith("--http-header-fields="));
             args.Add($"--http-header-fields={headers}");
@@ -72,7 +96,14 @@ public static class DesktopPlayer
                 startInfo.ArgumentList.Add(arg);
             }
 
-            Process.Start(startInfo);
+            var p = new Process { StartInfo = startInfo };
+            p.EnableRaisingEvents = true;
+            p.Exited += (s, e) => 
+            {
+                lock (_activeProcesses) _activeProcesses.Remove(p);
+            };
+            lock (_activeProcesses) _activeProcesses.Add(p);
+            p.Start();
         }
         catch (Exception ex)
         {
@@ -94,43 +125,112 @@ public static class DesktopPlayer
         catch { }
     }
 
-    public static async System.Threading.Tasks.Task DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null)
+    public static async System.Threading.Tasks.Task<bool> DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null, Action<double>? onProgress = null, System.Threading.CancellationToken cancellationToken = default)
     {
+        string animeDir = "";
+        string episodeNumStr = "";
+        Process? p = null;
         try
         {
-            Directory.CreateDirectory(downloadDir);
             var safeTitle = string.Join("_", anime.Title.Split(Path.GetInvalidFileNameChars()));
-            var filenamePattern = $"[AniCS] {safeTitle} - Ep {episode.EpisodeNumber}.%(ext)s";
-            var outputPath = Path.Combine(downloadDir, filenamePattern);
+            animeDir = Path.Combine(downloadDir, safeTitle);
+            Directory.CreateDirectory(animeDir);
+            
+            episodeNumStr = string.IsNullOrWhiteSpace(episode.EpisodeNumber) ? "Desconocido" : episode.EpisodeNumber;
+            var filenamePattern = $"Episodio {episodeNumStr}.%(ext)s";
+            var outputPath = Path.Combine(animeDir, filenamePattern);
 
             var refererArg = string.IsNullOrEmpty(referer) ? "" : $"--add-header \"Referer:{referer}\" ";
 
-            var p = new Process
+            p = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "yt-dlp",
-                    Arguments = $"{refererArg}-o \"{outputPath}\" \"{videoUrl}\"",
+                    Arguments = $"--newline --concurrent-fragments 1 --hls-prefer-native {refererArg}-o \"{outputPath}\" \"{videoUrl}\"",
                     UseShellExecute = false,
-                    CreateNoWindow = true
-                }
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true, // Prevent stderr deadlock
+                    StandardOutputEncoding = System.Text.Encoding.UTF8
+                },
+                EnableRaisingEvents = true
             };
-            p.Start();
-            await p.WaitForExitAsync();
-
-            if (p.ExitCode == 0)
+            
+            p.Exited += (s, e) => 
             {
-                var actualFileName = Directory.GetFiles(downloadDir, $"[AniCS] {safeTitle} - Ep {episode.EpisodeNumber}.*").FirstOrDefault();
+                lock (_activeProcesses) _activeProcesses.Remove(p);
+            };
+            lock (_activeProcesses) _activeProcesses.Add(p);
+            p.Start();
+            _ = p.StandardError.ReadToEndAsync(); // Drain stderr so it doesn't block
+            
+            using var reg = cancellationToken.Register(() => 
+            {
+                try { if (!p.HasExited) p.Kill(true); } catch { }
+            });
+
+            var regex = new System.Text.RegularExpressions.Regex(@"\[download\]\s+(\d+\.\d+)%");
+
+            while (true)
+            {
+                var line = await p.StandardOutput.ReadLineAsync();
+                if (line == null) break;
+                if (onProgress != null)
+                {
+                    var match = regex.Match(line);
+                    if (match.Success && double.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double progress))
+                    {
+                        onProgress(progress);
+                    }
+                }
+            }
+
+            await p.WaitForExitAsync(cancellationToken);
+
+            if (p.ExitCode == 0 && !cancellationToken.IsCancellationRequested)
+            {
+                var actualFileName = Directory.GetFiles(animeDir, $"Episodio {episodeNumStr}.*").FirstOrDefault();
                 if (actualFileName != null)
                 {
                     DownloadManager.RecordDownload(anime.Title, anime.Url, anime.ThumbnailUrl, episode.EpisodeNumber, episode.Title, actualFileName);
+                    return true;
                 }
             }
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine("Descarga cancelada.");
+            try { p?.Kill(true); p?.WaitForExit(2000); } catch { }
+            CleanupPartialFiles(animeDir, episodeNumStr);
+            return false;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error al descargar: {ex.Message}");
+            return false;
         }
+    }
+
+    private static void CleanupPartialFiles(string dir, string epNumStr)
+    {
+        try
+        {
+            if (Directory.Exists(dir))
+            {
+                var files = Directory.GetFiles(dir, $"Episodio {epNumStr}.*");
+                foreach (var f in files)
+                {
+                    try { File.Delete(f); } catch { }
+                }
+                if (!Directory.EnumerateFileSystemEntries(dir).Any())
+                {
+                    Directory.Delete(dir);
+                }
+            }
+        }
+        catch { }
     }
 
     private static bool IsInstalled(string command)
