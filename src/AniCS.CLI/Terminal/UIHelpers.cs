@@ -24,6 +24,7 @@ namespace AniCS.Terminal
             table.AddRow("[bold]scoop[/]",              "[grey]sc[/]",  "Cartelera semanal de estrenos");
             table.AddRow("[bold]history[/]",            "[grey]h[/]",   "Ver historial de animes vistos");
             table.AddRow("[bold]fuente[/]",             "[grey]f[/]",   "Cambiar la fuente activa");
+            table.AddRow("[bold]config[/]",             "[grey]c[/]",   "Ver la configuración actual");
             table.AddRow("[bold]clear[/]",              "[grey]cls[/]", "Limpiar pantalla");
             table.AddRow("[bold]clearcache[/]",         "[grey]cc[/]",  "Limpiar caché de RAM (forzar actualización)");
             table.AddRow("[bold]exit[/]",               "[grey]q[/]",   "Salir de la aplicación");

@@ -17,8 +17,8 @@
         <FluentTheme />
         <Style Selector="Window">
             <Setter Property="FontFamily" Value="{StaticResource JetBrainsFont}"/>
-            <Setter Property="Background" Value="{StaticResource AppBackgroundColor}"/>
-            <Setter Property="Foreground" Value="{StaticResource AppTextColor}"/>
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextColor}"/>
         </Style>
     </Application.Styles>
 </Application>

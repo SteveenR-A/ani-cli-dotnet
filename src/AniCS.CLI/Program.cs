@@ -26,7 +26,8 @@ public class Program
             new JKAnimeExtractor(http),
             new AnimeAV1Extractor(http),
         ];
-        var active = extractors[0];
+        var defaultConfig = ConfigManager.Current;
+        var active = extractors.FirstOrDefault(e => e.Domain.Contains(defaultConfig.DefaultExtractor, StringComparison.OrdinalIgnoreCase)) ?? extractors[0];
         var history = new WatchHistory();
 
         var state = new AppState(http, extractors, active, history);
@@ -69,7 +70,7 @@ public class Program
         }
         finally
         {
-            DataCache.ClearCacheDirectory();
+            DataCache.CleanupImageCache(ConfigManager.Current.MaxImageCacheCount);
         }
     }
 }

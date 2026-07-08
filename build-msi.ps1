@@ -20,7 +20,7 @@ try {
 
 Write-Host "`n3. Verificando extensión WixToolset.UI.wixext..." -ForegroundColor Yellow
 try {
-    wix extension add -g WixToolset.UI.wixext > $null 2>&1
+    wix extension add -g WixToolset.UI.wixext/4.0.5 > $null 2>&1
 } catch { }
 
 Write-Host "`n4. Construyendo el archivo .msi..." -ForegroundColor Yellow

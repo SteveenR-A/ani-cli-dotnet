@@ -15,6 +15,7 @@ namespace AniCS.Commands
         private readonly HistoryCommand _historyCommand;
         private readonly SourceCommand _sourceCommand;
         private readonly PremieresCommand _premieresCommand;
+        private readonly ConfigCommand _configCommand;
 
         public CommandRouter(AppState state)
         {
@@ -27,6 +28,7 @@ namespace AniCS.Commands
             _historyCommand = new HistoryCommand(state, _playback);
             _sourceCommand = new SourceCommand(state);
             _premieresCommand = new PremieresCommand(state, _playback);
+            _configCommand = new ConfigCommand();
         }
 
         public async Task<bool> RouteAsync(string input)
@@ -83,6 +85,11 @@ namespace AniCS.Commands
                 case "cc":
                     DataCache.ClearRamCache();
                     AnsiConsole.MarkupLine("[green]Caché de memoria RAM limpiado con éxito.[/]");
+                    break;
+
+                case "config":
+                case "c":
+                    _configCommand.Execute();
                     break;
 
                 case "clear":

@@ -30,7 +30,10 @@ public static class PlayerManager
     /// </summary>
     public static void Play(string url, string? title = null, string? referer = null, PlayerType player = PlayerType.Auto)
     {
-        var detected = player == PlayerType.Auto ? Detect() : player;
+        var configPlayer = ConfigManager.Current.DefaultPlayer.ToLower();
+        var detected = player == PlayerType.Auto ? 
+            (configPlayer == "mpv" ? PlayerType.Mpv : configPlayer == "vlc" ? PlayerType.Vlc : Detect()) 
+            : player;
         var (exe, args) = BuildCommand(detected, url, title, referer);
 
         try
@@ -67,7 +70,7 @@ public static class PlayerManager
 
         if (player == PlayerType.Mpv)
         {
-            var exe = IsInstalled("mpv") ? "mpv" : "mpvnet";
+            var exe = !string.IsNullOrEmpty(ConfigManager.Current.CustomPlayerExePath) ? ConfigManager.Current.CustomPlayerExePath : (IsInstalled("mpv") ? "mpv" : "mpvnet");
             args.Add("--force-window=yes");
             args.Add("--cache=yes");
             args.Add("--cache-pause-wait=5");
@@ -108,7 +111,7 @@ public static class PlayerManager
                 args.Add("--demuxer-max-back-bytes=200M");
             }
 
-            args.Add("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
+            args.Add($":http-user-agent={ConfigManager.Current.RandomUserAgent}");
             
             if (!string.IsNullOrEmpty(title))
             {
@@ -125,8 +128,9 @@ public static class PlayerManager
         }
         else if (player == PlayerType.Vlc)
         {
+            var exe = !string.IsNullOrEmpty(ConfigManager.Current.CustomPlayerExePath) ? ConfigManager.Current.CustomPlayerExePath : "vlc";
             args.Add(url);
-            return ("vlc", args);
+            return (exe, args);
         }
         else
         {

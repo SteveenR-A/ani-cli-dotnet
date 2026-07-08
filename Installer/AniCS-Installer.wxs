@@ -1,20 +1,15 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
-  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.0.0.0" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" Scope="perMachine">
-    <MajorUpgrade DowngradeErrorMessage="Ya tienes instalada una versión más reciente de AniCS." />
-    
+  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.0.1.0" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="Ya tienes instalada una versiÃƒÂ³n mÃƒÂ¡s reciente de AniCS." />
     <MediaTemplate EmbedCab="yes" />
-
     <Icon Id="AppIcon" SourceFile="src\AniCS.Desktop\Assets\Incono\favicon.ico" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
-
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
-
     <Feature Id="Main">
       <ComponentGroupRef Id="AppComponents" />
       <ComponentGroupRef Id="ShortcutsComponents" />
     </Feature>
   </Package>
-
   <Fragment>
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="AniCS" />
@@ -24,10 +19,9 @@
     </StandardDirectory>
     <StandardDirectory Id="DesktopFolder" />
   </Fragment>
-
   <Fragment>
     <ComponentGroup Id="AppComponents" Directory="INSTALLFOLDER">
-            <Component Id="cmpcf4a7e3c06c946918c64136e42a7de06" Guid="*">
+      <Component Id="cmpcf4a7e3c06c946918c64136e42a7de06" Guid="*">
         <File Id="filecf4a7e3c06c946918c64136e42a7de06" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\AniCS.Core.dll" KeyPath="yes" />
       </Component>
       <Component Id="cmp899faf6e19644d8db7d869e877b178fe" Guid="*">
@@ -120,32 +114,8 @@
       <Component Id="cmpb7c74299efe247729f2cbef631e37e86" Guid="*">
         <File Id="fileb7c74299efe247729f2cbef631e37e86" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\av_libglesv2.dll" KeyPath="yes" />
       </Component>
-      <Component Id="cmp00dbc40cb09a4d89b6f0da846ead3ab9" Guid="*">
-        <File Id="file00dbc40cb09a4d89b6f0da846ead3ab9" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\clretwrc.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp1b2b8407d5d14128b0b35624694a6999" Guid="*">
-        <File Id="file1b2b8407d5d14128b0b35624694a6999" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\clrgc.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpa2173f7f78c8485c9e8b88edc8233bf6" Guid="*">
-        <File Id="filea2173f7f78c8485c9e8b88edc8233bf6" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\clrgcexp.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp697c2f706a9d4048a5282f2e1bcf9116" Guid="*">
-        <File Id="file697c2f706a9d4048a5282f2e1bcf9116" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\clrjit.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpc03b4f02f5734c98954705b1efa4bd06" Guid="*">
-        <File Id="filec03b4f02f5734c98954705b1efa4bd06" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\coreclr.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp0fc4bbfae4814e39b1c309f4c6e39ae8" Guid="*">
-        <File Id="file0fc4bbfae4814e39b1c309f4c6e39ae8" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\createdump.exe" KeyPath="yes" />
-      </Component>
       <Component Id="cmp3ff18c03bfc546a68c521ef03893e3c3" Guid="*">
         <File Id="file3ff18c03bfc546a68c521ef03893e3c3" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\HarfBuzzSharp.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp96be8c718dbf4c3789aafec6a933a862" Guid="*">
-        <File Id="file96be8c718dbf4c3789aafec6a933a862" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\hostfxr.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpbcdbdbe3251e4355961fd499f29614c1" Guid="*">
-        <File Id="filebcdbdbe3251e4355961fd499f29614c1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\hostpolicy.dll" KeyPath="yes" />
       </Component>
       <Component Id="cmp7ffd9c71655b4d6297e699552a3256ae" Guid="*">
         <File Id="file7ffd9c71655b4d6297e699552a3256ae" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\HtmlAgilityPack.dll" KeyPath="yes" />
@@ -165,597 +135,39 @@
       <Component Id="cmpbe1eee0e2d6842afae6edb68093458e3" Guid="*">
         <File Id="filebe1eee0e2d6842afae6edb68093458e3" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\MicroCom.Runtime.dll" KeyPath="yes" />
       </Component>
-      <Component Id="cmp6dc0ff433008469c9bf2904d9bb8409e" Guid="*">
-        <File Id="file6dc0ff433008469c9bf2904d9bb8409e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.CSharp.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp47dd8e686da84452a53aff9575c2a7f2" Guid="*">
-        <File Id="file47dd8e686da84452a53aff9575c2a7f2" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.DiaSymReader.Native.amd64.dll" KeyPath="yes" />
-      </Component>
       <Component Id="cmp4ae7b1e56abb4c879ea6d4ec4d94551f" Guid="*">
         <File Id="file4ae7b1e56abb4c879ea6d4ec4d94551f" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.Extensions.Primitives.dll" KeyPath="yes" />
       </Component>
       <Component Id="cmp90a30b8366a1454b8e04fc43d48a1cfa" Guid="*">
         <File Id="file90a30b8366a1454b8e04fc43d48a1cfa" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.Net.Http.Headers.dll" KeyPath="yes" />
       </Component>
-      <Component Id="cmpb3578438824344118b971d5e2f2cfd07" Guid="*">
-        <File Id="fileb3578438824344118b971d5e2f2cfd07" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.VisualBasic.Core.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp851092d91bec4dcb888ff64786c78b12" Guid="*">
-        <File Id="file851092d91bec4dcb888ff64786c78b12" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.VisualBasic.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp8a3e86da02f145d38eea67cf530cd296" Guid="*">
-        <File Id="file8a3e86da02f145d38eea67cf530cd296" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.Win32.Primitives.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp53dd737c72784e3f93dd78d307e5befe" Guid="*">
-        <File Id="file53dd737c72784e3f93dd78d307e5befe" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.Win32.Registry.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4c149956cb55477b977da86631ac9dd6" Guid="*">
-        <File Id="file4c149956cb55477b977da86631ac9dd6" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\mscordaccore.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe9fc6cd4657f410d9b7a27269da794b9" Guid="*">
-        <File Id="filee9fc6cd4657f410d9b7a27269da794b9" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\mscordaccore_amd64_amd64_10.0.926.27113.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp3f1d26ddcec8473592926e3b1c225aeb" Guid="*">
-        <File Id="file3f1d26ddcec8473592926e3b1c225aeb" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\mscordbi.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp5315695592fe41ac9964b7ef4bfdf3b8" Guid="*">
-        <File Id="file5315695592fe41ac9964b7ef4bfdf3b8" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\mscorlib.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp74d7abef5381420a86b5332096fc989e" Guid="*">
-        <File Id="file74d7abef5381420a86b5332096fc989e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\mscorrc.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp576547f7e7344949a0b60d20a25ac592" Guid="*">
-        <File Id="file576547f7e7344949a0b60d20a25ac592" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\msquic.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp8bcdb5a7225a4b8894e3e7a86e1ea6ee" Guid="*">
-        <File Id="file8bcdb5a7225a4b8894e3e7a86e1ea6ee" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\netstandard.dll" KeyPath="yes" />
-      </Component>
       <Component Id="cmpac6f233f51864c3c9629742a18928208" Guid="*">
         <File Id="fileac6f233f51864c3c9629742a18928208" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\SkiaSharp.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp29e4008d529d407e97e5eb38668a08af" Guid="*">
-        <File Id="file29e4008d529d407e97e5eb38668a08af" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.AppContext.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe9b00fcf5f0d43edbd5a06ef1d62f0c1" Guid="*">
-        <File Id="filee9b00fcf5f0d43edbd5a06ef1d62f0c1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Buffers.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpc097bcd525464ab6a33042ed381526bf" Guid="*">
-        <File Id="filec097bcd525464ab6a33042ed381526bf" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Collections.Concurrent.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp5ebafafaf6034b4aa612646f1d04ee8a" Guid="*">
-        <File Id="file5ebafafaf6034b4aa612646f1d04ee8a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Collections.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4fc54e92d80046a09f7098d26c85a66d" Guid="*">
-        <File Id="file4fc54e92d80046a09f7098d26c85a66d" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Collections.Immutable.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp0f68cca9781e49e8bec9deeb4127d9bf" Guid="*">
-        <File Id="file0f68cca9781e49e8bec9deeb4127d9bf" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Collections.NonGeneric.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpff4a84a604f145d7ab886d79719dec61" Guid="*">
-        <File Id="fileff4a84a604f145d7ab886d79719dec61" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Collections.Specialized.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp50ee557d66ba4a388bf1289c0be00895" Guid="*">
-        <File Id="file50ee557d66ba4a388bf1289c0be00895" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.ComponentModel.Annotations.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp35ce217c79ed4e549fb659381740edf7" Guid="*">
-        <File Id="file35ce217c79ed4e549fb659381740edf7" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.ComponentModel.DataAnnotations.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf706b8261a9a470bb54c3bf988ea4085" Guid="*">
-        <File Id="filef706b8261a9a470bb54c3bf988ea4085" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.ComponentModel.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp113e868e72b24919b0b8309ede213ebe" Guid="*">
-        <File Id="file113e868e72b24919b0b8309ede213ebe" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.ComponentModel.EventBasedAsync.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp7476242f2f6a441fa0d82fa75bed0f9c" Guid="*">
-        <File Id="file7476242f2f6a441fa0d82fa75bed0f9c" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.ComponentModel.Primitives.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp2c594cb7f0e7410fb07d5ee3bfe94a32" Guid="*">
-        <File Id="file2c594cb7f0e7410fb07d5ee3bfe94a32" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.ComponentModel.TypeConverter.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe44930c96f5e4d40a1c58a755b8c44cc" Guid="*">
-        <File Id="filee44930c96f5e4d40a1c58a755b8c44cc" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Configuration.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp8a05a184abbe4683a3ba4fe90cb7ab6f" Guid="*">
-        <File Id="file8a05a184abbe4683a3ba4fe90cb7ab6f" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Console.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp60a6b848479c48878cd227e55d692c1a" Guid="*">
-        <File Id="file60a6b848479c48878cd227e55d692c1a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Core.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp9990af581b6246e5a2e3830b92b6b780" Guid="*">
-        <File Id="file9990af581b6246e5a2e3830b92b6b780" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Data.Common.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4f52969b0fd24c16839fd8783312ea3a" Guid="*">
-        <File Id="file4f52969b0fd24c16839fd8783312ea3a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Data.DataSetExtensions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpb70aef5a5beb49f186d7910be0f09ff2" Guid="*">
-        <File Id="fileb70aef5a5beb49f186d7910be0f09ff2" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Data.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf979d706ca674892a63b48ce4ba39b97" Guid="*">
-        <File Id="filef979d706ca674892a63b48ce4ba39b97" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Diagnostics.Contracts.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp54d3b29b12614009bdd06599fa5d2b69" Guid="*">
-        <File Id="file54d3b29b12614009bdd06599fa5d2b69" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Diagnostics.Debug.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp69aa9a69547148cdb9edcf0d3b06ad1c" Guid="*">
-        <File Id="file69aa9a69547148cdb9edcf0d3b06ad1c" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Diagnostics.DiagnosticSource.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp6554327c5977433bbaa9a7b00fcc922a" Guid="*">
-        <File Id="file6554327c5977433bbaa9a7b00fcc922a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Diagnostics.FileVersionInfo.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp67581667aa564f90b1917eddccea9371" Guid="*">
-        <File Id="file67581667aa564f90b1917eddccea9371" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Diagnostics.Process.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp486bb7ae132549c7a98d9ea54b3baa6a" Guid="*">
-        <File Id="file486bb7ae132549c7a98d9ea54b3baa6a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Diagnostics.StackTrace.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp150a0a520536418b85c947774b5337cc" Guid="*">
-        <File Id="file150a0a520536418b85c947774b5337cc" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Diagnostics.TextWriterTraceListener.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpcca4d74b23814f09a029f8af015cc1f4" Guid="*">
-        <File Id="filecca4d74b23814f09a029f8af015cc1f4" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Diagnostics.Tools.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp6523d5d8698c413786edd1d7b3ddec9f" Guid="*">
-        <File Id="file6523d5d8698c413786edd1d7b3ddec9f" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Diagnostics.TraceSource.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp6d1893009fa44fca939503243a4cdfc5" Guid="*">
-        <File Id="file6d1893009fa44fca939503243a4cdfc5" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Diagnostics.Tracing.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpbcec93e77838402488c60a62d424c756" Guid="*">
-        <File Id="filebcec93e77838402488c60a62d424c756" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpcb1c4b66f3764ffd8c49fb2c50c762ae" Guid="*">
-        <File Id="filecb1c4b66f3764ffd8c49fb2c50c762ae" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Drawing.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp79e3f2b19bf7428b91168249a3683cf4" Guid="*">
-        <File Id="file79e3f2b19bf7428b91168249a3683cf4" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Drawing.Primitives.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp00e32ce22d534c78a4ab5f5889ff0c68" Guid="*">
-        <File Id="file00e32ce22d534c78a4ab5f5889ff0c68" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Dynamic.Runtime.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp36c998f3b4964978b5df940373b452e1" Guid="*">
-        <File Id="file36c998f3b4964978b5df940373b452e1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Formats.Asn1.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpeb48f8f6f1f4432fa13bff525078c89b" Guid="*">
-        <File Id="fileeb48f8f6f1f4432fa13bff525078c89b" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Formats.Tar.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp1101dbba22ce42b0b746b838c71bdeb1" Guid="*">
-        <File Id="file1101dbba22ce42b0b746b838c71bdeb1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Globalization.Calendars.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf6ac17951025448381a40857d0652884" Guid="*">
-        <File Id="filef6ac17951025448381a40857d0652884" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Globalization.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp77130f5a68d84dd5925a61263b52ef12" Guid="*">
-        <File Id="file77130f5a68d84dd5925a61263b52ef12" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Globalization.Extensions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp1f854b4dcb894d69ab80e96c2a717ed7" Guid="*">
-        <File Id="file1f854b4dcb894d69ab80e96c2a717ed7" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.Compression.Brotli.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp9b8c62f6da9e43a0a9b47dafb3edb582" Guid="*">
-        <File Id="file9b8c62f6da9e43a0a9b47dafb3edb582" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.Compression.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp28d403485a474723acdbce0db5d8ac5f" Guid="*">
-        <File Id="file28d403485a474723acdbce0db5d8ac5f" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.Compression.FileSystem.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp014fae6244c44f45a2e41fc48f8dfd38" Guid="*">
-        <File Id="file014fae6244c44f45a2e41fc48f8dfd38" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.Compression.Native.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe266321984694f95bf7b2e127c27b8d9" Guid="*">
-        <File Id="filee266321984694f95bf7b2e127c27b8d9" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.Compression.ZipFile.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf67fff63856c498eb6e88dd81908d6e5" Guid="*">
-        <File Id="filef67fff63856c498eb6e88dd81908d6e5" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpd0320bca619a4657b041d676dfd1617a" Guid="*">
-        <File Id="filed0320bca619a4657b041d676dfd1617a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.FileSystem.AccessControl.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp75f8e947038c436da1b5c2f4d83074ec" Guid="*">
-        <File Id="file75f8e947038c436da1b5c2f4d83074ec" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.FileSystem.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpfafdf7654b24497bb9a8078d22b5aa4e" Guid="*">
-        <File Id="filefafdf7654b24497bb9a8078d22b5aa4e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.FileSystem.DriveInfo.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp54709e7b255945f9ab5b4367f9fc45af" Guid="*">
-        <File Id="file54709e7b255945f9ab5b4367f9fc45af" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.FileSystem.Primitives.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp3d2598b763274fe498ded9320f11beb2" Guid="*">
-        <File Id="file3d2598b763274fe498ded9320f11beb2" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.FileSystem.Watcher.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp414dbfbe1532477eabe7fd40d46710b7" Guid="*">
-        <File Id="file414dbfbe1532477eabe7fd40d46710b7" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.IsolatedStorage.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp492f472a3b82444da55a13a050825a78" Guid="*">
-        <File Id="file492f472a3b82444da55a13a050825a78" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.MemoryMappedFiles.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp6219cea02cd2442dad9190ded18d33b4" Guid="*">
-        <File Id="file6219cea02cd2442dad9190ded18d33b4" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.Pipelines.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp20f8280ea6de40b288abd15b9e169cdb" Guid="*">
-        <File Id="file20f8280ea6de40b288abd15b9e169cdb" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.Pipes.AccessControl.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe41edeb7b93f441f9896987f05a0dd4b" Guid="*">
-        <File Id="filee41edeb7b93f441f9896987f05a0dd4b" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.Pipes.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpde9c33f7cafc464ebb39110fd6c72e56" Guid="*">
-        <File Id="filede9c33f7cafc464ebb39110fd6c72e56" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.IO.UnmanagedMemoryStream.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpdd06b08f6dd94283ac3dd432d87bd3ea" Guid="*">
-        <File Id="filedd06b08f6dd94283ac3dd432d87bd3ea" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Linq.AsyncEnumerable.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp59cbe932fe6d404d837d042729d4ccad" Guid="*">
-        <File Id="file59cbe932fe6d404d837d042729d4ccad" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Linq.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe48ff832115b4a15bf53d091f63fd666" Guid="*">
-        <File Id="filee48ff832115b4a15bf53d091f63fd666" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Linq.Expressions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4a40460251884b04b03c0a2ef33af952" Guid="*">
-        <File Id="file4a40460251884b04b03c0a2ef33af952" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Linq.Parallel.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp25bcdfca83334aceb2b43075efa7f33e" Guid="*">
-        <File Id="file25bcdfca83334aceb2b43075efa7f33e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Linq.Queryable.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpdd618d97b87c40559d8b265727d5e38b" Guid="*">
-        <File Id="filedd618d97b87c40559d8b265727d5e38b" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Memory.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpc4f4f0f63a5e4f83a77247fe1057bacd" Guid="*">
-        <File Id="filec4f4f0f63a5e4f83a77247fe1057bacd" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp36882bdc46274dc59ae2b0ed38d700c0" Guid="*">
-        <File Id="file36882bdc46274dc59ae2b0ed38d700c0" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.Http.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp1f8c13a510cd4ee59dea0e03ce751aff" Guid="*">
-        <File Id="file1f8c13a510cd4ee59dea0e03ce751aff" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.Http.Json.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4f139b1888414b1d989836044bfc687e" Guid="*">
-        <File Id="file4f139b1888414b1d989836044bfc687e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.HttpListener.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpaddb75a66f774bff8d47245c5f6b18cc" Guid="*">
-        <File Id="fileaddb75a66f774bff8d47245c5f6b18cc" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.Mail.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp1021ed3c1aac4743bcfe397b6c08d601" Guid="*">
-        <File Id="file1021ed3c1aac4743bcfe397b6c08d601" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.NameResolution.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp00fed0b7390343cd8a2daf6a6b1ccd0a" Guid="*">
-        <File Id="file00fed0b7390343cd8a2daf6a6b1ccd0a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.NetworkInformation.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp12b0867ae02440e085373a8cccd10437" Guid="*">
-        <File Id="file12b0867ae02440e085373a8cccd10437" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.Ping.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp6c9b73247f524378a6995f6e24954d07" Guid="*">
-        <File Id="file6c9b73247f524378a6995f6e24954d07" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.Primitives.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp854a31782d4946ce848f51c3d401d0ff" Guid="*">
-        <File Id="file854a31782d4946ce848f51c3d401d0ff" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.Quic.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpdd582c8179ef4330a83e295f4de2e7bc" Guid="*">
-        <File Id="filedd582c8179ef4330a83e295f4de2e7bc" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.Requests.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpc631c9ed0f504c5d91cf481224459c18" Guid="*">
-        <File Id="filec631c9ed0f504c5d91cf481224459c18" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.Security.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp6cca2fbed90740d39ec81d8c51ca0e9b" Guid="*">
-        <File Id="file6cca2fbed90740d39ec81d8c51ca0e9b" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.ServerSentEvents.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp67f2bca3f2164cf686e6d74e8023376a" Guid="*">
-        <File Id="file67f2bca3f2164cf686e6d74e8023376a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.ServicePoint.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe56c3da706f04f87bce0dfd539bb85ed" Guid="*">
-        <File Id="filee56c3da706f04f87bce0dfd539bb85ed" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.Sockets.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpaa66fbf9054648218697a64a6698184e" Guid="*">
-        <File Id="fileaa66fbf9054648218697a64a6698184e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.WebClient.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe1c2e45199f2475ebf6fdbb6c89fcad8" Guid="*">
-        <File Id="filee1c2e45199f2475ebf6fdbb6c89fcad8" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.WebHeaderCollection.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4578883d328d445183c95a320b6631cc" Guid="*">
-        <File Id="file4578883d328d445183c95a320b6631cc" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.WebProxy.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf874eaf751f8452fad184d6a735add89" Guid="*">
-        <File Id="filef874eaf751f8452fad184d6a735add89" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.WebSockets.Client.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpcfdfe80fe31d4330bb017cf5afdc5fa2" Guid="*">
-        <File Id="filecfdfe80fe31d4330bb017cf5afdc5fa2" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Net.WebSockets.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpd1cdbbb38fd74b39a64dcb6164429c37" Guid="*">
-        <File Id="filed1cdbbb38fd74b39a64dcb6164429c37" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Numerics.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp17078c55e00e4167b46825ac40b23390" Guid="*">
-        <File Id="file17078c55e00e4167b46825ac40b23390" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Numerics.Vectors.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpa7199d05788544de810b559c1b4b1aa4" Guid="*">
-        <File Id="filea7199d05788544de810b559c1b4b1aa4" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.ObjectModel.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp1df2edf2edd0436db12829c21b6a603f" Guid="*">
-        <File Id="file1df2edf2edd0436db12829c21b6a603f" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Private.CoreLib.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp5c73a6d0aa7e4b47980135eaf26dab38" Guid="*">
-        <File Id="file5c73a6d0aa7e4b47980135eaf26dab38" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Private.DataContractSerialization.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp50d5c4f39aee4d7a83f6c1d7f8ee5aa1" Guid="*">
-        <File Id="file50d5c4f39aee4d7a83f6c1d7f8ee5aa1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Private.Uri.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp976d3ee190844e8fba831f08fe223d57" Guid="*">
-        <File Id="file976d3ee190844e8fba831f08fe223d57" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Private.Xml.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpca7258e98f09470d9e188d1c2f947a76" Guid="*">
-        <File Id="fileca7258e98f09470d9e188d1c2f947a76" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Private.Xml.Linq.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp686db35731a2464ca73e8aa2633395e1" Guid="*">
-        <File Id="file686db35731a2464ca73e8aa2633395e1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Reflection.DispatchProxy.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp6318bb703d604100b1bc76e2b9764add" Guid="*">
-        <File Id="file6318bb703d604100b1bc76e2b9764add" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Reflection.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpb0e593cb0487403cb2cb5b92369b2d2e" Guid="*">
-        <File Id="fileb0e593cb0487403cb2cb5b92369b2d2e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Reflection.Emit.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp5d9fcd130ef04355bce74ecb13751d1b" Guid="*">
-        <File Id="file5d9fcd130ef04355bce74ecb13751d1b" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Reflection.Emit.ILGeneration.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpff8a082378004fbfa391af8dd874b201" Guid="*">
-        <File Id="fileff8a082378004fbfa391af8dd874b201" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Reflection.Emit.Lightweight.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp2e8c150fabd9444db5defa991e0bf87a" Guid="*">
-        <File Id="file2e8c150fabd9444db5defa991e0bf87a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Reflection.Extensions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4d5f14ca18904aab98edf40ef419a0ed" Guid="*">
-        <File Id="file4d5f14ca18904aab98edf40ef419a0ed" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Reflection.Metadata.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp7b4c888a610f48a788e7347534c9cb86" Guid="*">
-        <File Id="file7b4c888a610f48a788e7347534c9cb86" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Reflection.Primitives.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpab076d808d0d442b9c5d27d5775caef1" Guid="*">
-        <File Id="fileab076d808d0d442b9c5d27d5775caef1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Reflection.TypeExtensions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp1d7e42f9053a480899698dd5bed9a537" Guid="*">
-        <File Id="file1d7e42f9053a480899698dd5bed9a537" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Resources.Reader.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp2ffc71b90caa4155a6de5070e61600a5" Guid="*">
-        <File Id="file2ffc71b90caa4155a6de5070e61600a5" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Resources.ResourceManager.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpdec7fa9955564efc940171f67f3ec125" Guid="*">
-        <File Id="filedec7fa9955564efc940171f67f3ec125" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Resources.Writer.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp6ff8bc84a7b44fd48e3424d0ffea7a59" Guid="*">
-        <File Id="file6ff8bc84a7b44fd48e3424d0ffea7a59" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.CompilerServices.Unsafe.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp579cb1a3cb2f4205b0a3b10b18812924" Guid="*">
-        <File Id="file579cb1a3cb2f4205b0a3b10b18812924" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.CompilerServices.VisualC.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpc396b8aee3d6497a86990eb494bf6d7c" Guid="*">
-        <File Id="filec396b8aee3d6497a86990eb494bf6d7c" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp3e7e103cb59e470980afac48e683966b" Guid="*">
-        <File Id="file3e7e103cb59e470980afac48e683966b" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.Extensions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp53c1930801034e6d977bad314652e178" Guid="*">
-        <File Id="file53c1930801034e6d977bad314652e178" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.Handles.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp874e48d8c3614081a1da0cf45f583884" Guid="*">
-        <File Id="file874e48d8c3614081a1da0cf45f583884" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.InteropServices.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4571dd6ab2044491a9689e7265ba0876" Guid="*">
-        <File Id="file4571dd6ab2044491a9689e7265ba0876" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.InteropServices.JavaScript.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp110df3763e6f404ab9c32c78f53fff42" Guid="*">
-        <File Id="file110df3763e6f404ab9c32c78f53fff42" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.InteropServices.RuntimeInformation.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp3b954a49dbbb462eb26aa05ccae65217" Guid="*">
-        <File Id="file3b954a49dbbb462eb26aa05ccae65217" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.Intrinsics.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf5e1c66b11b44001a0703b2f50e2ff5d" Guid="*">
-        <File Id="filef5e1c66b11b44001a0703b2f50e2ff5d" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.Loader.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp70b90a5e52534dd8a0201f99a9bc506d" Guid="*">
-        <File Id="file70b90a5e52534dd8a0201f99a9bc506d" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.Numerics.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp5a70eb4892ce4b92ac18f26f3cbd897b" Guid="*">
-        <File Id="file5a70eb4892ce4b92ac18f26f3cbd897b" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.Serialization.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp31b8abbd25424712b182a538a2658350" Guid="*">
-        <File Id="file31b8abbd25424712b182a538a2658350" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.Serialization.Formatters.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp7637804289204628b9ea03c8632339b0" Guid="*">
-        <File Id="file7637804289204628b9ea03c8632339b0" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.Serialization.Json.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp2a6bfb3d602d41b48cf076219e71fa67" Guid="*">
-        <File Id="file2a6bfb3d602d41b48cf076219e71fa67" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.Serialization.Primitives.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp76a3bbc5b5d84b4f88f70f378c1fb79c" Guid="*">
-        <File Id="file76a3bbc5b5d84b4f88f70f378c1fb79c" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Runtime.Serialization.Xml.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpcdff0149c4cd4313bc2841a326355fba" Guid="*">
-        <File Id="filecdff0149c4cd4313bc2841a326355fba" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.AccessControl.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf986cad7382543e4b03f26ad51d92a5f" Guid="*">
-        <File Id="filef986cad7382543e4b03f26ad51d92a5f" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Claims.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpb0699f59bbf642a89c07fba55a774336" Guid="*">
-        <File Id="fileb0699f59bbf642a89c07fba55a774336" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Cryptography.Algorithms.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpad54d6cfb7a54a1aab936694b7a97813" Guid="*">
-        <File Id="filead54d6cfb7a54a1aab936694b7a97813" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Cryptography.Cng.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpdea8e220906a4eb5bbc9308a42318aa1" Guid="*">
-        <File Id="filedea8e220906a4eb5bbc9308a42318aa1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Cryptography.Csp.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpdd518e8492984f41ae7bc3e865c81507" Guid="*">
-        <File Id="filedd518e8492984f41ae7bc3e865c81507" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Cryptography.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpc56fe48a534b4f888adfb6aca8f01cfb" Guid="*">
-        <File Id="filec56fe48a534b4f888adfb6aca8f01cfb" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Cryptography.Encoding.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp2ad6911b77034eeb86bbcb6e3477a6de" Guid="*">
-        <File Id="file2ad6911b77034eeb86bbcb6e3477a6de" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Cryptography.OpenSsl.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp95ba36249a1e4116b28f6248e8e31cc7" Guid="*">
-        <File Id="file95ba36249a1e4116b28f6248e8e31cc7" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Cryptography.Primitives.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpcfe6944fb73f44b9938c326819f8f8be" Guid="*">
-        <File Id="filecfe6944fb73f44b9938c326819f8f8be" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Cryptography.X509Certificates.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp80e09f1a00e34192a7c8223079a5241c" Guid="*">
-        <File Id="file80e09f1a00e34192a7c8223079a5241c" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpb00e7ae374fe40eb84470b39c03c4b0c" Guid="*">
-        <File Id="fileb00e7ae374fe40eb84470b39c03c4b0c" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Principal.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpa4834455f12d464f9170e44adb26f9bd" Guid="*">
-        <File Id="filea4834455f12d464f9170e44adb26f9bd" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.Principal.Windows.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp79f231be80fd4cfd936e510a72c94c73" Guid="*">
-        <File Id="file79f231be80fd4cfd936e510a72c94c73" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Security.SecureString.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp0a18bddcad7c4edebe0449fd9cc8e0c6" Guid="*">
-        <File Id="file0a18bddcad7c4edebe0449fd9cc8e0c6" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.ServiceModel.Web.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpa3e61fb7cf4b4eba91125e088c635586" Guid="*">
-        <File Id="filea3e61fb7cf4b4eba91125e088c635586" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.ServiceProcess.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp3a155169e1ea4df89e6b30bd32975bb9" Guid="*">
-        <File Id="file3a155169e1ea4df89e6b30bd32975bb9" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Text.Encoding.CodePages.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpc72c8e60100e4587a5602c55f56f75eb" Guid="*">
-        <File Id="filec72c8e60100e4587a5602c55f56f75eb" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Text.Encoding.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf7ec84380e3f46508094b8c8a5544e79" Guid="*">
-        <File Id="filef7ec84380e3f46508094b8c8a5544e79" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Text.Encoding.Extensions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp770ed2a04cb449d183707f1c8519c2f5" Guid="*">
-        <File Id="file770ed2a04cb449d183707f1c8519c2f5" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Text.Encodings.Web.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp9027788f853f41feb088bb42b25bf6d9" Guid="*">
-        <File Id="file9027788f853f41feb088bb42b25bf6d9" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Text.Json.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp37f8901c06a94609a95829ddca995780" Guid="*">
-        <File Id="file37f8901c06a94609a95829ddca995780" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Text.RegularExpressions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpa4518015b1454d84ae98e368d6fd3abf" Guid="*">
-        <File Id="filea4518015b1454d84ae98e368d6fd3abf" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.AccessControl.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp072de0c04b4f4849a08ab3f05d502d0d" Guid="*">
-        <File Id="file072de0c04b4f4849a08ab3f05d502d0d" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.Channels.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpac0a755dd59c47a5be2c6318e50de0cf" Guid="*">
-        <File Id="fileac0a755dd59c47a5be2c6318e50de0cf" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpa99d1605f69f4897897e3d5d555965c5" Guid="*">
-        <File Id="filea99d1605f69f4897897e3d5d555965c5" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.Overlapped.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp545f9411c10f48b2a9c2ef8c61f70e17" Guid="*">
-        <File Id="file545f9411c10f48b2a9c2ef8c61f70e17" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.Tasks.Dataflow.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpc82836c8073248ea849b6ffd6c837812" Guid="*">
-        <File Id="filec82836c8073248ea849b6ffd6c837812" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.Tasks.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpea6b7af70ebc4af1ac0ace29de61b840" Guid="*">
-        <File Id="fileea6b7af70ebc4af1ac0ace29de61b840" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.Tasks.Extensions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp797b949a0ad749e1bbaf1249b8ba2d10" Guid="*">
-        <File Id="file797b949a0ad749e1bbaf1249b8ba2d10" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.Tasks.Parallel.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpda2f6e19866e45fc8f88d77fb1118442" Guid="*">
-        <File Id="fileda2f6e19866e45fc8f88d77fb1118442" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.Thread.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp1f6f25b1556d48119b7d40f59bde98a6" Guid="*">
-        <File Id="file1f6f25b1556d48119b7d40f59bde98a6" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.ThreadPool.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpa5c06db9a3c34a5db009ec0dc4d8bdf7" Guid="*">
-        <File Id="filea5c06db9a3c34a5db009ec0dc4d8bdf7" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Threading.Timer.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf4416febd01f4d6dbb92089c875ebc34" Guid="*">
-        <File Id="filef4416febd01f4d6dbb92089c875ebc34" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Transactions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp2fe4d1262f6d493890c7111b3d1a80ae" Guid="*">
-        <File Id="file2fe4d1262f6d493890c7111b3d1a80ae" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Transactions.Local.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf6f660f44ec74d7f97f869f6d31e8d0e" Guid="*">
-        <File Id="filef6f660f44ec74d7f97f869f6d31e8d0e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.ValueTuple.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4b9e878e261b463a80e07f7f5b067458" Guid="*">
-        <File Id="file4b9e878e261b463a80e07f7f5b067458" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Web.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpb85f486f96114116a2a23feb21444285" Guid="*">
-        <File Id="fileb85f486f96114116a2a23feb21444285" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Web.HttpUtility.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp63738c6dbb1140f0bac450013a5e0ffd" Guid="*">
-        <File Id="file63738c6dbb1140f0bac450013a5e0ffd" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Windows.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp98d9e05fa664491ba4f420651dff0b68" Guid="*">
-        <File Id="file98d9e05fa664491ba4f420651dff0b68" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Xml.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp300f95f1a9a0467bacf49ea740ac040c" Guid="*">
-        <File Id="file300f95f1a9a0467bacf49ea740ac040c" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Xml.Linq.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp5dbd839528aa4b5f82952519a374e54d" Guid="*">
-        <File Id="file5dbd839528aa4b5f82952519a374e54d" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Xml.ReaderWriter.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp8a677ceedb2d4224b1905fbc92c14939" Guid="*">
-        <File Id="file8a677ceedb2d4224b1905fbc92c14939" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Xml.Serialization.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp6579dd51387c4f058e0298b8dfad3979" Guid="*">
-        <File Id="file6579dd51387c4f058e0298b8dfad3979" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Xml.XDocument.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpb17766f5c8044885b3645b909bd411c4" Guid="*">
-        <File Id="fileb17766f5c8044885b3645b909bd411c4" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Xml.XmlDocument.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp8550f2dfd4b84d1697a47464e66d58e1" Guid="*">
-        <File Id="file8550f2dfd4b84d1697a47464e66d58e1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Xml.XmlSerializer.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp429d1598482a4af08c72c98432245f16" Guid="*">
-        <File Id="file429d1598482a4af08c72c98432245f16" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Xml.XPath.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe113426f425f455f8588d62d4bc7f12e" Guid="*">
-        <File Id="filee113426f425f455f8588d62d4bc7f12e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\System.Xml.XPath.XDocument.dll" KeyPath="yes" />
       </Component>
       <Component Id="cmpf988fc046bae4b0ba02c6f22a8dd1c2e" Guid="*">
         <File Id="filef988fc046bae4b0ba02c6f22a8dd1c2e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Tmds.DBus.Protocol.dll" KeyPath="yes" />
       </Component>
-      <Component Id="cmpbf857a8362874eccb4eaa9082efa7aac" Guid="*">
-        <File Id="filebf857a8362874eccb4eaa9082efa7aac" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\WindowsBase.dll" KeyPath="yes" />
-      </Component>
-
-
-      
       <Component Id="YTDLPEXE" Guid="*">
         <File Id="YTDLPEXE" Source="InstallerDependencies\yt-dlp.exe" KeyPath="yes" />
       </Component>
-      
       <Component Id="MPVEXE" Guid="*">
         <File Id="MPVEXE" Source="InstallerDependencies\mpv.exe" KeyPath="yes" />
       </Component>
-      
       <Component Id="MPVD3D" Guid="*">
         <File Id="MPVD3D" Source="InstallerDependencies\d3dcompiler_43.dll" KeyPath="yes" />
       </Component>
-      
       <Component Id="PathEnv" Guid="6a7b8c9d-1e2f-4a3b-5c6d-7e8f9a0b1c2d">
         <RegistryValue Root="HKCU" Key="Software\SteveenR-A\AniCS" Name="path_installed" Type="integer" Value="1" KeyPath="yes" />
         <Environment Id="UpdatePath" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
       </Component>
     </ComponentGroup>
-
     <ComponentGroup Id="ShortcutsComponents" Directory="ApplicationProgramsFolder">
       <Component Id="ApplicationShortcut" Guid="7b8a9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d">
-        <Shortcut Id="ApplicationStartMenuShortcut" 
-                  Name="AniCS" 
-                  Description="Aplicación AniCS"
-                  Target="[#AniCSEXE]"
-                  WorkingDirectory="INSTALLFOLDER"
-                  Icon="AppIcon" />
-                  
-        <Shortcut Id="ApplicationDesktopShortcut"
-                  Directory="DesktopFolder"
-                  Name="AniCS"
-                  Description="Aplicación AniCS"
-                  Target="[#AniCSEXE]"
-                  WorkingDirectory="INSTALLFOLDER"
-                  Icon="AppIcon" />
-
+        <Shortcut Id="ApplicationStartMenuShortcut" Name="AniCS" Description="AplicaciÃƒÂ³n AniCS" Target="[#AniCSEXE]" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        <Shortcut Id="ApplicationDesktopShortcut" Directory="DesktopFolder" Name="AniCS" Description="AplicaciÃƒÂ³n AniCS" Target="[#AniCSEXE]" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
         <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
         <RegistryValue Root="HKCU" Key="Software\SteveenR-A\AniCS" Name="installed" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
 </Wix>
-

@@ -12,6 +12,7 @@ public partial class MainWindow : Window
     private CalendarView _calendarView = new CalendarView();
     private DownloadsView _downloadsView = new DownloadsView();
     private HistoryView _historyView = new HistoryView();
+    private SettingsView _settingsView = new SettingsView();
     private UserControl? _previousView;
 
     public MainWindow()
@@ -44,23 +45,24 @@ public partial class MainWindow : Window
         else
         {
             MainContent.Content = _homeView;
-            PageTitleText.Text = "Inicio (Recientes)";
+            PageTitleText.Text = "Inicio";
         }
     }
     
     private void SetTitleForView(UserControl view)
     {
-        if (view is HomeView) PageTitleText.Text = "Inicio (Recientes)";
+        if (view is HomeView) PageTitleText.Text = "Inicio";
         else if (view is SearchView) PageTitleText.Text = "Buscar Anime";
         else if (view is CalendarView) PageTitleText.Text = "Calendario";
         else if (view is DownloadsView) PageTitleText.Text = "Descargas";
         else if (view is HistoryView) PageTitleText.Text = "Historial";
+        else if (view is SettingsView) PageTitleText.Text = "Configuración";
     }
 
     private void OnHomeClicked(object? sender, RoutedEventArgs e)
     {
         MainContent.Content = _homeView;
-        PageTitleText.Text = "Inicio (Recientes)";
+        PageTitleText.Text = "Inicio";
         MainSplitView.IsPaneOpen = false;
     }
 
@@ -89,6 +91,14 @@ public partial class MainWindow : Window
     {
         MainContent.Content = new HistoryView();
         PageTitleText.Text = "Historial";
+        MainSplitView.IsPaneOpen = false;
+    }
+
+    private void OnSettingsClicked(object? sender, RoutedEventArgs e)
+    {
+        _settingsView.LoadConfig(); // Refrescar por si se cambió desde otro lado
+        MainContent.Content = _settingsView;
+        PageTitleText.Text = "Configuración";
         MainSplitView.IsPaneOpen = false;
     }
 }

@@ -16,6 +16,7 @@ public static class DataCache
     }
     
     private static readonly ConcurrentDictionary<string, object> _ramCache = new();
+    private static readonly ConcurrentDictionary<string, byte[]> _imageSessionCache = new();
 
     static DataCache()
     {
@@ -41,13 +42,21 @@ public static class DataCache
     {
         if (string.IsNullOrEmpty(url)) return [];
 
+        if (_imageSessionCache.TryGetValue(url, out var sessionBytes))
+        {
+            return sessionBytes;
+        }
+
         var filePath = GetImageCachePath(url);
 
         if (File.Exists(filePath))
         {
             try
             {
-                return await File.ReadAllBytesAsync(filePath, cancellationToken);
+                var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
+                File.SetLastAccessTimeUtc(filePath, DateTime.UtcNow);
+                _imageSessionCache[url] = bytes;
+                return bytes;
             }
             catch { /* Corrupted file or locked */ }
         }
@@ -61,6 +70,7 @@ public static class DataCache
                 Directory.CreateDirectory(dir);
             }
             await File.WriteAllBytesAsync(filePath, bytes, cancellationToken);
+            _imageSessionCache[url] = bytes;
             return bytes;
         }
         catch
@@ -109,6 +119,7 @@ public static class DataCache
     public static void ClearRamCache()
     {
         _ramCache.Clear();
+        _imageSessionCache.Clear();
     }
 
     /// <summary>
@@ -127,5 +138,34 @@ public static class DataCache
         {
             // Ignore directory deletion errors
         }
+    }
+
+    /// <summary>
+    /// Performs an LRU cleanup on the disk image cache, keeping only the most recently accessed files.
+    /// </summary>
+    public static void CleanupImageCache(int maxFiles = 30)
+    {
+        if (!Directory.Exists(CacheDir)) return;
+
+        try
+        {
+            var files = Directory.GetFiles(CacheDir, "*.jpg")
+                .Select(f => new FileInfo(f))
+                .OrderBy(f => f.LastAccessTimeUtc) // Oldest first
+                .ToList();
+
+            int filesToDelete = files.Count - maxFiles;
+            if (filesToDelete <= 0) return;
+
+            foreach (var file in files.Take(filesToDelete))
+            {
+                try
+                {
+                    file.Delete();
+                }
+                catch { /* Ignore locked files */ }
+            }
+        }
+        catch { /* Ignore directory access errors */ }
     }
 }
