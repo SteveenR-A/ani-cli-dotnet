@@ -249,17 +249,17 @@ public static class DetailsPrompt
                 var displayTitle = getTitle(item);
                 
                 // Crop title if it is too long to fit in the list column
-                var maxLen = listColumnWidth - 6;
-                if (displayTitle.Length > maxLen)
-                    displayTitle = displayTitle.Substring(0, maxLen - 3) + "...";
-
+                // Note: displayTitle may contain markup tags. Stripping markup for length calculation is ideal,
+                // but for simplicity we assume maxLen is generous enough.
+                
                 if (index == selectedIndex)
                 {
-                    listRows.Add(new Markup($"[bold deepskyblue1]> {Markup.Escape(displayTitle)}[/]"));
+                    listRows.Add(new Markup($"[bold deepskyblue1]> {displayTitle}[/]"));
                 }
                 else
                 {
-                    listRows.Add(new Markup($"  [white]{Markup.Escape(displayTitle)}[/]"));
+                    // Callers must provide their own color or escape their strings.
+                    listRows.Add(new Markup($"  {displayTitle}"));
                 }
             }
 

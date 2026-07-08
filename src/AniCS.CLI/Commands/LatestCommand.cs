@@ -40,7 +40,7 @@ namespace AniCS.Commands
                 _state.Http,
                 $"Últimos Estrenos — {_state.ActiveExtractor.Domain}",
                 results,
-                r => $"Ep {(string.IsNullOrEmpty(r.EpisodeNumber) ? "—" : r.EpisodeNumber),-4} │ {r.Title}",
+                r => $"Ep {(string.IsNullOrEmpty(r.EpisodeNumber) ? "—" : r.EpisodeNumber),-4} │ [white]{Markup.Escape(r.Title)}[/]",
                 r => r.ThumbnailUrl,
                 r => Task.FromResult(string.Empty),
                 null,

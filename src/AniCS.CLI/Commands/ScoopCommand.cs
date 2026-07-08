@@ -41,22 +41,20 @@ namespace AniCS.Commands
             var daysOfWeek = new List<string> { "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo" };
             var orderedResults = results.OrderByDescending(x => daysOfWeek.IndexOf(x.Day.ToLowerInvariant())).ToList();
 
-            var options = orderedResults.Select(r => 
-                $"[{GetDayColor(r.Day)}]{r.Day,-10}[/] │ {r.Title}"
-            ).ToList();
-            options.Add("[red]Cancelar[/]");
+            var selectedItem = await DetailsPrompt.PromptWithDetailsAsync(
+                _state.Http,
+                "Cartelera Semanal (Más recientes primero)",
+                orderedResults,
+                r => $"[{GetDayColor(r.Day)}]{r.Day,-10}[/] │ [white]{Markup.Escape(r.Title)}[/]",
+                r => r.ThumbnailUrl,
+                async r => await DataCache.GetOrFetchDataAsync($"synopsis_{r.Url}", TimeSpan.FromMinutes(5), () => _state.ActiveExtractor.GetSynopsisAsync(r.Url)),
+                r => r.Day,
+                showImage: false
+            );
 
-            var selected = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[bold deepskyblue1]Cartelera Semanal (Más recientes primero)[/]")
-                    .PageSize(15)
-                    .HighlightStyle(Style.Parse("deepskyblue1 bold"))
-                    .AddChoices(options));
+            if (selectedItem == null) return;
 
-            if (selected == "[red]Cancelar[/]") return;
-
-            var selectedIndex = options.IndexOf(selected);
-            var item = orderedResults[selectedIndex];
+            var item = selectedItem;
             var anime = new AnimeResult { Title = item.Title, Url = item.Url, ThumbnailUrl = item.ThumbnailUrl };
 
             await UIHelpers.DisplayAnimeInfoAsync(_state, anime, $"Emisión el {Markup.Escape(item.Day)}");

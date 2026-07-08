@@ -46,7 +46,7 @@ namespace AniCS.Commands
                 _state.Http,
                 "Selecciona un anime",
                 results,
-                r => r.Title,
+                r => $"[white]{Markup.Escape(r.Title)}[/]",
                 r => r.ThumbnailUrl,
                 async r => await DataCache.GetOrFetchDataAsync($"synopsis_{r.Url}", TimeSpan.FromMinutes(5), () => _state.ActiveExtractor.GetSynopsisAsync(r.Url)),
                 r => r.Description
@@ -82,7 +82,7 @@ namespace AniCS.Commands
                     _state.Http,
                     "Selecciona un episodio",
                     episodes,
-                    e => $"Ep {e.EpisodeNumber} — {e.Title}".TrimEnd('—', ' '),
+                    e => $"[white]{Markup.Escape($"Ep {e.EpisodeNumber} — {e.Title}".TrimEnd('—', ' '))}[/]",
                     e => e.ThumbnailUrl,
                     e => Task.FromResult(string.Empty),
                     null,
