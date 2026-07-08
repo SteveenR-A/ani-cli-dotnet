@@ -262,6 +262,7 @@ public partial class AnimeDetailsView : UserControl
                             AnimeTitle = _anime.Title,
                             AnimeUrl = _anime.Url,
                             ThumbnailUrl = _anime.ThumbnailUrl,
+                            EpisodeUrl = vm.Url,
                             EpisodeNumber = vm.EpisodeNumber,
                             EpisodeTitle = vm.Title,
                             State = AniCS.Desktop.Services.DownloadState.Downloading,
@@ -271,17 +272,31 @@ public partial class AnimeDetailsView : UserControl
 
                         _ = System.Threading.Tasks.Task.Run(async () =>
                         {
-                            bool success = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
+                            var result = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
                                 videoUrl, _anime, vm.Episode, defaultDir, server.Url, 
                                 progress => Dispatcher.UIThread.Post(() => activeDownload.Progress = progress), 
                                 activeDownload.CancellationTokenSource.Token);
 
+                            if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
+                            {
+                                var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars()));
+                                var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
+                                AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
+                            }
+
                             await Dispatcher.UIThread.InvokeAsync(() =>
                             {
-                                if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Downloading)
+                                if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Downloading || result == AniCS.Desktop.Services.DownloadResult.Success || result == AniCS.Desktop.Services.DownloadResult.Error)
                                 {
-                                    activeDownload.State = success ? AniCS.Desktop.Services.DownloadState.Completed : AniCS.Desktop.Services.DownloadState.Error;
-                                    AniCS.Desktop.Services.DownloadManager.RemoveActiveDownload(activeDownload);
+                                    if (result == AniCS.Desktop.Services.DownloadResult.Success)
+                                        activeDownload.State = AniCS.Desktop.Services.DownloadState.Completed;
+                                    else if (result == AniCS.Desktop.Services.DownloadResult.Error)
+                                        activeDownload.State = AniCS.Desktop.Services.DownloadState.Error;
+
+                                    if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Completed || activeDownload.State == AniCS.Desktop.Services.DownloadState.Error || activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
+                                    {
+                                        AniCS.Desktop.Services.DownloadManager.RemoveActiveDownload(activeDownload);
+                                    }
                                     UpdateEpisodeViewModelState(vm);
                                 }
                             });
@@ -316,7 +331,17 @@ public partial class AnimeDetailsView : UserControl
         {
             if (vm.ActiveDownload != null)
             {
+                bool wasPaused = vm.ActiveDownload.State == AniCS.Desktop.Services.DownloadState.Paused;
                 vm.ActiveDownload.Cancel();
+                
+                if (wasPaused)
+                {
+                    var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+                    var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars()));
+                    var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
+                    AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
+                }
+                
                 AniCS.Desktop.Services.DownloadManager.RemoveActiveDownload(vm.ActiveDownload);
                 UpdateEpisodeViewModelState(vm);
             }

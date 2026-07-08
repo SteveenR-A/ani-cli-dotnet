@@ -30,6 +30,7 @@ public partial class MainWindow : Window
         _previousView = MainContent.Content as UserControl;
         var detailsView = new AnimeDetailsView(anime);
         MainContent.Content = detailsView;
+        PageTitleText.Text = anime.Title;
     }
 
     public void GoBack()
@@ -37,46 +38,57 @@ public partial class MainWindow : Window
         if (_previousView != null)
         {
             MainContent.Content = _previousView;
+            SetTitleForView(_previousView);
             _previousView = null;
         }
         else
         {
             MainContent.Content = _homeView;
+            PageTitleText.Text = "Inicio (Recientes)";
         }
+    }
+    
+    private void SetTitleForView(UserControl view)
+    {
+        if (view is HomeView) PageTitleText.Text = "Inicio (Recientes)";
+        else if (view is SearchView) PageTitleText.Text = "Buscar Anime";
+        else if (view is CalendarView) PageTitleText.Text = "Calendario";
+        else if (view is DownloadsView) PageTitleText.Text = "Descargas";
+        else if (view is HistoryView) PageTitleText.Text = "Historial";
     }
 
     private void OnHomeClicked(object? sender, RoutedEventArgs e)
     {
         MainContent.Content = _homeView;
+        PageTitleText.Text = "Inicio (Recientes)";
         MainSplitView.IsPaneOpen = false;
     }
 
     private void OnSearchClicked(object? sender, RoutedEventArgs e)
     {
         MainContent.Content = _searchView;
+        PageTitleText.Text = "Buscar Anime";
         MainSplitView.IsPaneOpen = false;
     }
 
     private void OnCalendarClicked(object? sender, RoutedEventArgs e)
     {
         MainContent.Content = _calendarView;
+        PageTitleText.Text = "Calendario";
         MainSplitView.IsPaneOpen = false;
     }
 
     private void OnDownloadsClicked(object? sender, RoutedEventArgs e)
     {
-        // Reinstantiate to ensure data reload since constructor might only run once,
-        // or just rely on the view's OnLoaded. For simplicity we just use a new instance
-        // or the existing one depending on how we handle state. Since it has OnReloadClicked
-        // and OnLoaded, setting the content is fine, but Avalonia doesn't re-fire Loaded 
-        // if the control is just swapped in some cases, so let's instantiate new.
         MainContent.Content = new DownloadsView();
+        PageTitleText.Text = "Descargas";
         MainSplitView.IsPaneOpen = false;
     }
 
     private void OnHistoryClicked(object? sender, RoutedEventArgs e)
     {
         MainContent.Content = new HistoryView();
+        PageTitleText.Text = "Historial";
         MainSplitView.IsPaneOpen = false;
     }
 }

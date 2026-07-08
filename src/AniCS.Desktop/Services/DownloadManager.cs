@@ -17,7 +17,8 @@ public enum DownloadState
     Downloading,
     Completed,
     Error,
-    Cancelled
+    Cancelled,
+    Paused
 }
 
 public class ActiveDownload : INotifyPropertyChanged
@@ -25,6 +26,7 @@ public class ActiveDownload : INotifyPropertyChanged
     public string AnimeTitle { get; set; } = string.Empty;
     public string AnimeUrl { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
+    public string EpisodeUrl { get; set; } = string.Empty;
     public string EpisodeNumber { get; set; } = string.Empty;
     public string EpisodeTitle { get; set; } = string.Empty;
 
@@ -39,8 +41,10 @@ public class ActiveDownload : INotifyPropertyChanged
     public DownloadState State
     {
         get => _state;
-        set { _state = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); }
+        set { _state = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); OnPropertyChanged(nameof(PauseResumeText)); }
     }
+
+    public string PauseResumeText => State == DownloadState.Paused ? "▶ Reanudar" : "⏸ Pausar";
 
     public string StatusText => State switch
     {
@@ -48,17 +52,36 @@ public class ActiveDownload : INotifyPropertyChanged
         DownloadState.Completed => "✅ Descargado",
         DownloadState.Error => "❌ Error",
         DownloadState.Cancelled => "🚫 Cancelado",
+        DownloadState.Paused => "⏸ Pausado",
         _ => State.ToString()
     };
 
-    public CancellationTokenSource CancellationTokenSource { get; } = new CancellationTokenSource();
+    public CancellationTokenSource CancellationTokenSource { get; set; } = new CancellationTokenSource();
 
-    public void Cancel()
+    public void Pause()
     {
         if (State == DownloadState.Downloading)
         {
+            State = DownloadState.Paused;
             CancellationTokenSource.Cancel();
+        }
+    }
+
+    public void Resume()
+    {
+        if (State == DownloadState.Paused)
+        {
+            State = DownloadState.Downloading;
+            CancellationTokenSource = new CancellationTokenSource();
+        }
+    }
+
+    public void Cancel()
+    {
+        if (State == DownloadState.Downloading || State == DownloadState.Paused)
+        {
             State = DownloadState.Cancelled;
+            CancellationTokenSource.Cancel();
         }
     }
 
@@ -283,5 +306,37 @@ public static class DownloadManager
             return ep != null && File.Exists(ep.FilePath);
         }
         return false;
+    }
+
+    public static void CleanupPartialFiles(string downloadDir, string safeTitle, string episodeNumStr)
+    {
+        // Try multiple times since yt-dlp might take a moment to release the file lock
+        for (int i = 0; i < 5; i++)
+        {
+            try
+            {
+                var animeDir = Path.Combine(downloadDir, safeTitle);
+                if (Directory.Exists(animeDir))
+                {
+                    var files = Directory.GetFiles(animeDir, $"Episodio {episodeNumStr}.*");
+                    bool allDeleted = true;
+                    foreach (var f in files)
+                    {
+                        try { File.Delete(f); } catch { allDeleted = false; }
+                    }
+                    if (allDeleted)
+                    {
+                        if (!Directory.EnumerateFileSystemEntries(animeDir).Any())
+                        {
+                            Directory.Delete(animeDir);
+                        }
+                        break; // Success
+                    }
+                }
+                else { break; }
+            }
+            catch { }
+            System.Threading.Thread.Sleep(500); // Wait and retry
+        }
     }
 }

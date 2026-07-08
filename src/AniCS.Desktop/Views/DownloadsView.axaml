@@ -13,9 +13,8 @@
     </UserControl.Resources>
 
     <Grid RowDefinitions="Auto, *" Margin="20">
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,15">
-            <TextBlock Text="Mis Descargas" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center"/>
-            <Button Name="ReloadButton" Content="🔄 Recargar" FontSize="14" Padding="8,4" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" VerticalAlignment="Center" Click="OnReloadClicked"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
+            <Button Name="ReloadButton" Content="🔄" FontSize="18" Padding="8,4" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" Click="OnReloadClicked" ToolTip.Tip="Recargar"/>
         </StackPanel>
         
         <Grid Grid.Row="1">
@@ -36,11 +35,14 @@
                                                 </Border>
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding AnimeTitle}" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                                                    <TextBlock Text="{Binding EpisodeTitle}" Foreground="{DynamicResource AppSubtextColor}"/>
+                                                    <TextBlock Text="{Binding EpisodeTitle}" Foreground="{DynamicResource AppTitleColor}" Opacity="0.9"/>
                                                     <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,5,0,0"/>
                                                     <ProgressBar Value="{Binding Progress}" Maximum="100" Height="4" Margin="0,5,10,0"/>
                                                 </StackPanel>
-                                                <Button Grid.Column="2" Content="❌ Cancelar" Click="OnCancelActiveDownloadClicked" Tag="{Binding}" Background="#E53935" Foreground="White" VerticalAlignment="Center"/>
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                                                    <Button Content="{Binding PauseResumeText}" Click="OnPauseResumeActiveDownloadClicked" Tag="{Binding}" Background="#FFB300" Foreground="White" />
+                                                    <Button Content="❌ Cancelar" Click="OnCancelActiveDownloadClicked" Tag="{Binding}" Background="#E53935" Foreground="White" />
+                                                </StackPanel>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>

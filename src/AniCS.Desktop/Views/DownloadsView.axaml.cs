@@ -67,8 +67,97 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
     {
         if (sender is Button btn && btn.Tag is ActiveDownload active)
         {
+            bool wasPaused = active.State == DownloadState.Paused;
             active.Cancel();
+            
+            if (wasPaused)
+            {
+                var defaultDir = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyVideos), "AniCS");
+                var safeTitle = string.Join("_", active.AnimeTitle.Split(System.IO.Path.GetInvalidFileNameChars()));
+                var episodeNumStr = string.IsNullOrWhiteSpace(active.EpisodeNumber) ? "Desconocido" : active.EpisodeNumber;
+                DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
+            }
+            
             DownloadManager.RemoveActiveDownload(active);
+        }
+    }
+
+    private async void OnPauseResumeActiveDownloadClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is ActiveDownload active)
+        {
+            if (active.State == DownloadState.Downloading)
+            {
+                active.Pause();
+            }
+            else if (active.State == DownloadState.Paused)
+            {
+                active.Resume();
+                
+                try
+                {
+                    var extractor = new AniCS.Extractors.JKAnimeExtractor(new System.Net.Http.HttpClient());
+                    var servers = await extractor.GetVideoServersAsync(active.EpisodeUrl);
+
+                    if (servers.Count > 0)
+                    {
+                        var server = servers.Find(s => s.IsDirectPlaySupported) ?? servers[0];
+                        var videoUrl = await extractor.ResolveVideoUrlAsync(server.Url);
+
+                        if (!string.IsNullOrEmpty(videoUrl))
+                        {
+                            var defaultDir = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyVideos), "AniCS");
+                            
+                            _ = System.Threading.Tasks.Task.Run(async () =>
+                            {
+                                var result = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
+                                    videoUrl, 
+                                    new AnimeResult { Title = active.AnimeTitle, Url = active.AnimeUrl, ThumbnailUrl = active.ThumbnailUrl }, 
+                                    new Episode { EpisodeNumber = active.EpisodeNumber, Title = active.EpisodeTitle, Url = active.EpisodeUrl }, 
+                                    defaultDir, 
+                                    server.Url, 
+                                    progress => Dispatcher.UIThread.Post(() => active.Progress = progress), 
+                                    active.CancellationTokenSource.Token);
+
+                                if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && active.State == AniCS.Desktop.Services.DownloadState.Cancelled)
+                                {
+                                    var safeTitle = string.Join("_", active.AnimeTitle.Split(System.IO.Path.GetInvalidFileNameChars()));
+                                    var episodeNumStr = string.IsNullOrWhiteSpace(active.EpisodeNumber) ? "Desconocido" : active.EpisodeNumber;
+                                    AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
+                                }
+
+                                await Dispatcher.UIThread.InvokeAsync(() =>
+                                {
+                                    if (active.State == AniCS.Desktop.Services.DownloadState.Downloading || result == AniCS.Desktop.Services.DownloadResult.Success || result == AniCS.Desktop.Services.DownloadResult.Error)
+                                    {
+                                        if (result == AniCS.Desktop.Services.DownloadResult.Success)
+                                            active.State = AniCS.Desktop.Services.DownloadState.Completed;
+                                        else if (result == AniCS.Desktop.Services.DownloadResult.Error)
+                                            active.State = AniCS.Desktop.Services.DownloadState.Error;
+
+                                        if (active.State == AniCS.Desktop.Services.DownloadState.Completed || active.State == AniCS.Desktop.Services.DownloadState.Error || active.State == AniCS.Desktop.Services.DownloadState.Cancelled)
+                                        {
+                                            AniCS.Desktop.Services.DownloadManager.RemoveActiveDownload(active);
+                                        }
+                                    }
+                                });
+                            });
+                        }
+                        else
+                        {
+                            active.State = DownloadState.Error;
+                        }
+                    }
+                    else
+                    {
+                        active.State = DownloadState.Error;
+                    }
+                }
+                catch
+                {
+                    active.State = DownloadState.Error;
+                }
+            }
         }
     }
 

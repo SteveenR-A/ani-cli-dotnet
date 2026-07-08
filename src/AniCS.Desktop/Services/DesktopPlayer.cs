@@ -6,6 +6,13 @@ using System.Linq;
 
 namespace AniCS.Desktop.Services;
 
+public enum DownloadResult
+{
+    Success,
+    Cancelled,
+    Error
+}
+
 public static class DesktopPlayer
 {
     private static readonly List<Process> _activeProcesses = new();
@@ -125,7 +132,7 @@ public static class DesktopPlayer
         catch { }
     }
 
-    public static async System.Threading.Tasks.Task<bool> DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null, Action<double>? onProgress = null, System.Threading.CancellationToken cancellationToken = default)
+    public static async System.Threading.Tasks.Task<DownloadResult> DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null, Action<double>? onProgress = null, System.Threading.CancellationToken cancellationToken = default)
     {
         string animeDir = "";
         string episodeNumStr = "";
@@ -194,43 +201,22 @@ public static class DesktopPlayer
                 if (actualFileName != null)
                 {
                     DownloadManager.RecordDownload(anime.Title, anime.Url, anime.ThumbnailUrl, episode.EpisodeNumber, episode.Title, actualFileName);
-                    return true;
+                    return DownloadResult.Success;
                 }
             }
-            return false;
+            return cancellationToken.IsCancellationRequested ? DownloadResult.Cancelled : DownloadResult.Error;
         }
         catch (OperationCanceledException)
         {
-            Console.WriteLine("Descarga cancelada.");
+            Console.WriteLine("Descarga cancelada o pausada.");
             try { p?.Kill(true); p?.WaitForExit(2000); } catch { }
-            CleanupPartialFiles(animeDir, episodeNumStr);
-            return false;
+            return DownloadResult.Cancelled;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error al descargar: {ex.Message}");
-            return false;
+            return DownloadResult.Error;
         }
-    }
-
-    private static void CleanupPartialFiles(string dir, string epNumStr)
-    {
-        try
-        {
-            if (Directory.Exists(dir))
-            {
-                var files = Directory.GetFiles(dir, $"Episodio {epNumStr}.*");
-                foreach (var f in files)
-                {
-                    try { File.Delete(f); } catch { }
-                }
-                if (!Directory.EnumerateFileSystemEntries(dir).Any())
-                {
-                    Directory.Delete(dir);
-                }
-            }
-        }
-        catch { }
     }
 
     private static bool IsInstalled(string command)

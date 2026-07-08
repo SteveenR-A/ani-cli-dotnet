@@ -19,7 +19,7 @@
                         Foreground="{DynamicResource AppPrimaryColor}" 
                         Click="OnHamburgerClicked" 
                         VerticalAlignment="Center"/>
-                <TextBlock Text="AniCS" 
+                <TextBlock Name="PageTitleText" Text="Inicio" 
                            FontSize="28" 
                            FontWeight="Bold" 
                            Foreground="{DynamicResource AppPrimaryColor}" 
