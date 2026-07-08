@@ -9,7 +9,7 @@ $RepoUrl = "https://github.com/SteveenR-A/ani-cli-dotnet.git"
 
 # Detectar si estamos ejecutando desde el repositorio local con el código fuente
 $IsLocalRepo = $false
-if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "AniCS.csproj"))) {
+if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "AniCS.slnx"))) {
     $IsLocalRepo = $true
     $SourceDir = $PSScriptRoot
 } else {
@@ -46,9 +46,9 @@ function Install-AniCS {
         }
     }
 
-    Write-Host "`n--- Paso 2: Compilando AniCS ---" -ForegroundColor Cyan
+    Write-Host "`n--- Paso 2: Compilando AniCS CLI ---" -ForegroundColor Cyan
     Write-Host "Esto tomará unos segundos..."
-    dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true | Out-Null
+    dotnet publish src/AniCS.CLI/AniCS.CLI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[ERROR] Falló la compilación." -ForegroundColor Red
         exit 1
@@ -59,7 +59,10 @@ function Install-AniCS {
         New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
     }
 
-    $ExePath = "bin\Release\net10.0\win-x64\publish\AniCS.exe"
+    $ExePath = "src\AniCS.CLI\bin\Release\net10.0\win-x64\publish\AniCS.CLI.exe"
+    if (-not (Test-Path $ExePath)) {
+        $ExePath = "src\AniCS.CLI\bin\Release\net10.0\win-x64\publish\AniCS.exe"
+    }
     Copy-Item -Path $ExePath -Destination "$InstallDir\anics.exe" -Force
     Write-Host "[OK] Copiado anics.exe a $InstallDir" -ForegroundColor Green
 
@@ -77,40 +80,42 @@ function Install-AniCS {
 }
 
 function Update-AniCS {
-    if ($IsLocalRepo) {
-        Check-Dotnet
-        Write-Host "`nActualizando AniCS desde repositorio local..." -ForegroundColor Cyan
-        Set-Location $SourceDir
-        if (Test-Path (Join-Path $SourceDir ".git")) {
-            Write-Host "Haciendo git pull..."
-            git pull | Out-Null
-        }
-    } else {
-        if (-not (Test-Path $SourceDir)) {
-            Write-Host "[ERROR] AniCS no parece estar instalado mediante este script." -ForegroundColor Red
-            $resp = Read-Host "¿Deseas hacer una instalación limpia? [S/n]"
-            if ($resp -eq "" -or $resp -match "^[Ss]") {
-                Install-AniCS
-            }
-            return
-        }
+    Check-Dotnet
+    Write-Host "`nActualizando AniCS CLI desde GitHub..." -ForegroundColor Cyan
 
-        Check-Dotnet
-        Write-Host "`nActualizando AniCS..." -ForegroundColor Cyan
-        Set-Location $SourceDir
-        git pull | Out-Null
+    $TempRepoDir = $DefaultRepoDir
+    
+    if (Test-Path $TempRepoDir) {
+        Remove-Item -Path $TempRepoDir -Recurse -Force
     }
 
-    Write-Host "Compilando nueva versión..."
-    dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true | Out-Null
+    Write-Host "Clonando repositorio en $TempRepoDir..."
+    git clone $RepoUrl $TempRepoDir | Out-Null
+    
+    Set-Location $TempRepoDir
+
+    Write-Host "Compilando nueva versión de la CLI..."
+    dotnet publish src/AniCS.CLI/AniCS.CLI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[ERROR] Falló la compilación." -ForegroundColor Red
         exit 1
     }
 
-    $ExePath = "bin\Release\net10.0\win-x64\publish\AniCS.exe"
+    $ExePath = "src\AniCS.CLI\bin\Release\net10.0\win-x64\publish\AniCS.CLI.exe"
+    if (-not (Test-Path $ExePath)) {
+        $ExePath = "src\AniCS.CLI\bin\Release\net10.0\win-x64\publish\AniCS.exe"
+    }
+    
+    if (-not (Test-Path $InstallDir)) {
+        New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+    }
     Copy-Item -Path $ExePath -Destination "$InstallDir\anics.exe" -Force
-    Write-Host "¡AniCS actualizado correctamente!" -ForegroundColor Green
+    
+    Write-Host "Limpiando código fuente temporal..." -ForegroundColor Yellow
+    Set-Location $env:LOCALAPPDATA # Salir de la carpeta antes de borrarla
+    Remove-Item -Path $TempRepoDir -Recurse -Force
+
+    Write-Host "¡AniCS CLI actualizado correctamente!" -ForegroundColor Green
 }
 
 function Uninstall-AniCS {

@@ -10,7 +10,7 @@ REPO_URL="https://github.com/SteveenR-A/ani-cli-dotnet.git"
 # Detectar si estamos ejecutando desde el repositorio local
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 IS_LOCAL_REPO=false
-if [ -f "$SCRIPT_DIR/AniCS.csproj" ]; then
+if [ -f "$SCRIPT_DIR/AniCS.slnx" ]; then
     IS_LOCAL_REPO=true
     SOURCE_DIR="$SCRIPT_DIR"
 else
@@ -122,12 +122,16 @@ install() {
         fi
     fi
 
-    echo -e "\n${BLUE}--- Paso 3: Compilando AniCS ---${NC}"
+    echo -e "\n${BLUE}--- Paso 3: Compilando AniCS CLI ---${NC}"
     echo "Esto tomará unos segundos..."
-    dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+    dotnet publish src/AniCS.CLI/AniCS.CLI.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
 
     echo -e "\n${BLUE}--- Paso 4: Instalando en el sistema ---${NC}"
-    sudo cp "bin/Release/net10.0/linux-x64/publish/AniCS" "$BIN_PATH"
+    if [ -f "src/AniCS.CLI/bin/Release/net10.0/linux-x64/publish/AniCS.CLI" ]; then
+        sudo cp "src/AniCS.CLI/bin/Release/net10.0/linux-x64/publish/AniCS.CLI" "$BIN_PATH"
+    else
+        sudo cp "src/AniCS.CLI/bin/Release/net10.0/linux-x64/publish/AniCS" "$BIN_PATH"
+    fi
     sudo chmod +x "$BIN_PATH"
 
     echo -e "${GREEN}¡Instalación Completada!${NC}"
@@ -138,36 +142,34 @@ update() {
     echo -e "${BLUE}--- Paso 1: Verificando Dependencias ---${NC}"
     check_and_install_deps
 
-    echo -e "\n${BLUE}--- Paso 2: Actualizando Código Fuente ---${NC}"
-    if [ "$IS_LOCAL_REPO" = true ]; then
-        echo -e "${BLUE}Actualizando AniCS desde repositorio local...${NC}"
-        cd "$SOURCE_DIR"
-        if [ -d "$SOURCE_DIR/.git" ]; then
-            echo "Haciendo git pull..."
-            git pull
-        fi
-    else
-        if [ ! -d "$SOURCE_DIR" ]; then
-            echo -e "${RED}AniCS no parece estar instalado mediante este script.${NC}"
-            read -p "¿Deseas hacer una instalación limpia? [S/n]: " resp
-            if [[ "$resp" == "S" || "$resp" == "s" || "$resp" == "" ]]; then
-                install
-            fi
-            exit 0
-        fi
-        echo -e "${BLUE}Actualizando AniCS...${NC}"
-        cd "$SOURCE_DIR"
-        git pull
-    fi
+    echo -e "\n${BLUE}--- Paso 2: Actualizando Código Fuente desde GitHub ---${NC}"
+    TEMP_REPO_DIR="$DEFAULT_REPO_DIR"
     
-    echo -e "\n${BLUE}--- Paso 3: Compilando AniCS ---${NC}"
+    if [ -d "$TEMP_REPO_DIR" ]; then
+        rm -rf "$TEMP_REPO_DIR"
+    fi
+
+    echo "Clonando repositorio en $TEMP_REPO_DIR..."
+    git clone "$REPO_URL" "$TEMP_REPO_DIR"
+    cd "$TEMP_REPO_DIR"
+    
+    echo -e "\n${BLUE}--- Paso 3: Compilando AniCS CLI ---${NC}"
     echo -e "Compilando nueva versión..."
-    dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+    dotnet publish src/AniCS.CLI/AniCS.CLI.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
     
     echo -e "\n${BLUE}--- Paso 4: Instalando en el sistema ---${NC}"
-    sudo cp "bin/Release/net10.0/linux-x64/publish/AniCS" "$BIN_PATH"
+    if [ -f "src/AniCS.CLI/bin/Release/net10.0/linux-x64/publish/AniCS.CLI" ]; then
+        sudo cp "src/AniCS.CLI/bin/Release/net10.0/linux-x64/publish/AniCS.CLI" "$BIN_PATH"
+    else
+        sudo cp "src/AniCS.CLI/bin/Release/net10.0/linux-x64/publish/AniCS" "$BIN_PATH"
+    fi
     sudo chmod +x "$BIN_PATH"
-    echo -e "${GREEN}¡AniCS actualizado correctamente!${NC}"
+    
+    echo -e "${YELLOW}Limpiando código fuente temporal...${NC}"
+    cd ~
+    rm -rf "$TEMP_REPO_DIR"
+
+    echo -e "${GREEN}¡AniCS CLI actualizado correctamente!${NC}"
 }
 
 uninstall() {
