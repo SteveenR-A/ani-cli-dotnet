@@ -1,7 +1,15 @@
 # Tareas (Tasks)
 
-Aquí podemos mantener un registro de las tareas pendientes, en progreso y completadas.
+Registro de tareas pendientes, en progreso y completadas del proyecto AniCS.
 
-- [ ] Tarea 1: Describir tarea pendiente.
-- [ ] Tarea 2: Otra tarea pendiente.
-- [x] Tarea completada de ejemplo.
+## Pendientes / Sugerencias para el futuro
+- [ ] **Soporte multi-idioma (i18n)**: Extraer los textos en crudo del código `.axaml` y utilizar archivos de recursos (.resx) o diccionarios dinámicos para soportar Inglés/Español.
+- [ ] **Nuevos Extractores**: Implementar scraping para nuevos sitios web de anime alternativos a JkAnime para ofrecer respaldos si uno cae.
+- [ ] **Historial Local**: Guardar el último episodio visto de cada serie localmente en el archivo `config.json` para facilitar la continuación.
+
+## Completadas recientemente
+- [x] Ajustar márgenes del menú hamburguesa en `MainWindow.axaml` para que no sobresalga.
+- [x] Añadir y afinar paletas de colores en `ThemeManager.cs` (Dracula, Light, Tokyo Night, Cyberpunk con menos brillo amarillo).
+- [x] Refactorizar los User-Agents "quemados" y rotativos moviéndolos a la lista central de `AppConfig.cs`.
+- [x] Reparar la advertencia XAML en `SettingsView.axaml` (reemplazar Watermark obsoleto por PlaceholderText).
+- [x] Limpiar archivos `.dll` inexistentes del instalador `.wxs` de WiX y forzar la versión `4.0.5` en el script PowerShell de construcción.
