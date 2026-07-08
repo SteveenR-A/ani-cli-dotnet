@@ -80,8 +80,12 @@ cd ani-cli-dotnet
 ## 🛠️ Requisitos del Sistema
 
 - **.NET 10 SDK**: Requerido para compilar el código.
-- **mpv**: Obligatorio para reproducir video nativamente. (En Windows es compatible con `mpv.net`).
+- **mpv**: Obligatorio para reproducir video nativamente.
 - **yt-dlp**: Obligatorio para resolver servidores externos y descargar capítulos.
+
+> [!WARNING]  
+> **Usuarios de Windows:** A diferencia del instalador de Linux que hace todo automáticamente, en Windows debes instalar `mpv` y `yt-dlp` manualmente (por ejemplo, usando Scoop: `scoop install mpv yt-dlp`) y asegurarte de que estén en tus variables de entorno (PATH) para que tanto la versión Desktop como la CLI puedan encontrarlos.
+
 - **Kitty / Ghostty** (Opcional): Para renderizar imágenes de portadas nativamente en la terminal de Linux.
 
 ### Dependencias de Paquetes
