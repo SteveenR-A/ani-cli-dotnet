@@ -21,6 +21,7 @@ namespace AniCS.Commands
 
         public async Task ExecuteAsync()
         {
+            AnsiConsole.Clear();
             List<ScheduleItem> results = [];
 
             await AnsiConsole.Status()
