@@ -72,7 +72,12 @@ function Install-AniCS {
         $NewPath = $UserPath + ";$InstallDir"
         [Environment]::SetEnvironmentVariable("PATH", $NewPath, "User")
         Write-Host "[OK] Agregado $InstallDir a tu PATH." -ForegroundColor Green
-        Write-Host "`n[!] Importante: Reinicia tu consola (CMD o PowerShell) para que los cambios surtan efecto." -ForegroundColor Yellow
+        Write-Host "`n[!] Importante: Reinicia tu consola (CMD o PowerShell) para que los cambios surtan efecto globalmente." -ForegroundColor Yellow
+    }
+    
+    # Añadirlo también a la sesión actual para que funcione de inmediato sin reiniciar
+    if ($env:PATH -notlike "*$InstallDir*") {
+        $env:PATH += ";$InstallDir"
     }
 
     Write-Host "`n¡Instalación completada con éxito!" -ForegroundColor Green
