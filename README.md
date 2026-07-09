@@ -13,7 +13,9 @@ Ambas versiones comparten el mismo núcleo de extracción y sincronizan tu histo
 ## 🚀 Instalación (Windows & Linux)
 
 ### Versión de Escritorio (Desktop)
-Para usuarios de Windows que deseen la interfaz gráfica, el proyecto incluye un automatizador para generar el instalador MSI.
+
+**En Windows:**
+El proyecto incluye un automatizador para generar el instalador MSI.
 
 1. Clona el repositorio:
    ```powershell
@@ -25,6 +27,16 @@ Para usuarios de Windows que deseen la interfaz gráfica, el proyecto incluye un
    .\build-msi.ps1
    ```
 3. El archivo `AniCS-Installer.msi` se generará en la carpeta `Installer\`. Simplemente ejecútalo para instalar la aplicación en tu sistema.
+
+**En Linux:** (Soporta Arch, Ubuntu, Debian, Fedora, etc.)
+El proyecto cuenta con un script instalador que verifica dependencias, compila la aplicación nativamente y crea un acceso directo en tu menú de aplicaciones.
+
+```bash
+git clone https://github.com/SteveenR-A/ani-cli-dotnet.git
+cd ani-cli-dotnet
+./install-desktop.sh
+```
+El script mostrará un menú interactivo. Selecciona `1) Instalar AniCS Desktop`.
 
 ### Versión de Consola (CLI)
 Los scripts de instalación en bash/powershell instalan automáticamente la versión de consola en tu sistema de manera global.
@@ -108,7 +120,8 @@ ani-cli-dotnet/
 ├── Installer/                # Archivos de configuración WiX (v4) para el instalador.
 ├── build-msi.ps1             # Script (Windows) para compilar la GUI y generar el instalador MSI.
 ├── install.ps1               # Script (Windows) para instalar/actualizar la versión CLI en el sistema.
-└── install.sh                # Script (Linux) para instalar/actualizar la versión CLI en el sistema.
+├── install.sh                # Script (Linux) para instalar/actualizar la versión CLI en el sistema.
+└── install-desktop.sh        # Script (Linux) para instalar/actualizar la versión Gráfica (Desktop).
 ```
 
 ---
