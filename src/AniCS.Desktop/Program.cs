@@ -17,7 +17,7 @@ class Program
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
 #if DEBUG
-            .WithDeveloperTools()
+            //.WithDeveloperTools() // Requiere Avalonia 11.1+; comentado hasta actualizar
 #endif
             .WithInterFont()
             .LogToTrace();

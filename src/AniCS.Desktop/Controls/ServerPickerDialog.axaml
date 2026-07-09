@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="AniCS.Desktop.Controls.ServerPickerDialog"
+        Title="Seleccionar servidor"
+        Icon="avares://AniCS.Desktop/Assets/Incono/favicon.ico"
+        Width="400"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundColor}">
+
+    <StackPanel Margin="24">
+
+        <!-- Título -->
+        <TextBlock Text="Selecciona un servidor de video"
+                   FontSize="18"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource AppTitleColor}"
+                   Margin="0,0,0,6"/>
+
+        <TextBlock Name="EpisodeTitleText"
+                   FontSize="13"
+                   Foreground="{DynamicResource AppTextColor}"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,18"
+                   Opacity="0.75"/>
+
+        <!-- Lista de servidores (se llena dinámicamente desde code-behind) -->
+        <ItemsControl Name="ServersList">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <!-- Los botones se crean en code-behind, aquí solo el contenedor -->
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Panel de botones del diálogo generados en code-behind -->
+        <StackPanel Name="ServersPanel" Spacing="8" Margin="0,0,0,16"/>
+
+        <!-- Separador -->
+        <Separator Margin="0,0,0,12" Background="#44444460"/>
+
+        <!-- Cancelar -->
+        <Button Content="✕  Cancelar"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Padding="12,10"
+                CornerRadius="6"
+                Background="Transparent"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource AppTextColor}"
+                Foreground="{DynamicResource AppTextColor}"
+                Cursor="Hand"
+                Click="OnCancelClicked"/>
+    </StackPanel>
+</Window>

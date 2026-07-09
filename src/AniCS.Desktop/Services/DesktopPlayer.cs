@@ -54,7 +54,7 @@ public static class DesktopPlayer
         {
             "--force-window=yes",
             "--cache=yes",
-            "--cache-pause-wait=5"
+            "--cache-pause-wait=1"   // 1 s de buffer para reanudar tras seek (independiente del readahead)
         };
 
         bool isJkAnime = referer != null && referer.Contains("jkanime.net", StringComparison.OrdinalIgnoreCase);
@@ -67,13 +67,13 @@ public static class DesktopPlayer
 
         if (isJkAnime || isMediafire)
         {
-            args.Add("--demuxer-max-bytes=5M");
-            args.Add("--demuxer-readahead-secs=15");
-            args.Add("--cache-secs=30");
+            args.Add("--demuxer-max-bytes=150M");       // Hasta 150 MB en buffer
+            args.Add("--demuxer-max-back-bytes=50M");   // Guarda 50 MB ya reproducidos (rebobinar sin re-descargar)
+            args.Add("--demuxer-readahead-secs=120");   // Pre-descarga hasta 2 min durante reproducción normal
+            args.Add("--cache-secs=120");               // Cache total 2 min (cache-pause-wait controla seek por separado)
             args.Add("--demuxer-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_delay_max=5");
 
             string origin = isJkAnime ? "https://jkanime.net" : "https://www.mediafire.com";
-            // For mpv we can pass multiple headers joined by commas
             string headers = $"Referer: {referer},Origin: {origin},Accept-Language: es-419,es;q=0.9,en;q=0.8,Accept: */*,Connection: keep-alive,Sec-Fetch-Dest: video,Sec-Fetch-Mode: no-cors,Sec-Fetch-Site: cross-site";
 
             // Remove previous Referer and add the combined one
@@ -82,8 +82,9 @@ public static class DesktopPlayer
         }
         else
         {
-            args.Add("--demuxer-readahead-secs=20");
-            args.Add("--demuxer-max-back-bytes=200M");
+            args.Add("--demuxer-max-bytes=150M");
+            args.Add("--demuxer-max-back-bytes=50M");
+            args.Add("--demuxer-readahead-secs=120");
         }
 
         args.Add($"--title={title}");
@@ -105,7 +106,7 @@ public static class DesktopPlayer
 
             var p = new Process { StartInfo = startInfo };
             p.EnableRaisingEvents = true;
-            p.Exited += (s, e) => 
+            p.Exited += (s, e) =>
             {
                 lock (_activeProcesses) _activeProcesses.Remove(p);
             };
@@ -142,7 +143,7 @@ public static class DesktopPlayer
             var safeTitle = string.Join("_", anime.Title.Split(Path.GetInvalidFileNameChars()));
             animeDir = Path.Combine(downloadDir, safeTitle);
             Directory.CreateDirectory(animeDir);
-            
+
             episodeNumStr = string.IsNullOrWhiteSpace(episode.EpisodeNumber) ? "Desconocido" : episode.EpisodeNumber;
             var filenamePattern = $"Episodio {episodeNumStr}.%(ext)s";
             var outputPath = Path.Combine(animeDir, filenamePattern);
@@ -163,16 +164,16 @@ public static class DesktopPlayer
                 },
                 EnableRaisingEvents = true
             };
-            
-            p.Exited += (s, e) => 
+
+            p.Exited += (s, e) =>
             {
                 lock (_activeProcesses) _activeProcesses.Remove(p);
             };
             lock (_activeProcesses) _activeProcesses.Add(p);
             p.Start();
             _ = p.StandardError.ReadToEndAsync(); // Drain stderr so it doesn't block
-            
-            using var reg = cancellationToken.Register(() => 
+
+            using var reg = cancellationToken.Register(() =>
             {
                 try { if (!p.HasExited) p.Kill(true); } catch { }
             });

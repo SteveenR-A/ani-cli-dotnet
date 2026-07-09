@@ -5,6 +5,7 @@ using System.Net.Http;
 using AniCS.Extractors;
 using AniCS.Models;
 using AniCS.Desktop.Converters;
+using AniCS.Desktop.Controls;
 using System;
 
 namespace AniCS.Desktop.Views;
@@ -186,7 +187,7 @@ public partial class AnimeDetailsView : UserControl
     {
         if (sender is Button btn && btn.DataContext is EpisodeViewModel vm)
         {
-            StatusText.Text = $"Resolviendo video: {vm.Title}...";
+            StatusText.Text = $"Cargando servidores: {vm.Title}...";
             StatusText.IsVisible = true;
             btn.IsEnabled = false;
 
@@ -195,24 +196,52 @@ public partial class AnimeDetailsView : UserControl
                 var extractor = new JKAnimeExtractor(_httpClient);
                 var servers = await extractor.GetVideoServersAsync(vm.Url);
 
-                if (servers.Count > 0)
+                if (servers.Count == 0)
                 {
-                    var server = servers.Find(s => s.IsDirectPlaySupported) ?? servers[0];
-                    var videoUrl = await extractor.ResolveVideoUrlAsync(server.Url);
+                    StatusText.Text = "No se encontraron servidores de video.";
+                    return;
+                }
 
-                    if (!string.IsNullOrEmpty(videoUrl))
-                    {
-                        StatusText.IsVisible = false;
-                        AniCS.Desktop.Services.DesktopPlayer.Play(videoUrl, $"AniCS - {_anime.Title} - {vm.Title}", server.Url);
-                    }
-                    else
-                    {
-                        StatusText.Text = "Error: No se pudo extraer el video directo.";
-                    }
+                // Si hay más de un servidor, mostrar el diálogo de selección
+                VideoServer? chosenServer;
+                if (servers.Count == 1)
+                {
+                    chosenServer = servers[0];
                 }
                 else
                 {
-                    StatusText.Text = "No se encontraron servidores de video.";
+                    StatusText.IsVisible = false;
+                    var ownerWindow = TopLevel.GetTopLevel(this) as Window;
+                    if (ownerWindow == null) { chosenServer = servers[0]; }
+                    else
+                    {
+                        chosenServer = await ServerPickerDialog.ShowAsync(
+                            ownerWindow,
+                            servers,
+                            $"{_anime.Title} — {vm.Title}");
+                    }
+                }
+
+                if (chosenServer == null)
+                {
+                    // El usuario canceló
+                    StatusText.IsVisible = false;
+                    return;
+                }
+
+                StatusText.Text = $"Resolviendo video ({chosenServer.Name})...";
+                StatusText.IsVisible = true;
+
+                var videoUrl = await extractor.ResolveVideoUrlAsync(chosenServer.Url);
+
+                if (!string.IsNullOrEmpty(videoUrl))
+                {
+                    StatusText.IsVisible = false;
+                    AniCS.Desktop.Services.DesktopPlayer.Play(videoUrl, $"AniCS - {_anime.Title} - {vm.Title}", chosenServer.Url);
+                }
+                else
+                {
+                    StatusText.Text = $"Error: No se pudo extraer el video de '{chosenServer.Name}'";
                 }
             }
             catch (Exception ex)
@@ -237,7 +266,7 @@ public partial class AnimeDetailsView : UserControl
                 return;
             }
 
-            StatusText.Text = $"Preparando descarga: {vm.Title}...";
+            StatusText.Text = $"Cargando servidores: {vm.Title}...";
             StatusText.IsVisible = true;
             vm.CanDownload = false;
             vm.DownloadText = "⏳ Preparando...";
@@ -247,71 +276,101 @@ public partial class AnimeDetailsView : UserControl
                 var extractor = new JKAnimeExtractor(_httpClient);
                 var servers = await extractor.GetVideoServersAsync(vm.Url);
 
-                if (servers.Count > 0)
+                if (servers.Count == 0)
                 {
-                    var server = servers.Find(s => s.IsDirectPlaySupported) ?? servers[0];
-                    var videoUrl = await extractor.ResolveVideoUrlAsync(server.Url);
+                    StatusText.Text = "No se encontraron servidores de video.";
+                    vm.CanDownload = true;
+                    vm.DownloadText = "📥 Descargar";
+                    return;
+                }
 
-                    if (!string.IsNullOrEmpty(videoUrl))
-                    {
-                        StatusText.IsVisible = false;
-                        var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
-
-                        var activeDownload = new AniCS.Desktop.Services.ActiveDownload
-                        {
-                            AnimeTitle = _anime.Title,
-                            AnimeUrl = _anime.Url,
-                            ThumbnailUrl = _anime.ThumbnailUrl,
-                            EpisodeUrl = vm.Url,
-                            EpisodeNumber = vm.EpisodeNumber,
-                            EpisodeTitle = vm.Title,
-                            State = AniCS.Desktop.Services.DownloadState.Downloading,
-                            Progress = 0
-                        };
-                        AniCS.Desktop.Services.DownloadManager.AddActiveDownload(activeDownload);
-
-                        _ = System.Threading.Tasks.Task.Run(async () =>
-                        {
-                            var result = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
-                                videoUrl, _anime, vm.Episode, defaultDir, server.Url, 
-                                progress => Dispatcher.UIThread.Post(() => activeDownload.Progress = progress), 
-                                activeDownload.CancellationTokenSource.Token);
-
-                            if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
-                            {
-                                var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars()));
-                                var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
-                                AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
-                            }
-
-                            await Dispatcher.UIThread.InvokeAsync(() =>
-                            {
-                                if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Downloading || result == AniCS.Desktop.Services.DownloadResult.Success || result == AniCS.Desktop.Services.DownloadResult.Error)
-                                {
-                                    if (result == AniCS.Desktop.Services.DownloadResult.Success)
-                                        activeDownload.State = AniCS.Desktop.Services.DownloadState.Completed;
-                                    else if (result == AniCS.Desktop.Services.DownloadResult.Error)
-                                        activeDownload.State = AniCS.Desktop.Services.DownloadState.Error;
-
-                                    if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Completed || activeDownload.State == AniCS.Desktop.Services.DownloadState.Error || activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
-                                    {
-                                        AniCS.Desktop.Services.DownloadManager.RemoveActiveDownload(activeDownload);
-                                    }
-                                    UpdateEpisodeViewModelState(vm);
-                                }
-                            });
-                        });
-                    }
-                    else
-                    {
-                        StatusText.Text = "Error: No se pudo extraer el video para descargar.";
-                        vm.CanDownload = true;
-                        vm.DownloadText = "📥 Descargar";
-                    }
+                // Mostrar diálogo de selección si hay más de un servidor
+                VideoServer? chosenServer;
+                if (servers.Count == 1)
+                {
+                    chosenServer = servers[0];
                 }
                 else
                 {
-                    StatusText.Text = "No se encontraron servidores de video.";
+                    StatusText.IsVisible = false;
+                    var ownerWindow = TopLevel.GetTopLevel(this) as Window;
+                    if (ownerWindow == null) { chosenServer = servers[0]; }
+                    else
+                    {
+                        chosenServer = await ServerPickerDialog.ShowAsync(
+                            ownerWindow,
+                            servers,
+                            $"{_anime.Title} — {vm.Title}");
+                    }
+                }
+
+                if (chosenServer == null)
+                {
+                    // Usuario canceló
+                    StatusText.IsVisible = false;
+                    vm.CanDownload = true;
+                    vm.DownloadText = "📥 Descargar";
+                    return;
+                }
+
+                StatusText.Text = $"Preparando descarga ({chosenServer.Name}): {vm.Title}...";
+                StatusText.IsVisible = true;
+
+                var videoUrl = await extractor.ResolveVideoUrlAsync(chosenServer.Url);
+
+                if (!string.IsNullOrEmpty(videoUrl))
+                {
+                    StatusText.IsVisible = false;
+                    var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+
+                    var activeDownload = new AniCS.Desktop.Services.ActiveDownload
+                    {
+                        AnimeTitle = _anime.Title,
+                        AnimeUrl = _anime.Url,
+                        ThumbnailUrl = _anime.ThumbnailUrl,
+                        EpisodeUrl = vm.Url,
+                        EpisodeNumber = vm.EpisodeNumber,
+                        EpisodeTitle = vm.Title,
+                        State = AniCS.Desktop.Services.DownloadState.Downloading,
+                        Progress = 0
+                    };
+                    AniCS.Desktop.Services.DownloadManager.AddActiveDownload(activeDownload);
+
+                    _ = System.Threading.Tasks.Task.Run(async () =>
+                    {
+                        var result = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
+                            videoUrl, _anime, vm.Episode, defaultDir, chosenServer.Url,
+                            progress => Dispatcher.UIThread.Post(() => activeDownload.Progress = progress),
+                            activeDownload.CancellationTokenSource.Token);
+
+                        if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
+                        {
+                            var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars()));
+                            var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
+                            AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
+                        }
+
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Downloading || result == AniCS.Desktop.Services.DownloadResult.Success || result == AniCS.Desktop.Services.DownloadResult.Error)
+                            {
+                                if (result == AniCS.Desktop.Services.DownloadResult.Success)
+                                    activeDownload.State = AniCS.Desktop.Services.DownloadState.Completed;
+                                else if (result == AniCS.Desktop.Services.DownloadResult.Error)
+                                    activeDownload.State = AniCS.Desktop.Services.DownloadState.Error;
+
+                                if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Completed || activeDownload.State == AniCS.Desktop.Services.DownloadState.Error || activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
+                                {
+                                    AniCS.Desktop.Services.DownloadManager.RemoveActiveDownload(activeDownload);
+                                }
+                                UpdateEpisodeViewModelState(vm);
+                            }
+                        });
+                    });
+                }
+                else
+                {
+                    StatusText.Text = $"Error: No se pudo extraer el video de '{chosenServer.Name}'.";
                     vm.CanDownload = true;
                     vm.DownloadText = "📥 Descargar";
                 }
