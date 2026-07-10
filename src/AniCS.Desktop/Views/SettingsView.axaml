@@ -42,6 +42,24 @@
                 </ComboBox>
             </StackPanel>
 
+            <StackPanel Spacing="5">
+                <TextBlock Text="Paradigma de Interfaz" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                <TextBlock Text="El estilo y layout general de la aplicación. (Requiere reiniciar para aplicar los experimentales)" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                <ComboBox Name="ParadigmComboBox" HorizontalAlignment="Stretch">
+                    <ComboBoxItem Content="Lista (Por Defecto)" Tag="Normal"/>
+                    <ComboBoxItem Content="Carrusel Espacial 3D" Tag="Spatial"/>
+                    <ComboBoxItem Content="Grafo de Nodos" Tag="Node"/>
+                    <ComboBoxItem Content="Lista Cinética" Tag="Kinetic"/>
+                    <ComboBoxItem Content="TUI Avanzada (ASCII)" Tag="ASCII"/>
+                </ComboBox>
+            </StackPanel>
+
+            <StackPanel Spacing="5">
+                <TextBlock Text="HUD Espacial (Experimental)" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                <TextBlock Text="Muestra un menú radial al seleccionar episodios en lugar de botones clásicos." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                <ToggleSwitch Name="UseSpatialHudToggle" OffContent="Desactivado" OnContent="Activado" />
+            </StackPanel>
+
             <Button Content="Guardar Cambios" 
                     Padding="20,10"
                     Margin="0,20,0,0"

@@ -4,6 +4,7 @@ using Avalonia.Media.Imaging;
 using AniCS;
 using System.IO;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace AniCS.Desktop.Converters;
 
@@ -24,14 +25,28 @@ public class AsyncImageLoader
         element.SetValue(SourceUrlProperty, value);
     }
 
+    public static readonly AttachedProperty<bool> ApplyDuotoneProperty =
+        AvaloniaProperty.RegisterAttached<AsyncImageLoader, Image, bool>("ApplyDuotone", false);
+
+    public static bool GetApplyDuotone(Image element)
+    {
+        return element.GetValue(ApplyDuotoneProperty);
+    }
+
+    public static void SetApplyDuotone(Image element, bool value)
+    {
+        element.SetValue(ApplyDuotoneProperty, value);
+    }
+
     static AsyncImageLoader()
     {
         SourceUrlProperty.Changed.AddClassHandler<Image>(OnSourceUrlChanged);
+        ApplyDuotoneProperty.Changed.AddClassHandler<Image>(OnSourceUrlChanged);
     }
 
     private static async void OnSourceUrlChanged(Image sender, AvaloniaPropertyChangedEventArgs e)
     {
-        var url = e.NewValue as string;
+        var url = sender.GetValue(SourceUrlProperty);
         sender.Source = null;
 
         if (string.IsNullOrWhiteSpace(url)) return;
@@ -41,14 +56,35 @@ public class AsyncImageLoader
             var bytes = await DataCache.GetImageAsync(_httpClient, url);
             if (bytes != null && bytes.Length > 0)
             {
-                using var ms = new MemoryStream(bytes);
-                var bitmap = new Bitmap(ms);
-                sender.Source = bitmap;
+                bool applyDuotone = sender.GetValue(ApplyDuotoneProperty);
+                if (applyDuotone)
+                {
+                    // Buscar los colores del tema actual respetando diccionarios locales
+                    if (sender.TryFindResource("AppBackgroundColor", out var bgRes) &&
+                        sender.TryFindResource("AppPrimaryColor", out var fgRes) &&
+                        bgRes is Avalonia.Media.SolidColorBrush bgBrush &&
+                        fgRes is Avalonia.Media.SolidColorBrush fgBrush)
+                    {
+                        var bgColor = bgBrush.Color;
+                        var fgColor = fgBrush.Color;
+                        // Procesar de forma asíncrona para no bloquear UI
+                        var processedBitmap = await Task.Run(() => DuotoneImageProcessor.Process(bytes, bgColor, fgColor));
+                        sender.Source = processedBitmap;
+                    }
+                    else
+                    {
+                        sender.Source = new Bitmap(new MemoryStream(bytes));
+                    }
+                }
+                else
+                {
+                    sender.Source = new Bitmap(new MemoryStream(bytes));
+                }
             }
         }
         catch
         {
-            // Fallback or ignore
+            // Fallback
         }
     }
 }

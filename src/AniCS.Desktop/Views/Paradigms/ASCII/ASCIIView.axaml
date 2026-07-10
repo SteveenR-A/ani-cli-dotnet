@@ -1,0 +1,134 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:AniCS.Desktop.ViewModels"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:converters="clr-namespace:AniCS.Desktop.Converters"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="AniCS.Desktop.Views.Paradigms.ASCII.ASCIIView"
+             x:DataType="vm:HomeViewModel"
+             FontFamily="Cascadia Code, Consolas, Courier New">
+    <UserControl.Resources>
+        <!-- Sobrescribimos temporalmente el fondo para que NUNCA sea negro puro en la terminal (evita halación) -->
+        <!-- Como no sabemos qué tema está activo en puro XAML sin un ThemeDictionary avanzado, 
+             redefinimos un fondo genérico suavizado para la terminal si el usuario siente fatiga visual.
+             Sin embargo, para respetar el tema actual (Dracula/Tokyo/Cyberpunk), 
+             el DuotoneImageProcessor lee los colores del tema y los aplica matemáticamente. -->
+    </UserControl.Resources>
+
+    <!-- Se remueve el Background="Black" para que respete el tema actual (AppBackgroundColor provisto por MainWindow) -->
+    <Grid Margin="20" RowDefinitions="Auto, *">
+        
+        <!-- Cabecera ASCII -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="================================================================" Foreground="{DynamicResource AppTitleColor}" FontSize="14" FontWeight="Bold"/>
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBlock Grid.Column="0" Text=" ANICS TUI TERMINAL v1.0.0 " Foreground="{DynamicResource AppTitleColor}" FontSize="16" FontWeight="Bold"/>
+                <Button Grid.Column="1" Command="{Binding ReloadCommand}" Content="[ RECARGAR ]" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" BorderThickness="1" BorderBrush="{DynamicResource AppPrimaryColor}" Padding="5,2" Cursor="Hand"/>
+            </Grid>
+            <TextBlock Text="================================================================" Foreground="{DynamicResource AppTitleColor}" FontSize="14" FontWeight="Bold"/>
+        </StackPanel>
+
+        <!-- Contenido Central -->
+        <Grid Grid.Row="1">
+            
+            <!-- Estado de Carga -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsStatusVisible}">
+                <TextBlock Text="{Binding StatusText}" 
+                           FontSize="16" 
+                           Foreground="{DynamicResource AppPrimaryColor}"
+                           TextAlignment="Center">
+                    <TextBlock.Styles>
+                        <Style Selector="TextBlock">
+                            <Style.Animations>
+                                <Animation Duration="0:0:1" IterationCount="Infinite">
+                                    <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1.0"/></KeyFrame>
+                                    <KeyFrame Cue="50%"><Setter Property="Opacity" Value="0.2"/></KeyFrame>
+                                    <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1.0"/></KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+                    </TextBlock.Styles>
+                </TextBlock>
+            </StackPanel>
+
+            <!-- Lista de Resultados con soporte de teclado -->
+            <ListBox x:Name="AnimeListBox" ItemsSource="{Binding AnimeList}" Background="Transparent" BorderThickness="0"
+                     KeyUp="OnListBoxKeyUp" DoubleTapped="OnListBoxDoubleTapped">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                        <Setter Property="Background" Value="Transparent" />
+                    </Style>
+                    <!-- Eliminamos el efecto pointerover para no confundir con el hover del ratón -->
+                    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                        <Setter Property="Background" Value="Transparent" />
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:AnimeResult">
+                        <Border BorderBrush="{DynamicResource AppSubtextColor}" BorderThickness="0,0,0,1" Margin="0,0,0,10" Padding="5,5,5,10">
+                            <Grid ColumnDefinitions="Auto, Auto, *">
+                                
+                                <!-- Simulación de Ícono o ID con selector dinámico -->
+                                <TextBlock Grid.Column="0" Foreground="{DynamicResource AppPrimaryColor}" FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock.Styles>
+                                        <Style Selector="TextBlock">
+                                            <Setter Property="Text" Value="[ ]" />
+                                            <Setter Property="Opacity" Value="0.3" />
+                                        </Style>
+                                        <!-- Cuando el padre ListBoxItem está seleccionado, cambia el texto a [*] -->
+                                        <Style Selector="ListBoxItem:selected TextBlock">
+                                            <Setter Property="Text" Value="[*]" />
+                                            <Setter Property="Opacity" Value="1.0" />
+                                        </Style>
+                                    </TextBlock.Styles>
+                                </TextBlock>
+                                
+                                <!-- Imagen Procesada en Duotono Puro -->
+                                <Border Grid.Column="1" 
+                                        Width="120" Height="67" 
+                                        Margin="0,0,15,0"
+                                        Background="Transparent"
+                                        BorderBrush="{DynamicResource AppPrimaryColor}"
+                                        BorderThickness="1"
+                                        CornerRadius="2"
+                                        ClipToBounds="True">
+                                    <!-- AQUI USAMOS EL PROCESADOR DUOTONO -->
+                                    <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" 
+                                           converters:AsyncImageLoader.ApplyDuotone="False"
+                                           Stretch="UniformToFill" 
+                                           Opacity="1.0"
+                                           RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                                </Border>
+                                
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" 
+                                               Foreground="{DynamicResource AppTitleColor}" 
+                                               FontWeight="Bold" 
+                                               FontSize="16" 
+                                               TextWrapping="NoWrap" 
+                                               TextTrimming="CharacterEllipsis"/>
+                                    
+                                    <TextBlock Text="{Binding Description}" 
+                                               Foreground="{DynamicResource AppTitleColor}" 
+                                               Opacity="0.8"
+                                               FontSize="14" 
+                                               Margin="0,5,0,0"/>
+                                    
+                                    <TextBlock Text="{Binding Url}" 
+                                               Foreground="{DynamicResource AppPrimaryColor}" 
+                                               Opacity="0.4"
+                                               FontSize="10" 
+                                               Margin="0,5,0,0"
+                                               TextWrapping="NoWrap" 
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </Grid>
+</UserControl>

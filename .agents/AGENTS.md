@@ -8,6 +8,8 @@ El proyecto principal se divide en tres partes (ubicadas en `/src/`):
 - **AniCS.Desktop**: La interfaz gráfica de usuario multiplataforma desarrollada en **Avalonia UI** (C# / XAML). Utiliza una arquitectura orientada a eventos para reproducir, buscar y configurar temas (Dracula, Light, etc.).
 - **AniCS.CLI**: Una interfaz en modo consola interactiva para quienes prefieren la terminal.
 
+> **Importante**: Para entender los diferentes "Paradigmas Visuales" (Classic, ASCII, HUD, etc.) revisa el archivo `.agents/paradigmas.md`.
+
 Adicionalmente:
 - **/Installer**: Contiene la definición en XML de WiX Toolset v4 (`AniCS-Installer.wxs`) para construir el `.msi` en Windows. Para compilarlo se usa `build-msi.ps1`.
 

@@ -29,7 +29,7 @@ public static class DataCache
     public static string GetImageCachePath(string url)
     {
         if (string.IsNullOrEmpty(url)) return string.Empty;
-        var hash = Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(url)));
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(url)));
         // Use .jpg extension so that ImageSharp (used by Spectre.Console CanvasImage)
         // can correctly detect the image format from the file extension.
         return Path.Combine(CacheDir, hash + ".jpg");

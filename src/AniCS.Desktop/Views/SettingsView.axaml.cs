@@ -29,8 +29,26 @@ public partial class SettingsView : UserControl
         CustomPlayerPathInput.Text = config.CustomPlayerExePath;
         
         RefreshThemeList(config);
+        RefreshParadigmList(config);
+        
+        UseSpatialHudToggle.IsChecked = config.UseSpatialHud;
         
         StatusMessage.IsVisible = false;
+    }
+
+
+
+    private void RefreshParadigmList(AppConfig config)
+    {
+        if (ParadigmComboBox == null) return;
+        for (int i = 0; i < ParadigmComboBox.Items.Count; i++)
+        {
+            if (ParadigmComboBox.Items[i] is Avalonia.Controls.ComboBoxItem item && item.Tag?.ToString() == config.UiParadigm)
+            {
+                ParadigmComboBox.SelectedIndex = i;
+                break;
+            }
+        }
     }
 
     private void RefreshThemeList(AppConfig config)
@@ -60,6 +78,13 @@ public partial class SettingsView : UserControl
 
         config.CustomPlayerExePath = CustomPlayerPathInput.Text ?? string.Empty;
         
+        if (ParadigmComboBox != null && ParadigmComboBox.SelectedItem is Avalonia.Controls.ComboBoxItem paradigmItem && paradigmItem.Tag != null)
+        {
+            config.UiParadigm = paradigmItem.Tag.ToString()!;
+        }
+        
+        config.UseSpatialHud = UseSpatialHudToggle.IsChecked == true;
+
         ConfigManager.Save(config);
 
         StatusMessage.Text = "¡Configuración guardada exitosamente!";

@@ -4,19 +4,21 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:controls="clr-namespace:AniCS.Desktop.Controls"
              xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:vm="clr-namespace:AniCS.Desktop.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="AniCS.Desktop.Views.HomeView">
+             x:Class="AniCS.Desktop.Views.HomeView"
+             x:DataType="vm:HomeViewModel">
     
     <Grid RowDefinitions="Auto, *" Margin="20">
         <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,15">
             <TextBlock Grid.Column="0" Text="Últimos Episodios" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center"/>
-            <Button Grid.Column="1" Name="ReloadButton" Content="🔄" FontSize="18" Padding="8,4" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" Click="OnReloadClicked" ToolTip.Tip="Recargar"/>
+            <Button Grid.Column="1" Name="ReloadButton" Command="{Binding ReloadCommand}" Content="🔄" FontSize="18" Padding="8,4" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" ToolTip.Tip="Recargar"/>
         </Grid>
         
         <Grid Grid.Row="1">
-            <TextBlock Name="StatusText" Text="Cargando animes..." FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="True"/>
+            <TextBlock Name="StatusText" Text="{Binding StatusText}" FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsStatusVisible}"/>
             <ScrollViewer>
-                <ItemsControl Name="AnimeList">
+                <ItemsControl Name="AnimeList" ItemsSource="{Binding AnimeList}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="models:AnimeResult">
                             <controls:AnimeBlockControl />

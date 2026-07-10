@@ -6,6 +6,7 @@ namespace AniCS.Desktop;
 
 public partial class MainWindow : Window
 {
+    private ViewModels.HomeViewModel _sharedHomeViewModel = new ViewModels.HomeViewModel();
     private HomeView _homeView = new HomeView();
     private SearchView _searchView = new SearchView();
 
@@ -18,7 +19,61 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        MainContent.Content = _homeView;
+        ApplyWindowConfig();
+        LoadHomeParadigm();
+    }
+
+    private void LoadHomeParadigm()
+    {
+        var config = ConfigManager.Current;
+        UserControl targetView;
+        
+        switch (config.UiParadigm)
+        {
+            case "Spatial": targetView = new Views.Paradigms.Spatial.SpatialView(); break;
+            case "Node": targetView = new Views.Paradigms.Node.NodeView(); break;
+            case "Kinetic": targetView = new Views.Paradigms.Kinetic.KineticView(); break;
+            case "ASCII": targetView = new Views.Paradigms.ASCII.ASCIIView(); break;
+            default: targetView = _homeView; break;
+        }
+
+        // Inyectamos el ViewModel compartido para que no re-carguen todo al cambiar de vista
+        targetView.DataContext = _sharedHomeViewModel;
+        MainContent.Content = targetView;
+
+        // Si es la primera vez que se carga la aplicación y la lista está vacía, forzar la carga
+        if (_sharedHomeViewModel.AnimeList.Count == 0 && !_sharedHomeViewModel.IsReloading)
+        {
+            _ = _sharedHomeViewModel.LoadDataAsync();
+        }
+    }
+
+    private void ApplyWindowConfig()
+    {
+        var config = ConfigManager.Current;
+        if (config.WindowState == "Maximized")
+        {
+            this.WindowState = WindowState.Maximized;
+        }
+        else
+        {
+            this.WindowState = WindowState.Normal;
+            this.Width = config.WindowWidth > 0 ? config.WindowWidth : 1000;
+            this.Height = config.WindowHeight > 0 ? config.WindowHeight : 700;
+        }
+    }
+
+    protected override void OnClosing(Avalonia.Controls.WindowClosingEventArgs e)
+    {
+        base.OnClosing(e);
+        var config = ConfigManager.Current;
+        config.WindowState = this.WindowState == WindowState.Maximized ? "Maximized" : "Normal";
+        if (this.WindowState == WindowState.Normal)
+        {
+            config.WindowWidth = this.Bounds.Width;
+            config.WindowHeight = this.Bounds.Height;
+        }
+        ConfigManager.Save(config);
     }
 
     private void OnHamburgerClicked(object? sender, RoutedEventArgs e)
@@ -44,24 +99,24 @@ public partial class MainWindow : Window
         }
         else
         {
-            MainContent.Content = _homeView;
+            LoadHomeParadigm();
             PageTitleText.Text = "Inicio";
         }
     }
     
     private void SetTitleForView(UserControl view)
     {
-        if (view is HomeView) PageTitleText.Text = "Inicio";
-        else if (view is SearchView) PageTitleText.Text = "Buscar Anime";
+        if (view is SearchView) PageTitleText.Text = "Buscar Anime";
         else if (view is CalendarView) PageTitleText.Text = "Calendario";
         else if (view is DownloadsView) PageTitleText.Text = "Descargas";
         else if (view is HistoryView) PageTitleText.Text = "Historial";
         else if (view is SettingsView) PageTitleText.Text = "Configuración";
+        else PageTitleText.Text = "Inicio"; // Todos los demás (HomeView, ASCIIView, etc.) son el Inicio
     }
 
     private void OnHomeClicked(object? sender, RoutedEventArgs e)
     {
-        MainContent.Content = _homeView;
+        LoadHomeParadigm();
         PageTitleText.Text = "Inicio";
         MainSplitView.IsPaneOpen = false;
     }

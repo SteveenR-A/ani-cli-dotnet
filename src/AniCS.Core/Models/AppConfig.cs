@@ -36,4 +36,15 @@ public class AppConfig
 
     // UI Theme
     public string Theme { get; set; } = "Dark";
+
+    // Window State
+    public string WindowState { get; set; } = "Maximized";
+    public double WindowWidth { get; set; } = 1000;
+    public double WindowHeight { get; set; } = 700;
+
+    // UI Paradigm Mode
+    public string UiParadigm { get; set; } = "Normal";
+
+    // Use Spatial HUD for episode selection
+    public bool UseSpatialHud { get; set; } = false;
 }

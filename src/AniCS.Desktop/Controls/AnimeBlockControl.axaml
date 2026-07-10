@@ -20,8 +20,8 @@
             BorderBrush="#333333"
             Click="OnBlockClicked">
         
-        <Grid ColumnDefinitions="200, *">
-            <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="200" VerticalAlignment="Top">
+        <Grid ColumnDefinitions="Auto, *">
+            <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="220" VerticalAlignment="Top">
                 <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="Uniform" />
             </Border>
             
@@ -31,12 +31,15 @@
                            FontSize="18" 
                            FontWeight="Bold" 
                            Foreground="{DynamicResource AppTitleColor}" 
-                           TextWrapping="Wrap" 
+                           TextTrimming="CharacterEllipsis"
+                           TextWrapping="NoWrap"
                            Margin="0,0,0,8" />
                 
                 <TextBlock Text="{Binding Description}" 
                            FontSize="14" 
                            Foreground="{DynamicResource AppSubtextColor}"
+                           TextTrimming="CharacterEllipsis"
+                           MaxLines="4"
                            TextWrapping="Wrap" />
             </StackPanel>
         </Grid>

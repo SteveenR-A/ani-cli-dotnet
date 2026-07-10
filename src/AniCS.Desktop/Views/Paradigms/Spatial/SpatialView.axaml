@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="AniCS.Desktop.Views.Paradigms.Spatial.SpatialView">
+    <Grid>
+        <!-- Placeholder for 3D Spatial Paradigm -->
+        <TextBlock Text="[Paradigma Espacial 3D: Próximamente]" 
+                   HorizontalAlignment="Center" 
+                   VerticalAlignment="Center" 
+                   FontSize="24" 
+                   Foreground="{DynamicResource AppTitleColor}"/>
+        
+        <!-- En el futuro aquí se integraría un canvas con transformaciones 3D,
+             y se le pasaría el ViewModel de HomeView para renderizar las carátulas. -->
+    </Grid>
+</UserControl>

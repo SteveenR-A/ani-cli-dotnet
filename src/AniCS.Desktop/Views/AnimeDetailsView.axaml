@@ -53,7 +53,7 @@
                                             <TextBlock Text="{Binding Title}" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Button>
-                                    <Grid Grid.Column="1" ColumnDefinitions="*, Auto">
+                                    <Grid Grid.Column="1" ColumnDefinitions="*, Auto" IsVisible="{Binding IsDownloadButtonVisible}">
                                         <Button Grid.Column="0" Background="{DynamicResource AppSurfaceColor}" 
                                                 CornerRadius="0,4,4,0" 
                                                 Padding="15,10" 
