@@ -5,7 +5,9 @@
              xmlns:services="clr-namespace:AniCS.Desktop.Services"
              xmlns:converters="clr-namespace:AniCS.Desktop.Converters"
              xmlns:views="clr-namespace:AniCS.Desktop.Views"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             xmlns:local="clr-namespace:AniCS.Desktop"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AniCS.Desktop.Views.DownloadsView">
     
     <UserControl.Resources>
@@ -14,7 +16,9 @@
 
     <Grid RowDefinitions="Auto, *" Margin="20">
         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
-            <Button Name="ReloadButton" Content="🔄" FontSize="18" Padding="8,4" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" Click="OnReloadClicked" ToolTip.Tip="Recargar"/>
+            <Button Name="ReloadButton" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" Click="OnReloadClicked" ToolTip.Tip="Recargar">
+                <material:MaterialIcon Kind="Refresh" Width="24" Height="24" />
+            </Button>
         </StackPanel>
         
         <Grid Grid.Row="1">
@@ -41,7 +45,12 @@
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
                                                     <Button Content="{Binding PauseResumeText}" Click="OnPauseResumeActiveDownloadClicked" Tag="{Binding}" Background="#FFB300" Foreground="White" />
-                                                    <Button Content="❌ Cancelar" Click="OnCancelActiveDownloadClicked" Tag="{Binding}" Background="#E53935" Foreground="White" />
+                                                    <Button Click="OnCancelActiveDownloadClicked" Tag="{Binding}" Background="#E53935" Foreground="White">
+                                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                                            <material:MaterialIcon Kind="Close" Width="16" Height="16" />
+                                                            <TextBlock Text="Cancelar" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                    </Button>
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
@@ -65,7 +74,12 @@
                                             <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" Margin="15,0" VerticalAlignment="Center" />
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                 <Button Content="Ver Online" Click="OnGoToAnimeClicked" Tag="{Binding}" Background="#1E88E5" Foreground="White" />
-                                                <Button Content="🗑️ Eliminar Anime" Click="OnDeleteAnimeClicked" Tag="{Binding}" Background="#E53935" Foreground="White" />
+                                                <Button Click="OnDeleteAnimeClicked" Tag="{Binding}" Background="#E53935" Foreground="White">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                        <material:MaterialIcon Kind="Delete" Width="16" Height="16" />
+                                                        <TextBlock Text="Eliminar Anime" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
                                             </StackPanel>
                                         </Grid>
                                     </Expander.Header>
@@ -78,8 +92,15 @@
                                                         <TextBlock Grid.Column="0" Text="{Binding EpisodeNumber}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Width="40" VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="1" Text="{Binding EpisodeTitle}" FontSize="16" Foreground="{DynamicResource AppSubtextColor}" VerticalAlignment="Center" Margin="10,0"/>
                                                         
-                                                        <Button Grid.Column="2" Content="▶ Reproducir" Click="OnPlayEpisodeClicked" Tag="{Binding}" Margin="0,0,10,0" Background="#43A047" Foreground="White" />
-                                                        <Button Grid.Column="3" Content="🗑️" Click="OnDeleteEpisodeClicked" Tag="{Binding}" Background="#E53935" Foreground="White"/>
+                                                        <Button Grid.Column="2" Click="OnPlayEpisodeClicked" Tag="{Binding}" Margin="0,0,10,0" Background="#43A047" Foreground="White">
+                                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                <material:MaterialIcon Kind="Play" Width="16" Height="16" />
+                                                                <TextBlock Text="Reproducir" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Grid.Column="3" Click="OnDeleteEpisodeClicked" Tag="{Binding}" Background="#E53935" Foreground="White">
+                                                            <material:MaterialIcon Kind="Delete" Width="16" Height="16" />
+                                                        </Button>
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>

@@ -3,13 +3,20 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:history="clr-namespace:AniCS.History;assembly=AniCS.Core"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             xmlns:local="clr-namespace:AniCS.Desktop"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
              x:Class="AniCS.Desktop.Views.HistoryView">
     
     <Grid RowDefinitions="Auto, *" Margin="20">
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,15">
             <TextBlock Text="Historial" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center"/>
-            <Button Name="ReloadButton" Content="🔄 Recargar" FontSize="14" Padding="8,4" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" VerticalAlignment="Center" Click="OnReloadClicked"/>
+            <Button Name="ReloadButton" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" VerticalAlignment="Center" Click="OnReloadClicked">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <material:MaterialIcon Kind="Refresh" Width="16" Height="16" />
+                    <TextBlock Text="Recargar" VerticalAlignment="Center" FontSize="14" />
+                </StackPanel>
+            </Button>
         </StackPanel>
         
         <Grid Grid.Row="1">

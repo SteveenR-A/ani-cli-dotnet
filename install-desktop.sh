@@ -138,7 +138,7 @@ install() {
 [Desktop Entry]
 Name=AniCS
 Comment=Cliente de Anime de Escritorio
-Exec=$BIN_PATH
+Exec=env AVALONIA_USE_WAYLAND=0 $BIN_PATH
 Icon=$BIN_DIR/icon.png
 Terminal=false
 Type=Application

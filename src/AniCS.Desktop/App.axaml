@@ -1,10 +1,11 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="AniCS.Desktop.App"
              RequestedThemeVariant="Dark">
 
     <Application.Resources>
-        <FontFamily x:Key="JetBrainsFont">avares://AniCS.Desktop/Assets/Fonts#JetBrains Mono</FontFamily>
+        <FontFamily x:Key="JetBrainsFont">avares://AniCS.Desktop/Assets/Fonts#JetBrains Mono, Noto Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Twemoji</FontFamily>
         <SolidColorBrush x:Key="AppBackgroundColor">#000000</SolidColorBrush>
         <SolidColorBrush x:Key="AppSurfaceColor">#121212</SolidColorBrush>
         <SolidColorBrush x:Key="AppPrimaryColor">#FFFFFF</SolidColorBrush>
@@ -15,8 +16,9 @@
 
     <Application.Styles>
         <FluentTheme />
+        <materialIcons:MaterialIconStyles />
         <Style Selector="Window">
-            <Setter Property="FontFamily" Value="{StaticResource JetBrainsFont}"/>
+            <Setter Property="FontFamily" Value="avares://AniCS.Desktop/Assets/Fonts#JetBrains Mono, Noto Color Emoji, Segoe UI Emoji, Twemoji, Noto Sans, Arial"/>
             <Setter Property="Background" Value="{DynamicResource AppBackgroundColor}"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextColor}"/>
         </Style>

@@ -5,14 +5,19 @@
              xmlns:controls="clr-namespace:AniCS.Desktop.Controls"
              xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
              xmlns:vm="clr-namespace:AniCS.Desktop.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             xmlns:views="clr-namespace:AniCS.Desktop.Views"
+             xmlns:local="clr-namespace:AniCS.Desktop"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
              x:Class="AniCS.Desktop.Views.HomeView"
              x:DataType="vm:HomeViewModel">
     
     <Grid RowDefinitions="Auto, *" Margin="20">
         <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,15">
             <TextBlock Grid.Column="0" Text="Últimos Episodios" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center"/>
-            <Button Grid.Column="1" Name="ReloadButton" Command="{Binding ReloadCommand}" Content="🔄" FontSize="18" Padding="8,4" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" ToolTip.Tip="Recargar"/>
+            <Button Grid.Column="1" Name="ReloadButton" Command="{Binding ReloadCommand}" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" ToolTip.Tip="Recargar">
+                <material:MaterialIcon Kind="Refresh" Width="24" Height="24" />
+            </Button>
         </Grid>
         
         <Grid Grid.Row="1">

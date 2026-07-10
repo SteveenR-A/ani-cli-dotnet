@@ -5,7 +5,9 @@
              xmlns:converters="clr-namespace:AniCS.Desktop.Converters"
              xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
              xmlns:views="clr-namespace:AniCS.Desktop.Views"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             xmlns:local="clr-namespace:AniCS.Desktop"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
              x:Class="AniCS.Desktop.Views.AnimeDetailsView"
              x:DataType="models:AnimeResult">
     
@@ -15,7 +17,12 @@
 
     <Grid RowDefinitions="Auto, *" Margin="20">
         <!-- Back Button -->
-        <Button Grid.Row="0" Content="← Volver" FontSize="16" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" BorderThickness="0" Margin="0,0,0,15" Cursor="Hand" Click="OnBackClicked"/>
+        <Button Grid.Row="0" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" BorderThickness="0" Margin="0,0,0,15" Cursor="Hand" Click="OnBackClicked">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+                <material:MaterialIcon Kind="ArrowLeft" Width="20" Height="20" />
+                <TextBlock Text="Volver" VerticalAlignment="Center" FontSize="16" />
+            </StackPanel>
+        </Button>
         
         <ScrollViewer Grid.Row="1">
             <StackPanel>
@@ -62,10 +69,12 @@
                                                 BorderThickness="1"
                                                 BorderBrush="#333333"
                                                 Click="OnDownloadEpisodeClicked"/>
-                                        <Button Grid.Column="1" Content="❌" IsVisible="{Binding IsDownloading}"
+                                        <Button Grid.Column="1" IsVisible="{Binding IsDownloading}"
                                                 Click="OnCancelDownloadClicked"
                                                 Background="#E53935" Foreground="White"
-                                                Margin="5,0,0,0"/>
+                                                Margin="5,0,0,0">
+                                            <material:MaterialIcon Kind="Close" Width="16" Height="16" />
+                                        </Button>
                                     </Grid>
                                 </Grid>
                             </DataTemplate>
