@@ -201,8 +201,8 @@ public partial class HudRadialMenuDialog : Window
 
     private PathGeometry CreateWedgeGeometry(double cx, double cy, double r1, double r2, double startAngleDeg, double sweepAngleDeg)
     {
-        var geo = new PathGeometry();
-        var fig = new PathFigure { IsClosed = true };
+        var geo = new PathGeometry { Figures = new PathFigures() };
+        var fig = new PathFigure { IsClosed = true, Segments = new PathSegments() };
         
         double startRad = startAngleDeg * Math.PI / 180.0;
         double endRad = (startAngleDeg + sweepAngleDeg) * Math.PI / 180.0;
