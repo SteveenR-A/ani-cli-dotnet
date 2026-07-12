@@ -73,7 +73,9 @@ public static class PlayerManager
             var exe = !string.IsNullOrEmpty(ConfigManager.Current.CustomPlayerExePath) ? ConfigManager.Current.CustomPlayerExePath : (IsInstalled("mpv") ? "mpv" : "mpvnet");
             args.Add("--force-window=yes");
             args.Add("--cache=yes");
-            args.Add("--cache-pause-wait=5");
+            // 2 s es suficiente para que el CDN entregue el siguiente chunk sin crear
+            // el ciclo pausa-5s-descarga-2s que causaba la sensación de "congelado permanente"
+            args.Add("--cache-pause-wait=2");
             
             bool isJkAnime = referer != null && referer.Contains("jkanime.net", StringComparison.OrdinalIgnoreCase);
             bool isMediafire = referer != null && referer.Contains("mediafire.com", StringComparison.OrdinalIgnoreCase);
@@ -86,20 +88,33 @@ public static class PlayerManager
 
             if (isJkAnime || isMediafire)
             {
-                // Modo Stealth/Navegador: evitar bloqueos por descargas masivas
-                args.Add("--demuxer-max-bytes=5M");
-                args.Add("--demuxer-readahead-secs=15");
-                args.Add("--cache-secs=30");
-                
-                // Flags de reconexión rápida sin hacer flood
-                args.Add("--demuxer-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_delay_max=5");
-                
-                // Cabeceras adicionales para simular el comportamiento embebido de Chrome
+                // Buffer grande: evita que mpv llegue al borde del buffer con la
+                // latencia alta del CDN de MediaFire (antes era 5 M → congelaba a los ~30 s)
+                args.Add("--demuxer-max-bytes=150M");
+                args.Add("--demuxer-max-back-bytes=50M");    // permite rebobinar sin re-descargar
+                args.Add("--demuxer-readahead-secs=120");    // pre-descarga hasta 2 min
+                args.Add("--cache-secs=120");
+
+                // Optimización de Seek y Red para Streaming HTTP:
+                //   hr-seek=check-cache: Hace un seek preciso sólo si ya está en caché. Si está fuera,
+                //   hace seek rápido al keyframe más cercano sin tener que descargar todos los bytes intermedios.
+                args.Add("--hr-seek=check-cache");
+                args.Add("--demuxer-seekable=yes");
+                args.Add("--network-timeout=15");            // Si el seek tarda más de 15s, reconecta en vez de quedarse congelado.
+
+                // Reconexión robusta:
+                //   reconnect_on_http_error cubre 403 (URL firmada expirada) y errores 5xx del CDN
+                //   reconnect_delay_max=10 evita flood pero no hace esperar demasiado
+                args.Add("--demuxer-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_on_http_error=403,5xx,reconnect_delay_max=10");
+
+                // Cabeceras mínimas necesarias para no recibir 403 del CDN.
+                // NOTA: NO incluir 'Connection: keep-alive' — mpv gestiona sus propias
+                // conexiones y esa cabecera entra en conflicto con su lógica de reconexión,
+                // causando que el servidor cierre la conexión tras el primer chunk (~30 s).
                 string origin = isJkAnime ? "https://jkanime.net" : "https://www.mediafire.com";
                 headers.Add($"Origin: {origin}");
                 headers.Add("Accept-Language: es-419,es;q=0.9,en;q=0.8");
                 headers.Add("Accept: */*");
-                headers.Add("Connection: keep-alive");
                 headers.Add("Sec-Fetch-Dest: video");
                 headers.Add("Sec-Fetch-Mode: no-cors");
                 headers.Add("Sec-Fetch-Site: cross-site");
@@ -107,8 +122,9 @@ public static class PlayerManager
             else
             {
                 // Configuración estándar para AnimeAV1 y otros
-                args.Add("--demuxer-readahead-secs=20");
-                args.Add("--demuxer-max-back-bytes=200M");
+                args.Add("--demuxer-max-bytes=150M");
+                args.Add("--demuxer-max-back-bytes=50M");
+                args.Add("--demuxer-readahead-secs=60");
             }
 
             args.Add($":http-user-agent={ConfigManager.Current.RandomUserAgent}");

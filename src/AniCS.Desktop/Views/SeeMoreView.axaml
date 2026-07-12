@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:controls="clr-namespace:AniCS.Desktop.Controls"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="AniCS.Desktop.Views.SeeMoreView"
+             Margin="20">
+    
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,20">
+            <Button Grid.Column="0" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" Click="OnBackClicked" Margin="0,0,15,0" Cursor="Hand">
+                <material:MaterialIcon Kind="ArrowLeft" Width="28" Height="28" />
+            </Button>
+            <TextBlock Grid.Column="1" Name="CategoryTitle" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+        </Grid>
+        
+        <!-- Contenido Grid -->
+        <ScrollViewer Grid.Row="1">
+            <ItemsControl Name="AnimeItemsControl">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:AnimeResult">
+                        <controls:AnimeCardControl Margin="0,0,15,15" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

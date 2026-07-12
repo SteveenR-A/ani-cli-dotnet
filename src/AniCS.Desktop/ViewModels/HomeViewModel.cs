@@ -28,6 +28,7 @@ public class HomeViewModel : ViewModelBase
 {
     private static readonly HttpClient _httpClient = new HttpClient();
     
+    // Lista general (Emisión - Modo Clásico)
     private ObservableCollection<AnimeResult> _animeList = new();
     public ObservableCollection<AnimeResult> AnimeList
     {
@@ -35,7 +36,29 @@ public class HomeViewModel : ViewModelBase
         set => SetProperty(ref _animeList, value);
     }
 
-    private string _statusText = "Cargando animes recientes...";
+    // Listas para el modo Android App
+    private ObservableCollection<AnimeResult> _latestList = new();
+    public ObservableCollection<AnimeResult> LatestList
+    {
+        get => _latestList;
+        set => SetProperty(ref _latestList, value);
+    }
+
+    private ObservableCollection<AnimeResult> _premieresList = new();
+    public ObservableCollection<AnimeResult> PremieresList
+    {
+        get => _premieresList;
+        set => SetProperty(ref _premieresList, value);
+    }
+
+    private ObservableCollection<AnimeResult> _historyList = new();
+    public ObservableCollection<AnimeResult> HistoryList
+    {
+        get => _historyList;
+        set => SetProperty(ref _historyList, value);
+    }
+
+    private string _statusText = "Cargando...";
     public string StatusText
     {
         get => _statusText;
@@ -81,12 +104,39 @@ public class HomeViewModel : ViewModelBase
         if (IsReloading) return;
         
         IsReloading = true;
-        StatusText = "Cargando animes recientes...";
+        StatusText = "Cargando contenido...";
         IsStatusVisible = true;
+        
         AnimeList.Clear();
+        LatestList.Clear();
+        PremieresList.Clear();
+        HistoryList.Clear();
 
         var extractor = new JKAnimeExtractor(_httpClient);
-        
+        var watchHistory = new AniCS.History.WatchHistory();
+
+        // Lanzar las tres tareas simultáneamente para que vayan renderizando apenas salgan
+        var latestTask = LoadLatestAsync(extractor);
+        var premieresTask = LoadPremieresAsync(extractor);
+        var historyTask = LoadHistoryAsync(watchHistory);
+
+        try
+        {
+            await Task.WhenAll(latestTask, premieresTask, historyTask);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Error parcial: {ex.Message}";
+        }
+        finally
+        {
+            IsStatusVisible = false;
+            IsReloading = false;
+        }
+    }
+
+    private async Task LoadLatestAsync(JKAnimeExtractor extractor)
+    {
         try
         {
             var episodes = await extractor.GetLatestReleasesAsync();
@@ -103,24 +153,68 @@ public class HomeViewModel : ViewModelBase
                 });
             }
             
+            // Asignar a ambas listas (AnimeList para el modo clásico y LatestList para el modo App)
             if (results.Count > 0)
             {
-                IsStatusVisible = false;
-                AnimeList = results;
-                SelectedIndex = 0;
+                // Dispatching al UI thread no es estrictamente necesario en Avalonia si solo se reasigna la prop,
+                // pero si la vista ya está ligada, Avalonia lo maneja.
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => 
+                {
+                    AnimeList = new ObservableCollection<AnimeResult>(results);
+                    LatestList = new ObservableCollection<AnimeResult>(results);
+                    SelectedIndex = 0;
+                });
             }
-            else
+        }
+        catch { /* Ignore */ }
+    }
+
+    private async Task LoadPremieresAsync(JKAnimeExtractor extractor)
+    {
+        try
+        {
+            var premieres = await extractor.GetPremieresAsync();
+            if (premieres != null && premieres.Count > 0)
             {
-                StatusText = "No se encontraron animes. Intenta recargar.";
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => 
+                {
+                    PremieresList = new ObservableCollection<AnimeResult>(premieres);
+                });
             }
         }
-        catch (Exception ex)
+        catch { /* Ignore */ }
+    }
+
+    private async Task LoadHistoryAsync(AniCS.History.WatchHistory history)
+    {
+        try
         {
-            StatusText = $"Error: {ex.Message}";
+            // El historial local es rápido, pero usamos Task.Run para no bloquear
+            await Task.Run(() =>
+            {
+                var entries = history.GetAll();
+                var results = new ObservableCollection<AnimeResult>();
+                
+                foreach (var entry in entries)
+                {
+                    results.Add(new AnimeResult
+                    {
+                        Title = entry.AnimeTitle,
+                        Description = $"Visto: Ep {entry.LastEpisodeNumber}",
+                        ThumbnailUrl = entry.AnimeThumbnailUrl, 
+                        Url = entry.AnimeUrl
+                    });
+                }
+
+                if (results.Count > 0)
+                {
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => 
+                    {
+                        HistoryList = results;
+                    });
+                }
+            });
         }
-        finally
-        {
-            IsReloading = false;
-        }
+        catch { /* Ignore */ }
     }
 }

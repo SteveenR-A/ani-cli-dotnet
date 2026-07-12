@@ -83,7 +83,7 @@ namespace AniCS.Terminal
             // Play
             AnsiConsole.MarkupLine($"[dim]Iniciando reproductor:[/] [bold]{Markup.Escape(anime.Title)}[/] [grey]Ep.{Markup.Escape(episode.EpisodeNumber)}[/]");
             PlayerManager.Play(epVideoUrl, $"AniCS — {anime.Title} Ep.{episode.EpisodeNumber}", epReferer);
-            _state.History.Record(anime.Title, anime.Url, episode.EpisodeNumber, epVideoUrl);
+            _state.History.Record(anime.Title, anime.Url, anime.ThumbnailUrl, episode.EpisodeNumber, epVideoUrl);
 
             if (!allowBinge) return LoopAction.ExitWithFalse;
 
@@ -125,7 +125,7 @@ namespace AniCS.Terminal
                 var targetDir = string.IsNullOrWhiteSpace(dirPrompt) ? defaultDir : dirPrompt;
 
                 YtDlpResolver.Download(epVideoUrl, anime.Title, episode.EpisodeNumber, targetDir, epReferer);
-                _state.History.Record(anime.Title, anime.Url, episode.EpisodeNumber, epVideoUrl);
+                _state.History.Record(anime.Title, anime.Url, anime.ThumbnailUrl, episode.EpisodeNumber, epVideoUrl);
             }
         }
 

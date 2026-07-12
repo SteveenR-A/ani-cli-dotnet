@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.VisualTree;
 using AniCS.History;
 using AniCS.Models;
 
@@ -26,6 +25,8 @@ public partial class HistoryView : UserControl
     {
         LoadData();
     }
+
+    public void Reload() => LoadData();
 
     private void LoadData()
     {
@@ -55,7 +56,7 @@ public partial class HistoryView : UserControl
                 {
                     Title = entry.AnimeTitle,
                     Url = entry.AnimeUrl,
-                    ThumbnailUrl = "" // Historial doesn't store thumbnails by default
+                    ThumbnailUrl = entry.AnimeThumbnailUrl
                 });
             }
         }

@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:vm="clr-namespace:AniCS.Desktop.ViewModels"
+             xmlns:controls="clr-namespace:AniCS.Desktop.Controls"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="AniCS.Desktop.Views.Paradigms.AndroidApp.AndroidAppView"
+             x:DataType="vm:HomeViewModel">
+    
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header con botón recargar -->
+        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="20,20,20,10">
+            <TextBlock Grid.Column="0" Text="Inicio (App Móvil)" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Command="{Binding ReloadCommand}" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" ToolTip.Tip="Recargar">
+                <material:MaterialIcon Kind="Refresh" Width="28" Height="28" />
+            </Button>
+        </Grid>
+        
+        <!-- Contenido desplazable -->
+        <ScrollViewer Grid.Row="1" Margin="20,0,0,0">
+            <StackPanel Spacing="30" Margin="0,0,0,40">
+                
+                <!-- Status de Carga Global (Opcional, ya que cargan independiente) -->
+                <TextBlock Text="{Binding StatusText}" 
+                           FontSize="18" 
+                           Foreground="{DynamicResource AppSubtextColor}" 
+                           HorizontalAlignment="Center" 
+                           IsVisible="{Binding IsStatusVisible}"/>
+                           
+                <!-- Carrusel 1: Últimos Episodios (Emisión) -->
+                <StackPanel>
+                    <Grid ColumnDefinitions="*, Auto" Margin="0,0,20,10">
+                        <TextBlock Grid.Column="0" Text="Emisión Reciente" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                        <Button Grid.Column="1" Content="Ver más" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" Click="OnSeeMoreLatestClicked" Cursor="Hand"/>
+                    </Grid>
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding LatestList}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:AnimeResult">
+                                    <controls:AnimeCardControl />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+
+                <!-- Carrusel 2: Estrenos / Populares -->
+                <StackPanel>
+                    <Grid ColumnDefinitions="*, Auto" Margin="0,0,20,10">
+                        <TextBlock Grid.Column="0" Text="Estrenos / Destacados" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                        <Button Grid.Column="1" Content="Ver más" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" Click="OnSeeMorePremieresClicked" Cursor="Hand"/>
+                    </Grid>
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding PremieresList}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:AnimeResult">
+                                    <controls:AnimeCardControl />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+
+                <!-- Carrusel 3: Historial -->
+                <StackPanel>
+                    <Grid ColumnDefinitions="*, Auto" Margin="0,0,20,10">
+                        <TextBlock Grid.Column="0" Text="Seguir Viendo" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                        <Button Grid.Column="1" Content="Ver más" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" Click="OnSeeMoreHistoryClicked" Cursor="Hand"/>
+                    </Grid>
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding HistoryList}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:AnimeResult">
+                                    <controls:AnimeCardControl />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -41,50 +41,55 @@ public static class DesktopPlayer
 
     public static void Play(string url, string title, string? referer)
     {
-        var exe = IsInstalled("mpv") ? "mpv" : IsInstalled("mpvnet") ? "mpvnet" : null;
+        var exe = GetExecutablePath("mpv") ?? GetExecutablePath("mpvnet");
 
         if (exe == null)
         {
-            // Fallback: Open in browser if mpv is not installed
-            OpenBrowser(url);
-            return;
+            throw new Exception("mpv no está instalado. Por favor, descarga mpv y agrégalo al PATH o a la carpeta del programa.");
         }
 
         var args = new List<string>
         {
             "--force-window=yes",
             "--cache=yes",
-            "--cache-pause-wait=1"   // 1 s de buffer para reanudar tras seek (independiente del readahead)
+            "--cache-pause-wait=1"
         };
 
         bool isJkAnime = referer != null && referer.Contains("jkanime.net", StringComparison.OrdinalIgnoreCase);
         bool isMediafire = referer != null && referer.Contains("mediafire.com", StringComparison.OrdinalIgnoreCase);
 
-        if (!string.IsNullOrEmpty(referer))
-        {
-            args.Add($"--http-header-fields=Referer: {referer}");
-        }
-
         if (isJkAnime || isMediafire)
         {
-            args.Add("--demuxer-max-bytes=150M");       // Hasta 150 MB en buffer
-            args.Add("--demuxer-max-back-bytes=50M");   // Guarda 50 MB ya reproducidos (rebobinar sin re-descargar)
-            args.Add("--demuxer-readahead-secs=120");   // Pre-descarga hasta 2 min durante reproducción normal
-            args.Add("--cache-secs=120");               // Cache total 2 min (cache-pause-wait controla seek por separado)
-            args.Add("--demuxer-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_delay_max=5");
+            args.Add("--demuxer-max-bytes=150M");
+            args.Add("--demuxer-max-back-bytes=50M");
+            args.Add("--demuxer-readahead-secs=120");
+            args.Add("--cache-secs=120");
+            args.Add("--hr-seek=yes");
+            args.Add("--network-timeout=15");
+            args.Add("--demuxer-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_on_http_error=4xx,reconnect_delay_max=10");
 
+            // mpv 0.40+ acepta --http-header-fields una vez por cabecera (no separadas por coma)
             string origin = isJkAnime ? "https://jkanime.net" : "https://www.mediafire.com";
-            string headers = $"Referer: {referer},Origin: {origin},Accept-Language: es-419,es;q=0.9,en;q=0.8,Accept: */*,Connection: keep-alive,Sec-Fetch-Dest: video,Sec-Fetch-Mode: no-cors,Sec-Fetch-Site: cross-site";
-
-            // Remove previous Referer and add the combined one
-            args.RemoveAll(a => a.StartsWith("--http-header-fields="));
-            args.Add($"--http-header-fields={headers}");
+            if (!string.IsNullOrEmpty(referer))
+            {
+                args.Add($"--http-header-fields=Referer: {referer}");
+                args.Add($"--http-header-fields=Origin: {origin}");
+            }
+            args.Add("--http-header-fields=Accept-Language: es-419");
+            args.Add("--http-header-fields=Accept: */*");
+            args.Add("--http-header-fields=Sec-Fetch-Dest: video");
+            args.Add("--http-header-fields=Sec-Fetch-Mode: no-cors");
+            args.Add("--http-header-fields=Sec-Fetch-Site: cross-site");
         }
         else
         {
             args.Add("--demuxer-max-bytes=150M");
             args.Add("--demuxer-max-back-bytes=50M");
             args.Add("--demuxer-readahead-secs=120");
+            if (!string.IsNullOrEmpty(referer))
+            {
+                args.Add($"--http-header-fields=Referer: {referer}");
+            }
         }
 
         args.Add($"--title={title}");
@@ -95,14 +100,14 @@ public static class DesktopPlayer
             var startInfo = new ProcessStartInfo
             {
                 FileName = exe,
+                // UseShellExecute = false: permite usar ArgumentList (escaping 100% seguro por .NET).
+                // CreateNoWindow = false: NO suprime la ventana de video de mpv.
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = false,
             };
 
             foreach (var arg in args)
-            {
                 startInfo.ArgumentList.Add(arg);
-            }
 
             var p = new Process { StartInfo = startInfo };
             p.EnableRaisingEvents = true;
@@ -115,22 +120,8 @@ public static class DesktopPlayer
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error launching player: {ex.Message}");
-            OpenBrowser(url);
+            throw new Exception($"Error al iniciar el reproductor: {ex.Message}", ex);
         }
-    }
-
-    private static void OpenBrowser(string url)
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            });
-        }
-        catch { }
     }
 
     public static async System.Threading.Tasks.Task<DownloadResult> DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null, Action<double>? onProgress = null, System.Threading.CancellationToken cancellationToken = default)
@@ -220,19 +211,54 @@ public static class DesktopPlayer
         }
     }
 
-    private static bool IsInstalled(string command)
+    /// <summary>
+    /// Convierte una lista de argumentos a una cadena escapada para ProcessStartInfo.Arguments.
+    /// Necesario porque con UseShellExecute = true no se puede usar ArgumentList.
+    /// </summary>
+    private static string BuildArgumentString(List<string> args)
     {
-        var paths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator);
-        if (paths == null) return false;
-
-        string extension = OperatingSystem.IsWindows() ? ".exe" : "";
-
-        foreach (var path in paths)
+        var parts = new List<string>();
+        foreach (var arg in args)
         {
-            var fullPath = Path.Combine(path.Trim(), command + extension);
-            if (File.Exists(fullPath)) return true;
+            // Si el argumento contiene espacios o comillas, debe ir entre comillas dobles
+            // con las comillas internas escapadas con backslash.
+            if (arg.Contains(' ') || arg.Contains('"') || arg.Contains('\t'))
+            {
+                // Escaping estándar de Windows: las backslashes antes de una comilla se duplican
+                string escaped = arg.Replace("\\", "\\\\").Replace("\"", "\\\"");
+                parts.Add($"\"{escaped}\"");
+            }
+            else
+            {
+                parts.Add(arg);
+            }
+        }
+        return string.Join(" ", parts);
+    }
+
+    private static string? GetExecutablePath(string command)
+    {
+        string extension = OperatingSystem.IsWindows() ? ".exe" : "";
+        string fileName = command + extension;
+
+        // 1. Prioridad: buscar en el PATH del sistema (versión más actualizada del usuario)
+        var paths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator);
+        if (paths != null)
+        {
+            foreach (var path in paths)
+            {
+                var fullPath = Path.Combine(path.Trim(), fileName);
+                if (File.Exists(fullPath)) return fullPath;
+            }
         }
 
-        return false;
+        // 2. Fallback: mpv en la carpeta de la aplicación (interno / antiguo)
+        string localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+        if (File.Exists(localPath)) return localPath;
+
+        string currentDirPath = Path.Combine(Environment.CurrentDirectory, fileName);
+        if (File.Exists(currentDirPath)) return currentDirPath;
+
+        return null;
     }
 }

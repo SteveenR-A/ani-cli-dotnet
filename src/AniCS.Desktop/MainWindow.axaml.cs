@@ -34,6 +34,7 @@ public partial class MainWindow : Window
             case "Node": targetView = new Views.Paradigms.Node.NodeView(); break;
             case "Kinetic": targetView = new Views.Paradigms.Kinetic.KineticView(); break;
             case "ASCII": targetView = new Views.Paradigms.ASCII.ASCIIView(); break;
+            case "AndroidApp": targetView = new Views.Paradigms.AndroidApp.AndroidAppView(); break;
             default: targetView = _homeView; break;
         }
 
@@ -89,6 +90,14 @@ public partial class MainWindow : Window
         PageTitleText.Text = anime.Title;
     }
 
+    public void NavigateToSeeMore(string title, System.Collections.Generic.IEnumerable<AniCS.Models.AnimeResult> items)
+    {
+        _previousView = MainContent.Content as UserControl;
+        var seeMoreView = new SeeMoreView(title, items);
+        MainContent.Content = seeMoreView;
+        PageTitleText.Text = title;
+    }
+
     public void GoBack()
     {
         if (_previousView != null)
@@ -137,14 +146,15 @@ public partial class MainWindow : Window
 
     private void OnDownloadsClicked(object? sender, RoutedEventArgs e)
     {
-        MainContent.Content = new DownloadsView();
+        MainContent.Content = _downloadsView;
         PageTitleText.Text = "Descargas";
         MainSplitView.IsPaneOpen = false;
     }
 
     private void OnHistoryClicked(object? sender, RoutedEventArgs e)
     {
-        MainContent.Content = new HistoryView();
+        _historyView.Reload(); // Refrescar el historial al abrirlo
+        MainContent.Content = _historyView;
         PageTitleText.Text = "Historial";
         MainSplitView.IsPaneOpen = false;
     }

@@ -47,10 +47,8 @@
                 <TextBlock Text="El estilo y layout general de la aplicación. (Requiere reiniciar para aplicar los experimentales)" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
                 <ComboBox Name="ParadigmComboBox" HorizontalAlignment="Stretch">
                     <ComboBoxItem Content="Lista (Por Defecto)" Tag="Normal"/>
-                    <ComboBoxItem Content="Carrusel Espacial 3D" Tag="Spatial"/>
-                    <ComboBoxItem Content="Grafo de Nodos" Tag="Node"/>
-                    <ComboBoxItem Content="Lista Cinética" Tag="Kinetic"/>
                     <ComboBoxItem Content="TUI Avanzada (ASCII)" Tag="ASCII"/>
+                    <ComboBoxItem Content="App Móvil (Carruseles)" Tag="AndroidApp"/>
                 </ComboBox>
             </StackPanel>
 

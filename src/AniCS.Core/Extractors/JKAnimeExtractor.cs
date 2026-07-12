@@ -315,7 +315,8 @@ public class JKAnimeExtractor : BaseExtractor
                 servers.Add(new VideoServer { Name = "Desu (Fallback)", Url = iframeSrc, IsDirectPlaySupported = true });
         }
 
-        return servers;
+        // Remove duplicates that might occur if a server is defined in both video[] and var servers=[]
+        return servers.GroupBy(s => s.Name).Select(g => g.First()).ToList();
     }
 
     // ── Get Synopsis ──────────────────────────────────────────────
@@ -365,25 +366,96 @@ public class JKAnimeExtractor : BaseExtractor
         }
 
         // Custom Mediafire Resolver (yt-dlp does not support it natively)
+        // Uses 3 cascading strategies to survive MediaFire's frequent HTML changes.
         if (url.Contains("mediafire.com"))
         {
-            var mfHtml = await DownloadWebpageAsync(url);
-            if (string.IsNullOrEmpty(mfHtml)) return string.Empty;
-
-            // Mediafire a veces cambia la estructura de sus URLs de descarga.
-            // La forma más segura de extraer el video es buscar el botón de descarga principal.
-            var downloadLink = SearchRegex(@"id=""downloadButton""[^>]*href=""([^""]+)""", mfHtml);
-            
-            // Fallback a la regla anterior por si acaso
-            if (string.IsNullOrEmpty(downloadLink))
-                downloadLink = SearchRegex(@"href=""(https?://download[^""]+)""", mfHtml);
-
-            return downloadLink ?? string.Empty;
+            return await ResolveMediafireAsync(url);
         }
 
         // Return empty for other external servers so Program.cs uses yt-dlp fallback
         // yt-dlp will handle Mp4upload, Streamtape, Mixdrop, etc.
         return string.Empty;
+    }
+
+    // ── MediaFire Resolver ────────────────────────────────────────
+    /// <summary>
+    /// Resolves a MediaFire page URL to a direct download link.
+    /// Uses 3 cascading strategies to handle frequent HTML structure changes:
+    ///   1. JSON-embedded data (fastest, most reliable)
+    ///   2. aria-label="Download file" anchor tag
+    ///   3. Broad regex for any download subdomain link
+    /// </summary>
+    private async Task<string> ResolveMediafireAsync(string pageUrl)
+    {
+        const string MfReferer = "https://www.mediafire.com";
+
+        var html = await DownloadWebpageAsync(pageUrl, MfReferer);
+        if (string.IsNullOrEmpty(html)) return string.Empty;
+
+        // Strategy 1: Extract from embedded JSON (e.g. {"links":{"normal_download":"https://..."}}
+        // MediaFire embeds download data in a JS variable named `dl_link` or inside window.__appData.
+        var jsonLinkMatch = Regex.Match(html,
+            @"""(?:normal_download|download_url|downloadUrl)""\s*:\s*""(https?://[^""]+)""",
+            RegexOptions.IgnoreCase);
+        if (jsonLinkMatch.Success)
+        {
+            var candidate = jsonLinkMatch.Groups[1].Value.Replace(@"\/", "/");
+            if (IsLikelyVideoUrl(candidate)) return candidate;
+        }
+
+        // Strategy 2: <a aria-label="Download file" href="...">
+        // This is the main visible download button since ~2023.
+        var ariaMatch = Regex.Match(html,
+            @"<a\s[^>]*aria-label=""Download file""[^>]*href=""([^""]+)""",
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        if (!ariaMatch.Success)
+        {
+            // Also try reversed attribute order (href before aria-label)
+            ariaMatch = Regex.Match(html,
+                @"<a\s[^>]*href=""([^""]+)""[^>]*aria-label=""Download file""",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        }
+        if (ariaMatch.Success)
+        {
+            var candidate = ariaMatch.Groups[1].Value.Replace(@"\/", "/");
+            if (!string.IsNullOrEmpty(candidate)) return candidate;
+        }
+
+        // Strategy 3: id="downloadButton" with any attribute ordering
+        var btnMatch = Regex.Match(html,
+            @"id=""downloadButton""[^>]*href=""([^""]+)""",
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        if (!btnMatch.Success)
+        {
+            btnMatch = Regex.Match(html,
+                @"href=""([^""]+)""[^>]*id=""downloadButton""",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        }
+        if (btnMatch.Success)
+        {
+            var candidate = btnMatch.Groups[1].Value.Replace(@"\/", "/");
+            if (!string.IsNullOrEmpty(candidate)) return candidate;
+        }
+
+        // Strategy 4: Broad regex — any URL on a download subdomain (last resort)
+        var broadMatch = Regex.Match(html,
+            @"(https?://download\d*\.mediafire\.com/[^""'\s<>]+)",
+            RegexOptions.IgnoreCase);
+        if (broadMatch.Success)
+            return broadMatch.Groups[1].Value.Replace(@"\/", "/");
+
+        return string.Empty;
+    }
+
+    /// <summary>
+    /// Heuristic check: returns true if a URL looks like a direct video file.
+    /// </summary>
+    private static bool IsLikelyVideoUrl(string url)
+    {
+        var lower = url.ToLowerInvariant();
+        return lower.Contains(".mp4") || lower.Contains(".mkv") ||
+               lower.Contains(".avi") || lower.Contains(".webm") ||
+               lower.Contains("download") || lower.Contains("mediafire.com");
     }
 
     // ── Helpers ───────────────────────────────────────────────────

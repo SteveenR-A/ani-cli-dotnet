@@ -269,15 +269,35 @@ public partial class AnimeDetailsView : UserControl
 
             var videoUrl = await extractor.ResolveVideoUrlAsync(chosenServer.Url);
 
+            // Fallback: si el extractor interno no pudo resolver la URL (servidor externo o JS-rendered),
+            // intentar con yt-dlp que soporta docenas de hosts de video.
+            if (string.IsNullOrEmpty(videoUrl))
+            {
+                if (AniCS.Desktop.Services.YtDlpService.IsAvailable())
+                {
+                    StatusText.Text = $"Extractor interno falló. Intentando con yt-dlp ({chosenServer.Name})...";
+                    videoUrl = await AniCS.Desktop.Services.YtDlpService.ResolveAsync(
+                        chosenServer.Url,
+                        referer: chosenServer.Url);
+                }
+            }
+
             if (!string.IsNullOrEmpty(videoUrl))
             {
                 StatusText.Text = $"¡Abriendo reproductor para {vm.Title}!";
                 StatusText.IsVisible = true;
                 AniCS.Desktop.Services.DesktopPlayer.Play(videoUrl, $"AniCS - {_anime.Title} - {vm.Title}", chosenServer.Url);
+
+                // Ocultar el mensaje después de unos segundos si todo salió bien
+                await System.Threading.Tasks.Task.Delay(3000);
+                StatusText.IsVisible = false;
             }
             else
             {
-                StatusText.Text = $"Error: No se pudo extraer el video de '{chosenServer.Name}'";
+                bool ytdlpAvailable = AniCS.Desktop.Services.YtDlpService.IsAvailable();
+                StatusText.Text = ytdlpAvailable
+                    ? $"Error: No se pudo extraer el video de '{chosenServer.Name}' (interno + yt-dlp fallaron)."
+                    : $"Error: No se pudo extraer el video de '{chosenServer.Name}'. Instala yt-dlp para soporte de servidores externos.";
             }
         }
         catch (Exception ex)

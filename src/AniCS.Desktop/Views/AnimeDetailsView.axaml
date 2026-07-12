@@ -41,8 +41,8 @@
                 </Grid>
                 
                 <!-- Episodes List -->
-                <Grid>
-                    <TextBlock Name="StatusText" Text="Cargando episodios..." FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="True"/>
+                <StackPanel>
+                    <TextBlock Name="StatusText" Text="Cargando episodios..." FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" Margin="0,0,0,15" IsVisible="True" TextWrapping="Wrap"/>
                     <ItemsControl Name="EpisodesList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="views:EpisodeViewModel">
@@ -80,7 +80,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                </Grid>
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
     </Grid>

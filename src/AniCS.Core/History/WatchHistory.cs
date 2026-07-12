@@ -7,6 +7,7 @@ public class WatchEntry
 {
     public string AnimeTitle { get; set; } = string.Empty;
     public string AnimeUrl { get; set; } = string.Empty;
+    public string AnimeThumbnailUrl { get; set; } = string.Empty;
     public string LastEpisodeNumber { get; set; } = string.Empty;
     public string LastEpisodeUrl { get; set; } = string.Empty;
     public DateTime WatchedAt { get; set; } = DateTime.Now;
@@ -59,13 +60,14 @@ public class WatchHistory
         catch { }
     }
 
-    public void Record(string title, string animeUrl, string episodeNumber, string episodeUrl)
+    public void Record(string title, string animeUrl, string thumbnailUrl, string episodeNumber, string episodeUrl)
     {
         var existing = _entries.FirstOrDefault(e =>
             e.AnimeUrl.Equals(animeUrl, StringComparison.OrdinalIgnoreCase));
 
         if (existing != null)
         {
+            existing.AnimeThumbnailUrl = thumbnailUrl; // Update thumbnail if it changed or was empty
             existing.LastEpisodeNumber = episodeNumber;
             existing.LastEpisodeUrl = episodeUrl;
             existing.WatchedAt = DateTime.Now;
@@ -76,6 +78,7 @@ public class WatchHistory
             {
                 AnimeTitle = title,
                 AnimeUrl = animeUrl,
+                AnimeThumbnailUrl = thumbnailUrl,
                 LastEpisodeNumber = episodeNumber,
                 LastEpisodeUrl = episodeUrl,
                 WatchedAt = DateTime.Now

@@ -19,7 +19,8 @@ public static class YtDlpResolver
                 FileName              = "yt-dlp",
                 Arguments             = "--version",
                 RedirectStandardOutput = true,
-                UseShellExecute       = false
+                UseShellExecute       = false,
+                CreateNoWindow        = true
             });
             p?.WaitForExit();
             return p?.ExitCode == 0;

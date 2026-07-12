@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:history="clr-namespace:AniCS.History;assembly=AniCS.Core"
+             xmlns:converters="clr-namespace:AniCS.Desktop.Converters"
              xmlns:local="clr-namespace:AniCS.Desktop"
              xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
@@ -27,14 +28,19 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="history:WatchEntry">
                             <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="8" Margin="0,0,0,10" Padding="15">
-                                <Grid ColumnDefinitions="*, Auto">
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <Grid ColumnDefinitions="Auto, *, Auto">
+                                    
+                                    <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="100" Height="140" Margin="0,0,15,0">
+                                        <Image converters:AsyncImageLoader.SourceUrl="{Binding AnimeThumbnailUrl}" Stretch="UniformToFill" />
+                                    </Border>
+                                    
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding AnimeTitle}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding StringFormat='Último visto: Ep {0}' ,Path=LastEpisodeNumber}" FontSize="16" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,5,0,0"/>
                                         <TextBlock Text="{Binding StringFormat='Fecha: {0:g}' ,Path=WatchedAt}" FontSize="14" Foreground="{DynamicResource AppSubtextColor}"/>
                                     </StackPanel>
                                     
-                                    <Button Grid.Column="1" Content="Ir al Anime" Click="OnGoToAnimeClicked" Tag="{Binding}" Background="#1E88E5" Foreground="White" VerticalAlignment="Center" Padding="15,10"/>
+                                    <Button Grid.Column="2" Content="Ir al Anime" Click="OnGoToAnimeClicked" Tag="{Binding}" Background="#1E88E5" Foreground="White" VerticalAlignment="Center" Padding="15,10"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>

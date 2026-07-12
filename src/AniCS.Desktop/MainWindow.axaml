@@ -14,20 +14,23 @@
     <Grid RowDefinitions="Auto, *">
         <!-- Top Navigation Bar -->
         <Border Grid.Row="0" Background="{DynamicResource AppSurfaceColor}" Height="60" Padding="5,0">
-            <StackPanel Orientation="Horizontal" Spacing="20">
-                <Button Name="HamburgerButton" 
+            <Grid ColumnDefinitions="Auto, *">
+                <Button Grid.Column="0" Name="HamburgerButton" 
                         Background="Transparent" 
                         Foreground="{DynamicResource AppPrimaryColor}" 
                         Click="OnHamburgerClicked" 
+                        Margin="0,0,20,0"
                         VerticalAlignment="Center">
                     <material:MaterialIcon Kind="Menu" Width="24" Height="24" />
                 </Button>
-                <TextBlock Name="PageTitleText" Text="Inicio" 
+                <TextBlock Grid.Column="1" Name="PageTitleText" Text="Inicio" 
                            FontSize="28" 
                            FontWeight="Bold" 
                            Foreground="{DynamicResource AppPrimaryColor}" 
-                           VerticalAlignment="Center"/>
-            </StackPanel>
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+            </Grid>
         </Border>
 
         <!-- Main Content with SplitView -->

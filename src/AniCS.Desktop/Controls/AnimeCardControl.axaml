@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:converters="clr-namespace:AniCS.Desktop.Converters"
+             x:Class="AniCS.Desktop.Controls.AnimeCardControl"
+             x:DataType="models:AnimeResult"
+             Margin="0,0,15,0">
+    <UserControl.Resources>
+        <converters:AsyncImageLoader x:Key="AsyncImageLoader"/>
+    </UserControl.Resources>
+
+    <Button Background="{DynamicResource AppSurfaceColor}" 
+            CornerRadius="8" 
+            Padding="0" 
+            Width="160"
+            Height="270"
+            VerticalAlignment="Top"
+            HorizontalContentAlignment="Stretch"
+            VerticalContentAlignment="Stretch"
+            BorderThickness="1"
+            BorderBrush="#333333"
+            Click="OnCardClicked">
+        
+        <Grid RowDefinitions="*, Auto">
+            <Border Grid.Row="0" CornerRadius="8,8,0,0" ClipToBounds="True">
+                <!-- Fallback to a local image if ThumbnailUrl is empty -->
+                <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
+            </Border>
+            
+            <StackPanel Grid.Row="1" Margin="10" Height="65">
+                <TextBlock Text="{Binding Title}" 
+                           FontSize="14" 
+                           FontWeight="Bold" 
+                           Foreground="{DynamicResource AppTitleColor}" 
+                           TextTrimming="CharacterEllipsis"
+                           MaxLines="2"
+                           TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Description}" 
+                           FontSize="12" 
+                           Foreground="{DynamicResource AppSubtextColor}"
+                           TextTrimming="CharacterEllipsis"
+                           MaxLines="1"
+                           Margin="0,4,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Button>
+</UserControl>
