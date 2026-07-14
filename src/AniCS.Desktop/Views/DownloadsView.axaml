@@ -38,13 +38,21 @@
                                                     <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="Uniform" VerticalAlignment="Top"/>
                                                 </Border>
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding AnimeTitle}" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                                                    <TextBlock Text="{Binding EpisodeTitle}" Foreground="{DynamicResource AppTitleColor}" Opacity="0.9"/>
-                                                    <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,5,0,0"/>
+                                                    <SelectableTextBlock Text="{Binding AnimeTitle}" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                                                    <SelectableTextBlock Text="{Binding EpisodeTitle}" Foreground="{DynamicResource AppTitleColor}" Opacity="0.9"/>
+                                                    <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,5,0,0">
+                                                        <material:MaterialIcon Kind="{Binding StatusIcon}" Width="14" Height="14" Foreground="{DynamicResource AppPrimaryColor}" />
+                                                        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource AppPrimaryColor}" />
+                                                    </StackPanel>
                                                     <ProgressBar Value="{Binding Progress}" Maximum="100" Height="4" Margin="0,5,10,0"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-                                                    <Button Content="{Binding PauseResumeText}" Click="OnPauseResumeActiveDownloadClicked" Tag="{Binding}" Background="#FFB300" Foreground="White" />
+                                                    <Button Click="OnPauseResumeActiveDownloadClicked" Tag="{Binding}" Background="#FFB300" Foreground="White">
+                                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                                            <material:MaterialIcon Kind="{Binding PauseResumeIcon}" Width="16" Height="16" />
+                                                            <TextBlock Text="{Binding PauseResumeText}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                    </Button>
                                                     <Button Click="OnCancelActiveDownloadClicked" Tag="{Binding}" Background="#E53935" Foreground="White">
                                                         <StackPanel Orientation="Horizontal" Spacing="5">
                                                             <material:MaterialIcon Kind="Close" Width="16" Height="16" />
@@ -71,7 +79,7 @@
                                             <Border Grid.Column="0" CornerRadius="4" ClipToBounds="True">
                                                 <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="Uniform" VerticalAlignment="Top"/>
                                             </Border>
-                                            <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" Margin="15,0" VerticalAlignment="Center" />
+                                            <SelectableTextBlock Grid.Column="1" Text="{Binding Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" Margin="15,0" VerticalAlignment="Center" />
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                 <Button Content="Ver Online" Click="OnGoToAnimeClicked" Tag="{Binding}" Background="#1E88E5" Foreground="White" />
                                                 <Button Click="OnDeleteAnimeClicked" Tag="{Binding}" Background="#E53935" Foreground="White">
@@ -90,7 +98,7 @@
                                                 <Border BorderBrush="#333333" BorderThickness="0,0,0,1" Padding="10">
                                                     <Grid ColumnDefinitions="Auto, *, Auto, Auto">
                                                         <TextBlock Grid.Column="0" Text="{Binding EpisodeNumber}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Width="40" VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="1" Text="{Binding EpisodeTitle}" FontSize="16" Foreground="{DynamicResource AppSubtextColor}" VerticalAlignment="Center" Margin="10,0"/>
+                                                        <SelectableTextBlock Grid.Column="1" Text="{Binding EpisodeTitle}" FontSize="16" Foreground="{DynamicResource AppSubtextColor}" VerticalAlignment="Center" Margin="10,0"/>
                                                         
                                                         <Button Grid.Column="2" Click="OnPlayEpisodeClicked" Tag="{Binding}" Margin="0,0,10,0" Background="#43A047" Foreground="White">
                                                             <StackPanel Orientation="Horizontal" Spacing="5">

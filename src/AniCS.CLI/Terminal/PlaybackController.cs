@@ -60,7 +60,7 @@ namespace AniCS.Terminal
             var selectedServer = await PromptServerSelection(episode.Url);
             if (selectedServer == null) return LoopAction.ExitWithFalse;
 
-            var (epVideoUrl, epReferer) = await ResolveWithStatus(selectedServer.Url);
+            var (epVideoUrl, epReferer) = await ResolveWithStatus(selectedServer.Url, selectedServer.Name);
             if (string.IsNullOrEmpty(epVideoUrl))
             {
                 AnsiConsole.MarkupLine("[red]No se pudo resolver el enlace de video.[/]");
@@ -82,7 +82,7 @@ namespace AniCS.Terminal
 
             // Play
             AnsiConsole.MarkupLine($"[dim]Iniciando reproductor:[/] [bold]{Markup.Escape(anime.Title)}[/] [grey]Ep.{Markup.Escape(episode.EpisodeNumber)}[/]");
-            PlayerManager.Play(epVideoUrl, $"AniCS — {anime.Title} Ep.{episode.EpisodeNumber}", epReferer);
+            await _state.PlayerService.PlayAsync(epVideoUrl, $"AniCS — {anime.Title} Ep.{episode.EpisodeNumber}", epReferer);
             _state.History.Record(anime.Title, anime.Url, anime.ThumbnailUrl, episode.EpisodeNumber, epVideoUrl);
 
             if (!allowBinge) return LoopAction.ExitWithFalse;
@@ -124,7 +124,7 @@ namespace AniCS.Terminal
 
                 var targetDir = string.IsNullOrWhiteSpace(dirPrompt) ? defaultDir : dirPrompt;
 
-                YtDlpResolver.Download(epVideoUrl, anime.Title, episode.EpisodeNumber, targetDir, epReferer);
+                _state.PlayerService.Download(epVideoUrl, anime.Title, episode.EpisodeNumber, targetDir, epReferer);
                 _state.History.Record(anime.Title, anime.Url, anime.ThumbnailUrl, episode.EpisodeNumber, epVideoUrl);
             }
         }
@@ -177,7 +177,7 @@ namespace AniCS.Terminal
             return servers.First(s => sSelected.Contains(s.Name));
         }
 
-        private async Task<(string url, string referer)> ResolveWithStatus(string episodeUrl)
+        private async Task<(string url, string referer)> ResolveWithStatus(string episodeUrl, string serverName)
         {
             string videoUrl = string.Empty;
             string referer = episodeUrl;
@@ -190,16 +190,21 @@ namespace AniCS.Terminal
                     videoUrl = await _state.ActiveExtractor.ResolveVideoUrlAsync(episodeUrl);
                 });
 
-            if (string.IsNullOrEmpty(videoUrl) && YtDlpResolver.IsAvailable())
+            if (string.IsNullOrEmpty(videoUrl) && _state.PlayerService.IsYtDlpAvailable())
             {
-                AnsiConsole.MarkupLine("[dim]Extractor interno falló. Probando con yt-dlp...[/]");
-                await AnsiConsole.Status()
-                    .Spinner(Spinner.Known.Dots2)
-                    .SpinnerStyle(Style.Parse("yellow"))
-                    .StartAsync("Resolviendo con yt-dlp...", async _ =>
+                var ytdlpServers = new[] { "Streamtape", "VOE", "Mp4upload", "Mixdrop" };
+                if (ytdlpServers.Any(s => serverName.Contains(s, StringComparison.OrdinalIgnoreCase)))
+                {
+                    AnsiConsole.MarkupLine($"[grey]Intentando extraer '{serverName}' mediante yt-dlp...[/]");
+                    try
                     {
-                        videoUrl = await YtDlpResolver.ResolveAsync(episodeUrl, referer);
-                    });
+                        videoUrl = await _state.PlayerService.ResolveVideoUrlWithYtDlpAsync(episodeUrl, referer);
+                    }
+                    catch
+                    {
+                        videoUrl = string.Empty;
+                    }
+                }
             }
 
             return (videoUrl, referer);

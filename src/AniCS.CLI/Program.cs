@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using AniCS.Commands;
 using AniCS.Extractors;
 using AniCS.History;
@@ -15,23 +16,20 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        var handler = new HttpClientHandler
-        {
-            AutomaticDecompression = System.Net.DecompressionMethods.All
-        };
-        var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
         
-        List<IAnimeExtractor> extractors =
-        [
-            new JKAnimeExtractor(http),
-            new AnimeAV1Extractor(http),
-        ];
-        var defaultConfig = ConfigManager.Current;
-        var active = extractors.FirstOrDefault(e => e.Domain.Contains(defaultConfig.DefaultExtractor, StringComparison.OrdinalIgnoreCase)) ?? extractors[0];
-        var history = new WatchHistory();
+        // Add Core dependencies (HttpClient, Extractors, Config, PlayerService)
+        services.AddAniCSCore();
+        
+        // CLI specifics
+        services.AddSingleton<WatchHistory>();
+        services.AddSingleton<AppState>();
+        services.AddSingleton<CommandRouter>();
 
-        var state = new AppState(http, extractors, active, history);
-        var router = new CommandRouter(state);
+        var serviceProvider = services.BuildServiceProvider();
+
+        var state = serviceProvider.GetRequiredService<AppState>();
+        var router = serviceProvider.GetRequiredService<CommandRouter>();
 
         try
         {
@@ -51,7 +49,7 @@ public class Program
             AnsiConsole.Write(new Panel(
                 "[bold green]Bienvenido a AniCS (Modo Interactivo)[/]\n" +
                 $"Fuente activa: [bold yellow]{state.ActiveExtractor.Domain}[/]  |  " +
-                $"yt-dlp: {(YtDlpResolver.IsAvailable() ? "[green]disponible ✓[/]" : "[grey]no instalado[/]")}  |  " +
+                $"yt-dlp: {(state.PlayerService.IsYtDlpAvailable() ? "[green]disponible ✓[/]" : "[grey]no instalado[/]")}  |  " +
                 "Escribe [bold yellow]help[/] para los comandos o [bold red]exit[/] para salir.")
             {
                 Border = BoxBorder.Rounded,

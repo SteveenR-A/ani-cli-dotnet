@@ -35,7 +35,7 @@
                     </Border>
                     
                     <StackPanel Grid.Column="1" Margin="20,0,0,0">
-                        <TextBlock Name="TitleText" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                        <SelectableTextBlock Name="TitleText" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" Margin="0,0,0,10" />
                         <TextBlock Name="SynopsisText" FontSize="16" Foreground="{DynamicResource AppSubtextColor}" TextWrapping="Wrap" Text="Cargando sinopsis..." />
                     </StackPanel>
                 </Grid>
@@ -57,18 +57,22 @@
                                             Click="OnEpisodeClicked">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                             <TextBlock Text="{Binding EpisodeNumber}" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Width="40"/>
-                                            <TextBlock Text="{Binding Title}" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
+                                            <SelectableTextBlock Text="{Binding Title}" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Button>
                                     <Grid Grid.Column="1" ColumnDefinitions="*, Auto" IsVisible="{Binding IsDownloadButtonVisible}">
                                         <Button Grid.Column="0" Background="{DynamicResource AppSurfaceColor}" 
                                                 CornerRadius="0,4,4,0" 
                                                 Padding="15,10" 
-                                                Content="{Binding DownloadText}"
                                                 IsEnabled="{Binding CanDownload}"
                                                 BorderThickness="1"
                                                 BorderBrush="#333333"
-                                                Click="OnDownloadEpisodeClicked"/>
+                                                Click="OnDownloadEpisodeClicked">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <material:MaterialIcon Kind="{Binding DownloadIcon}" Width="16" Height="16" />
+                                                <TextBlock Text="{Binding DownloadText}" />
+                                            </StackPanel>
+                                        </Button>
                                         <Button Grid.Column="1" IsVisible="{Binding IsDownloading}"
                                                 Click="OnCancelDownloadClicked"
                                                 Background="#E53935" Foreground="White"

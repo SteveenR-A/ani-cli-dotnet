@@ -11,13 +11,17 @@ namespace AniCS.Models
         public List<IAnimeExtractor> Extractors { get; }
         public IAnimeExtractor ActiveExtractor { get; set; }
         public WatchHistory History { get; }
+        public AniCS.Services.IPlayerService PlayerService { get; }
 
-        public AppState(HttpClient http, List<IAnimeExtractor> extractors, IAnimeExtractor activeExtractor, WatchHistory history)
+        public AppState(HttpClient http, IEnumerable<IAnimeExtractor> extractors, WatchHistory history, AniCS.Services.IPlayerService playerService)
         {
             Http = http;
-            Extractors = extractors;
-            ActiveExtractor = activeExtractor;
+            Extractors = new List<IAnimeExtractor>(extractors);
             History = history;
+            PlayerService = playerService;
+            
+            var defaultConfig = ConfigManager.Current;
+            ActiveExtractor = Extractors.Find(e => e.Domain.Contains(defaultConfig.DefaultExtractor, System.StringComparison.OrdinalIgnoreCase)) ?? Extractors[0];
         }
     }
 }

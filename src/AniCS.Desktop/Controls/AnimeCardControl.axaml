@@ -28,7 +28,7 @@
             </Border>
             
             <StackPanel Grid.Row="1" Margin="10" Height="65">
-                <TextBlock Text="{Binding Title}" 
+                <SelectableTextBlock Text="{Binding Title}" 
                            FontSize="14" 
                            FontWeight="Bold" 
                            Foreground="{DynamicResource AppTitleColor}" 

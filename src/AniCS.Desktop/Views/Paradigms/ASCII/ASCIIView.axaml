@@ -103,7 +103,7 @@
                                 </Border>
                                 
                                 <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Title}" 
+                                    <SelectableTextBlock Text="{Binding Title}" 
                                                Foreground="{DynamicResource AppTitleColor}" 
                                                FontWeight="Bold" 
                                                FontSize="16" 

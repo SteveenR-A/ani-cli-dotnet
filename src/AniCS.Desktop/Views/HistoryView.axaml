@@ -35,7 +35,7 @@
                                     </Border>
                                     
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding AnimeTitle}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
+                                        <SelectableTextBlock Text="{Binding AnimeTitle}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding StringFormat='Último visto: Ep {0}' ,Path=LastEpisodeNumber}" FontSize="16" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,5,0,0"/>
                                         <TextBlock Text="{Binding StringFormat='Fecha: {0:g}' ,Path=WatchedAt}" FontSize="14" Foreground="{DynamicResource AppSubtextColor}"/>
                                     </StackPanel>

@@ -126,7 +126,8 @@ public partial class AnimeDetailsView : UserControl
     {
         if (AniCS.Desktop.Services.DownloadManager.IsEpisodeDownloaded(_anime.Url, vm.EpisodeNumber))
         {
-            vm.DownloadText = "✅ Descargado";
+            vm.DownloadText = "Descargado";
+            vm.DownloadIcon = "Check";
             vm.CanDownload = false;
             vm.IsDownloading = false;
             if (vm.ActiveDownload != null)
@@ -147,12 +148,14 @@ public partial class AnimeDetailsView : UserControl
                     active.PropertyChanged += Vm_ActiveDownload_PropertyChanged;
                 }
                 vm.DownloadText = active.StatusText;
+                vm.DownloadIcon = active.StatusIcon;
                 vm.CanDownload = false;
                 vm.IsDownloading = active.State == AniCS.Desktop.Services.DownloadState.Downloading;
             }
             else
             {
-                vm.DownloadText = "📥 Descargar";
+                vm.DownloadText = "Descargar";
+                vm.DownloadIcon = "Download";
                 vm.CanDownload = true;
                 vm.IsDownloading = false;
                 if (vm.ActiveDownload != null)
@@ -176,6 +179,7 @@ public partial class AnimeDetailsView : UserControl
                     if (vm != null)
                     {
                         vm.DownloadText = active.StatusText;
+                        vm.DownloadIcon = active.StatusIcon;
                         vm.IsDownloading = active.State == AniCS.Desktop.Services.DownloadState.Downloading;
                     }
                 }
@@ -483,11 +487,18 @@ public class EpisodeViewModel : System.ComponentModel.INotifyPropertyChanged
     public string Title => Episode.Title;
     public string Url => Episode.Url;
     
-    private string _downloadText = "📥 Descargar";
+    private string _downloadText = "Descargar";
     public string DownloadText
     {
         get => _downloadText;
         set { _downloadText = value; OnPropertyChanged(); }
+    }
+
+    private string _downloadIcon = "Download";
+    public string DownloadIcon
+    {
+        get => _downloadIcon;
+        set { _downloadIcon = value; OnPropertyChanged(); }
     }
     
     private bool _canDownload = true;

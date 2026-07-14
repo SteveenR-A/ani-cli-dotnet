@@ -44,16 +44,27 @@ public class ActiveDownload : INotifyPropertyChanged
         set { _state = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); OnPropertyChanged(nameof(PauseResumeText)); }
     }
 
-    public string PauseResumeText => State == DownloadState.Paused ? "▶ Reanudar" : "⏸ Pausar";
+    public string PauseResumeText => State == DownloadState.Paused ? "Reanudar" : "Pausar";
+    public string PauseResumeIcon => State == DownloadState.Paused ? "Play" : "Pause";
 
     public string StatusText => State switch
     {
         DownloadState.Downloading => $"Descargando... {Progress:F1}%",
-        DownloadState.Completed => "✅ Descargado",
-        DownloadState.Error => "❌ Error",
-        DownloadState.Cancelled => "🚫 Cancelado",
-        DownloadState.Paused => "⏸ Pausado",
+        DownloadState.Completed => "Descargado",
+        DownloadState.Error => "Error",
+        DownloadState.Cancelled => "Cancelado",
+        DownloadState.Paused => "Pausado",
         _ => State.ToString()
+    };
+
+    public string StatusIcon => State switch
+    {
+        DownloadState.Downloading => "Download",
+        DownloadState.Completed => "Check",
+        DownloadState.Error => "Close",
+        DownloadState.Cancelled => "Cancel",
+        DownloadState.Paused => "Pause",
+        _ => "Information"
     };
 
     public CancellationTokenSource CancellationTokenSource { get; set; } = new CancellationTokenSource();
