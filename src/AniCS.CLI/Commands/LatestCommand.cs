@@ -52,7 +52,7 @@ namespace AniCS.Commands
 
             AnsiConsole.Write(new Rule($"[bold]{Markup.Escape(selectedEpisode.Title)}[/]").RuleStyle("deepskyblue1"));
 
-            var dummyAnime = new AnimeResult { Title = selectedEpisode.Title, Url = selectedEpisode.Url };
+            var dummyAnime = new AnimeResult { Title = selectedEpisode.Title, Url = _state.ActiveExtractor.NormalizeSeriesUrl(selectedEpisode.Url) };
             await _playback.PlayEpisodesLoop([selectedEpisode], 0, dummyAnime, allowBinge: false);
         }
     }

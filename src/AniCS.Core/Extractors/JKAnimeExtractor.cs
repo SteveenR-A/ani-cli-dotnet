@@ -181,7 +181,7 @@ public class JKAnimeExtractor : BaseExtractor
     public override async Task<List<Episode>> GetEpisodesAsync(string animeUrl)
     {
         var episodes = new List<Episode>();
-        var seriesUrl = NormalizeToSeriesUrl(animeUrl);
+        var seriesUrl = NormalizeSeriesUrl(animeUrl);
         var slug      = ExtractSlug(seriesUrl);
         if (string.IsNullOrEmpty(slug)) return episodes;
 
@@ -491,7 +491,7 @@ public class JKAnimeExtractor : BaseExtractor
         return m.Success ? m.Groups[1].Value : string.Empty;
     }
 
-    private static string NormalizeToSeriesUrl(string url)
+    public override string NormalizeSeriesUrl(string url)
     {
         var m = Regex.Match(url, @"(https://jkanime\.net/[^/]+/)");
         return m.Success ? m.Groups[1].Value : url;

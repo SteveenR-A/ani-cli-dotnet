@@ -14,4 +14,5 @@ public interface IAnimeExtractor
     Task<string> GetSynopsisAsync(string animeUrl);
     Task<string> GetThumbnailAsync(string animeUrl);
     Task<List<AnimeResult>> GetPremieresAsync();
+    string NormalizeSeriesUrl(string url);
 }

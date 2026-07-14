@@ -149,7 +149,7 @@ public class HomeViewModel : ViewModelBase
                     Title = ep.Title,
                     Description = $"Episodio {ep.EpisodeNumber}",
                     ThumbnailUrl = ep.ThumbnailUrl,
-                    Url = ep.Url
+                    Url = extractor.NormalizeSeriesUrl(ep.Url)
                 });
             }
             

@@ -102,4 +102,6 @@ public abstract class BaseExtractor : IAnimeExtractor
     {
         return Task.FromResult(new List<AnimeResult>());
     }
+    
+    public virtual string NormalizeSeriesUrl(string url) => url;
 }
