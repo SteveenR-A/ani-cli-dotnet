@@ -27,6 +27,7 @@ public abstract class BaseExtractor : IAnimeExtractor
 
     public abstract string Domain { get; }
     public abstract Task<List<AnimeResult>> SearchAsync(string query);
+    public virtual Task<List<AnimeResult>> AdvancedSearchAsync(SearchFilters filters) => Task.FromResult(new List<AnimeResult>());
     public abstract Task<List<Episode>> GetLatestReleasesAsync();
     public abstract Task<List<ScheduleItem>> GetWeeklyScoopAsync();
     public abstract Task<List<Episode>> GetEpisodesAsync(string animeUrl);
@@ -34,6 +35,7 @@ public abstract class BaseExtractor : IAnimeExtractor
     public abstract Task<string> ResolveVideoUrlAsync(string url);
 
     public virtual Task<string> GetSynopsisAsync(string animeUrl) => Task.FromResult(string.Empty);
+    public virtual Task<AnimeResult> GetDetailsAsync(string animeUrl) => Task.FromResult(new AnimeResult { Url = animeUrl });
     
     public virtual async Task<string> GetThumbnailAsync(string animeUrl)
     {
@@ -99,6 +101,11 @@ public abstract class BaseExtractor : IAnimeExtractor
     }
 
     public virtual Task<List<AnimeResult>> GetPremieresAsync()
+    {
+        return Task.FromResult(new List<AnimeResult>());
+    }
+
+    public virtual Task<List<AnimeResult>> GetTopAnimesAsync(string topType, string yearFilter, int page = 1)
     {
         return Task.FromResult(new List<AnimeResult>());
     }

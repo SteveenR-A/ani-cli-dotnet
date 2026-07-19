@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="AniCS.Desktop.Controls.ChangelogWindow"
+        Title="¡Novedades de la Versión!"
+        Icon="avares://AniCS.Desktop/Assets/Incono/favicon.ico"
+        Width="550" Height="450"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundColor}">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="24">
+        
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
+            <TextBlock Text="¡Actualización Instalada!" 
+                       FontSize="24" 
+                       FontWeight="Bold" 
+                       Foreground="{DynamicResource AppPrimaryColor}"/>
+            <TextBlock Name="VersionText"
+                       Text="Versión " 
+                       FontSize="14" 
+                       Foreground="{DynamicResource AppSubtextColor}"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Background="#11FFFFFF" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+            <ScrollViewer>
+                <TextBlock Name="ChangelogText" 
+                           TextWrapping="Wrap" 
+                           Foreground="{DynamicResource AppTextColor}"
+                           LineHeight="26"
+                           FontSize="14"/>
+            </ScrollViewer>
+        </Border>
+
+        <Button Grid.Row="2"
+                Content="Cerrar"
+                HorizontalAlignment="Right"
+                Padding="25,10"
+                Cursor="Hand"
+                Click="OnCloseClicked"/>
+    </Grid>
+</Window>

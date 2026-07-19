@@ -12,7 +12,7 @@ namespace AniCS.Desktop.Views;
 
 public partial class AnimeDetailsView : UserControl
 {
-    private readonly AnimeResult _anime;
+    private AnimeResult _anime;
     private static readonly HttpClient _httpClient = new HttpClient();
 
     public AnimeDetailsView()
@@ -42,36 +42,30 @@ public partial class AnimeDetailsView : UserControl
     private async void OnLoaded(object? sender, RoutedEventArgs e)
     {
         AniCS.Desktop.Services.DownloadManager.DownloadsChanged += OnDownloadsChanged;
-        var extractor = new JKAnimeExtractor(_httpClient);
-
-        if (string.IsNullOrEmpty(_anime.ThumbnailUrl))
-        {
-            try
-            {
-                var thumb = await extractor.GetThumbnailAsync(_anime.Url);
-                if (!string.IsNullOrEmpty(thumb))
-                {
-                    Dispatcher.UIThread.Invoke(() =>
-                    {
-                        _anime.ThumbnailUrl = thumb;
-                        AniCS.Desktop.Converters.AsyncImageLoader.SetSourceUrl(CoverImage, thumb);
-                    });
-                }
-            }
-            catch { }
-        }
+        var extractor = ExtractorFactory.GetExtractor();
 
         try
         {
-            var syn = await extractor.GetSynopsisAsync(_anime.Url);
+            var details = await extractor.GetDetailsAsync(_anime.Url);
             Dispatcher.UIThread.Invoke(() =>
             {
-                SynopsisText.Text = string.IsNullOrEmpty(syn) ? "Sinopsis no disponible." : syn;
+                // Conservar Thumbnail si GetDetailsAsync no lo trajo
+                if (string.IsNullOrEmpty(details.ThumbnailUrl)) details.ThumbnailUrl = _anime.ThumbnailUrl;
+                
+                _anime = details;
+                DataContext = _anime;
+
+                if (!string.IsNullOrEmpty(_anime.ThumbnailUrl))
+                {
+                    AniCS.Desktop.Converters.AsyncImageLoader.SetSourceUrl(CoverImage, _anime.ThumbnailUrl);
+                }
+                
+                SynopsisText.Text = string.IsNullOrEmpty(_anime.Synopsis) ? "Sinopsis no disponible." : _anime.Synopsis;
             });
         }
         catch
         {
-            Dispatcher.UIThread.Invoke(() => SynopsisText.Text = "Error cargando sinopsis.");
+            Dispatcher.UIThread.Invoke(() => SynopsisText.Text = "Error cargando detalles.");
         }
 
         try
@@ -101,11 +95,22 @@ public partial class AnimeDetailsView : UserControl
         {
             Dispatcher.UIThread.Invoke(() => StatusText.Text = $"Error: {ex.Message}");
         }
+
+        AniCS.Desktop.Services.DesktopPlayer.OnPlayerError += OnPlayerErrorReceived;
+    }
+
+    private void OnPlayerErrorReceived(string message)
+    {
+        Dispatcher.UIThread.InvokeAsync(() => {
+            StatusText.Text = message;
+            StatusText.IsVisible = true;
+        });
     }
 
     private void OnUnloaded(object? sender, RoutedEventArgs e)
     {
         AniCS.Desktop.Services.DownloadManager.DownloadsChanged -= OnDownloadsChanged;
+        AniCS.Desktop.Services.DesktopPlayer.OnPlayerError -= OnPlayerErrorReceived;
     }
 
     private void OnDownloadsChanged(object? sender, EventArgs e)
@@ -229,7 +234,7 @@ public partial class AnimeDetailsView : UserControl
 
         try
         {
-            var extractor = new JKAnimeExtractor(_httpClient);
+            var extractor = ExtractorFactory.GetExtractor();
             var servers = await extractor.GetVideoServersAsync(vm.Url);
 
             if (servers.Count == 0)
@@ -240,9 +245,12 @@ public partial class AnimeDetailsView : UserControl
 
             // Si hay más de un servidor, mostrar el diálogo de selección
             VideoServer? chosenServer = null;
+            string chosenQuality = "Mejor";
+            bool isDonghua = AniCS.ConfigManager.Current.ContentType == "Donghua";
             if (servers.Count == 1)
             {
                 chosenServer = servers[0];
+                chosenQuality = AniCS.ConfigManager.Current.PreferredQuality;
             }
             else
             {
@@ -253,11 +261,17 @@ public partial class AnimeDetailsView : UserControl
                     foreach (var s in servers) options.Add(new AniCS.Desktop.Controls.RadialMenuOption { Text = s.Name, IsSupported = s.IsDirectPlaySupported });
                     
                     int srvIdx = await AniCS.Desktop.Controls.HudRadialMenuDialog.ShowAsync(ownerWindow, options, "");
-                    if (srvIdx != -1) chosenServer = servers[srvIdx];
+                    if (srvIdx != -1) 
+                    {
+                        chosenServer = servers[srvIdx];
+                        chosenQuality = AniCS.ConfigManager.Current.PreferredQuality;
+                    }
                 }
                 else
                 {
-                    chosenServer = await ServerPickerDialog.ShowAsync(ownerWindow, servers, $"{_anime.Title} — {vm.Title}");
+                    var result = await ServerPickerDialog.ShowAsync(ownerWindow, servers, $"{_anime.Title} — {vm.Title}", isDonghua);
+                    chosenServer = result.Server;
+                    chosenQuality = result.Quality;
                 }
             }
 
@@ -290,7 +304,12 @@ public partial class AnimeDetailsView : UserControl
             {
                 StatusText.Text = $"¡Abriendo reproductor para {vm.Title}!";
                 StatusText.IsVisible = true;
-                AniCS.Desktop.Services.DesktopPlayer.Play(videoUrl, $"AniCS - {_anime.Title} - {vm.Title}", chosenServer.Url);
+                
+                // Guardar historial
+                var history = new AniCS.History.WatchHistory();
+                history.Record(_anime.Title, _anime.Url, _anime.ThumbnailUrl, vm.EpisodeNumber, videoUrl);
+                
+                AniCS.Desktop.Services.DesktopPlayer.Play(videoUrl, $"AniCS - {_anime.Title} - {vm.Title}", chosenServer.Url, chosenQuality);
 
                 // Ocultar el mensaje después de unos segundos si todo salió bien
                 await System.Threading.Tasks.Task.Delay(3000);
@@ -342,7 +361,7 @@ public partial class AnimeDetailsView : UserControl
 
         try
         {
-            var extractor = new JKAnimeExtractor(_httpClient);
+            var extractor = ExtractorFactory.GetExtractor();
             var servers = await extractor.GetVideoServersAsync(vm.Url);
 
             if (servers.Count == 0)
@@ -355,9 +374,13 @@ public partial class AnimeDetailsView : UserControl
 
             // Mostrar diálogo de selección si hay más de un servidor
             VideoServer? chosenServer = null;
+            string chosenQuality = "Mejor";
+            bool isDonghua = AniCS.ConfigManager.Current.ContentType == "Donghua";
+            
             if (servers.Count == 1)
             {
                 chosenServer = servers[0];
+                chosenQuality = AniCS.ConfigManager.Current.PreferredQuality;
             }
             else
             {
@@ -368,11 +391,17 @@ public partial class AnimeDetailsView : UserControl
                     foreach (var s in servers) options.Add(new AniCS.Desktop.Controls.RadialMenuOption { Text = s.Name, IsSupported = null });
                     
                     int srvIdx = await AniCS.Desktop.Controls.HudRadialMenuDialog.ShowAsync(ownerWindow, options, "");
-                    if (srvIdx != -1) chosenServer = servers[srvIdx];
+                    if (srvIdx != -1) 
+                    {
+                        chosenServer = servers[srvIdx];
+                        chosenQuality = AniCS.ConfigManager.Current.PreferredQuality;
+                    }
                 }
                 else
                 {
-                    chosenServer = await ServerPickerDialog.ShowAsync(ownerWindow, servers, $"{_anime.Title} — {vm.Title}");
+                    var result = await ServerPickerDialog.ShowAsync(ownerWindow, servers, $"{_anime.Title} — {vm.Title}", isDonghua);
+                    chosenServer = result.Server;
+                    chosenQuality = result.Quality;
                 }
             }
 
@@ -412,7 +441,7 @@ public partial class AnimeDetailsView : UserControl
                 _ = System.Threading.Tasks.Task.Run(async () =>
                 {
                     var result = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
-                        videoUrl, _anime, vm.Episode, defaultDir, chosenServer.Url,
+                        videoUrl, _anime, vm.Episode, defaultDir, chosenServer.Url, chosenQuality,
                         progress => Dispatcher.UIThread.Post(() => activeDownload.Progress = progress),
                         activeDownload.CancellationTokenSource.Token);
 

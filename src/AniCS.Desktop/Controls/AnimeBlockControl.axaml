@@ -9,6 +9,7 @@
              Margin="0,0,0,10">
     <UserControl.Resources>
         <converters:AsyncImageLoader x:Key="AsyncImageLoader"/>
+        <converters:BadgeColorConverter x:Key="BadgeColorConverter"/>
     </UserControl.Resources>
 
     <Button Background="{DynamicResource AppSurfaceColor}" 
@@ -22,7 +23,22 @@
         
         <Grid ColumnDefinitions="Auto, *">
             <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="220" VerticalAlignment="Top">
-                <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="Uniform" />
+                <Grid>
+                    <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="Uniform" />
+                    <!-- Badge de Type (Donghua, OVA, Pelicula) -->
+                    <Border Background="{Binding Type, Converter={StaticResource BadgeColorConverter}}" 
+                            CornerRadius="4" 
+                            Padding="6,2" 
+                            HorizontalAlignment="Left" 
+                            VerticalAlignment="Top" 
+                            Margin="8"
+                            IsVisible="{Binding Type, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="{Binding Type}" 
+                                   FontWeight="Bold" 
+                                   FontSize="12" 
+                                   Foreground="White" />
+                    </Border>
+                </Grid>
             </Border>
             
             <!-- Detalles -->

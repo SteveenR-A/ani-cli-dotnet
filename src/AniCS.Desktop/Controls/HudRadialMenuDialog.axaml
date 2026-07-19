@@ -7,7 +7,7 @@
         Title="HUD Radial Menu"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
-        SystemDecorations="None"
+        WindowDecorations="None"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False">
     <Grid>

@@ -31,7 +31,7 @@ public class AnimeAV1Extractor : BaseExtractor
 
             var url = linkNode.GetAttributeValue("href", "");
             if (string.IsNullOrEmpty(url) || !url.StartsWith("/media/")) continue;
-            
+
             var descNode = node.SelectSingleNode(".//p[contains(@class, 'line-clamp')]");
             var description = descNode != null ? System.Net.WebUtility.HtmlDecode(descNode.InnerText.Trim()) : "";
 
@@ -109,7 +109,7 @@ public class AnimeAV1Extractor : BaseExtractor
         if (doc == null) return episodes;
 
         var added = new HashSet<string>();
-        
+
         // 1. Try to extract from raw SvelteKit data (bypasses 50-episode pagination limit)
         var html = doc.DocumentNode.OuterHtml;
         var svelteMatches = System.Text.RegularExpressions.Regex.Matches(html, @"number:(\d+)");
@@ -117,7 +117,7 @@ public class AnimeAV1Extractor : BaseExtractor
         {
             var text = m.Groups[1].Value;
             var href = new Uri(new Uri(BaseUrl), new Uri(animeUrl).AbsolutePath + "/" + text).AbsolutePath;
-            
+
             if (!added.Contains(href))
             {
                 added.Add(href);

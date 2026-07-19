@@ -15,6 +15,7 @@ namespace AniCS.Desktop.Controls;
 public partial class ServerPickerDialog : Window
 {
     private VideoServer? _selectedServer;
+    private string _selectedQuality = "Mejor";
 
     public ServerPickerDialog()
     {
@@ -24,19 +25,21 @@ public partial class ServerPickerDialog : Window
     /// <summary>
     /// Muestra el diálogo y retorna el servidor elegido, o null si el usuario canceló.
     /// </summary>
-    public static async System.Threading.Tasks.Task<VideoServer?> ShowAsync(
+    public static async System.Threading.Tasks.Task<(VideoServer? Server, string Quality)> ShowAsync(
         Window owner,
         List<VideoServer> servers,
-        string episodeTitle)
+        string episodeTitle,
+        bool showQualitySelector = true)
     {
         var dialog = new ServerPickerDialog();
         dialog.EpisodeTitleText.Text = episodeTitle;
         dialog.BuildServerButtons(servers);
-
+        
         // Hereda el tema de la ventana padre aplicando sus recursos
         dialog.RequestedThemeVariant = owner.RequestedThemeVariant;
 
-        return await dialog.ShowDialog<VideoServer?>(owner);
+        var result = await dialog.ShowDialog<VideoServer?>(owner);
+        return (result, dialog._selectedQuality);
     }
 
     private void BuildServerButtons(List<VideoServer> servers)
@@ -74,7 +77,7 @@ public partial class ServerPickerDialog : Window
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                 Child = new TextBlock
                 {
-                    Text = server.IsDirectPlaySupported ? "Directo" : "yt-dlp",
+                    Text = server.IsDirectPlaySupported ? "Nativo (Ver/Descargar)" : "yt-dlp (Inestable)",
                     FontSize = 11,
                     Foreground = Brushes.White,
                 }
@@ -113,6 +116,7 @@ public partial class ServerPickerDialog : Window
         if (sender is Button btn && btn.Tag is VideoServer server)
         {
             _selectedServer = server;
+            _selectedQuality = "Mejor";
             Close(_selectedServer);
         }
     }

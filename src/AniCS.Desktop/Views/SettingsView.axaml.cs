@@ -17,6 +17,12 @@ public partial class SettingsView : UserControl
     {
         var config = ConfigManager.Current;
 
+        var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+        if (AppVersionText != null)
+        {
+            AppVersionText.Text = $"Versión: {currentVersion}";
+        }
+
         CacheLimitInput.Value = config.MaxImageCacheCount;
         
         switch (config.DefaultPlayer.ToLower())
@@ -32,6 +38,8 @@ public partial class SettingsView : UserControl
         RefreshParadigmList(config);
         
         UseSpatialHudToggle.IsChecked = config.UseSpatialHud;
+        
+
         
         StatusMessage.IsVisible = false;
     }
@@ -84,6 +92,8 @@ public partial class SettingsView : UserControl
         }
         
         config.UseSpatialHud = UseSpatialHudToggle.IsChecked == true;
+        
+
 
         ConfigManager.Save(config);
 
@@ -106,6 +116,27 @@ public partial class SettingsView : UserControl
                 ConfigManager.Save(config);
                 ThemeManager.ApplyTheme(newTheme);
             }
+        }
+    }
+
+    private void OnViewChangelogClicked(object? sender, RoutedEventArgs e)
+    {
+        var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+        string changelog = "¡Hola! Estas son las novedades de la versión 1.0.4.0:\n\n" +
+                           "• ¡Nuevo apartado Top Animes! Explora los mejores Animes y Donghuas del momento.\n" +
+                           "• Soporte oficial para MundoDonghua: Ahora puedes buscar, ver y descargar Donghuas nativamente.\n" +
+                           "• Ventana de Notas del Parche integrada para consultar estas novedades directamente desde Ajustes.\n" +
+                           "• El reproductor de MPV ahora se abre por defecto con un tamaño más grande y adaptativo.\n" +
+                           "• Reparado el error (403 Forbidden) al intentar ver o descargar desde servidores externos (VidHide, etc.).\n" +
+                           "• Mejoras internas en la decodificación de enlaces (Base62) y redirecciones, aumentando drásticamente la compatibilidad.\n" +
+                           "• Añadidas notificaciones visuales inteligentes cuando el reproductor externo falla al iniciar o extraer video.\n" +
+                           "• Ahora la ventana de selección de servidor omite la calidad si no aplica, yendo directamente a la mejor calidad disponible.\n\n" +
+                           "¡Gracias por usar AniCS!";
+        
+        if (VisualRoot is Window window)
+        {
+            var changelogWindow = new Controls.ChangelogWindow(currentVersion, changelog);
+            changelogWindow.ShowDialog(window);
         }
     }
 }

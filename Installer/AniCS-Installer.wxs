@@ -1,5 +1,5 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
-  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.0.2.0" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" Scope="perMachine">
+  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.0.4.0" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" Scope="perMachine">
     <MajorUpgrade DowngradeErrorMessage="Ya tienes instalada una versiÃƒÂ³n mÃƒÂ¡s reciente de AniCS." />
     <MediaTemplate EmbedCab="yes" />
     <Icon Id="AppIcon" SourceFile="src\AniCS.Desktop\Assets\Incono\favicon.ico" />
@@ -146,6 +146,21 @@
       </Component>
       <Component Id="cmpf988fc046bae4b0ba02c6f22a8dd1c2e" Guid="*">
         <File Id="filef988fc046bae4b0ba02c6f22a8dd1c2e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Tmds.DBus.Protocol.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="cmpCommunityToolkitMvvm" Guid="*">
+        <File Id="fileCommunityToolkitMvvm" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\CommunityToolkit.Mvvm.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="cmpMaterialIconsAvalonia" Guid="*">
+        <File Id="fileMaterialIconsAvalonia" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Material.Icons.Avalonia.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="cmpMaterialIcons" Guid="*">
+        <File Id="fileMaterialIcons" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Material.Icons.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="cmpMicrosoftExtensionsDependencyInjectionAbstractions" Guid="*">
+        <File Id="fileMicrosoftExtensionsDependencyInjectionAbstractions" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.Extensions.DependencyInjection.Abstractions.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="cmpMicrosoftExtensionsDependencyInjection" Guid="*">
+        <File Id="fileMicrosoftExtensionsDependencyInjection" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.Extensions.DependencyInjection.dll" KeyPath="yes" />
       </Component>
       <Component Id="YTDLPEXE" Guid="*">
         <File Id="YTDLPEXE" Source="InstallerDependencies\yt-dlp.exe" KeyPath="yes" />

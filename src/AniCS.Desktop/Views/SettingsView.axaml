@@ -58,6 +58,8 @@
                 <ToggleSwitch Name="UseSpatialHudToggle" OffContent="Desactivado" OnContent="Activado" />
             </StackPanel>
 
+
+
             <Button Content="Guardar Cambios" 
                     Padding="20,10"
                     Margin="0,20,0,0"
@@ -66,6 +68,14 @@
             
             <TextBlock Name="StatusMessage" Foreground="#4CAF50" FontWeight="Bold" IsVisible="False"/>
 
+            <StackPanel Margin="0,30,0,0">
+                <Separator Background="#44444460" Margin="0,0,0,10"/>
+                <TextBlock Text="Acerca de AniCS" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                <StackPanel Orientation="Horizontal" Spacing="15" Margin="0,5,0,0">
+                    <TextBlock Name="AppVersionText" Text="Versión: Desconocida" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource AppSubtextColor}"/>
+                    <Button Content="Ver Notas de Parche" Cursor="Hand" Click="OnViewChangelogClicked"/>
+                </StackPanel>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

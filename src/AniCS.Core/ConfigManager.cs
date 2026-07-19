@@ -23,7 +23,7 @@ public static class ConfigManager
             try
             {
                 var json = File.ReadAllText(ConfigPath);
-                var config = JsonSerializer.Deserialize<AppConfig>(json);
+                var config = JsonSerializer.Deserialize(json, AppConfigJsonContext.Default.AppConfig);
                 if (config != null)
                 {
                     return config;
@@ -51,7 +51,8 @@ public static class ConfigManager
             }
             
             var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(config, options);
+            var context = new AppConfigJsonContext(options);
+            var json = JsonSerializer.Serialize(config, context.AppConfig);
             File.WriteAllText(ConfigPath, json);
             Current = config;
         }

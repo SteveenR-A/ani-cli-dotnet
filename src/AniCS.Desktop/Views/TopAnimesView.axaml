@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:controls="clr-namespace:AniCS.Desktop.Controls"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="AniCS.Desktop.Views.TopAnimesView">
+    
+    <Grid RowDefinitions="Auto, *, Auto" Margin="20">
+        <!-- Header & Filters -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto, Auto" Margin="0,0,0,20">
+            <TextBlock Grid.Column="0" Text="Top Animes" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center"/>
+            
+            <ComboBox Grid.Column="2" Name="TopTypeComboBox" Width="180" SelectedIndex="0" SelectionChanged="OnFilterChanged">
+                <ComboBoxItem Content="Top General" Tag=""/>
+            </ComboBox>
+        </Grid>
+        
+        <!-- Content -->
+        <Grid Grid.Row="1">
+            <TextBlock Name="StatusText" Text="Cargando top..." FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="True"/>
+            
+            <ScrollViewer>
+                <ItemsControl Name="TopList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:AnimeResult">
+                            <Grid Margin="0,0,15,15">
+                                <controls:AnimeBlockControl />
+                                <!-- Rank Badge -->
+                                <Border Background="#E53935" CornerRadius="4" Padding="5,2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5">
+                                    <TextBlock Text="{Binding Rank, StringFormat='#{0}'}" FontWeight="Bold" Foreground="White" />
+                                </Border>
+                                <!-- Votes -->
+                                <Border Background="#1A1A2E" CornerRadius="4" Padding="8,4" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="15">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <material:MaterialIcon Kind="ThumbUp" Width="14" Height="14" Foreground="White" />
+                                        <TextBlock Text="{Binding Votes}" FontSize="13" FontWeight="Bold" Foreground="White" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

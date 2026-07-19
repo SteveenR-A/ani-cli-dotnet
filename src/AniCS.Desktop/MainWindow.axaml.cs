@@ -11,6 +11,7 @@ public partial class MainWindow : Window
     private SearchView _searchView = new SearchView();
 
     private CalendarView _calendarView = new CalendarView();
+    private TopAnimesView _topAnimesView = new TopAnimesView();
     private DownloadsView _downloadsView = new DownloadsView();
     private HistoryView _historyView = new HistoryView();
     private SettingsView _settingsView = new SettingsView();
@@ -19,15 +20,80 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        TopNavigationBar.DataContext = _sharedHomeViewModel;
+
+        _sharedHomeViewModel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(ViewModels.HomeViewModel.IsDonghuaMode))
+            {
+                bool isDonghua = _sharedHomeViewModel.IsDonghuaMode;
+
+                var calendarBtn = this.FindControl<Button>("CalendarNavBtn");
+                var topAnimesBtn = this.FindControl<Button>("TopAnimesNavBtn");
+
+                if (calendarBtn != null) calendarBtn.IsVisible = !isDonghua;
+                if (topAnimesBtn != null) topAnimesBtn.IsVisible = !isDonghua;
+
+                if (isDonghua && (MainContent.Content is CalendarView || MainContent.Content is TopAnimesView))
+                {
+                    OnHomeClicked(null, new RoutedEventArgs());
+                }
+                else
+                {
+                    _searchView.ReloadConfig();
+                    _topAnimesView.ReloadConfig();
+                }
+            }
+        };
+
+        // Estado inicial de los botones
+        bool initialDonghua = _sharedHomeViewModel.IsDonghuaMode;
+        var initialCalendarBtn = this.FindControl<Button>("CalendarNavBtn");
+        var initialTopAnimesBtn = this.FindControl<Button>("TopAnimesNavBtn");
+        if (initialCalendarBtn != null) initialCalendarBtn.IsVisible = !initialDonghua;
+        if (initialTopAnimesBtn != null) initialTopAnimesBtn.IsVisible = !initialDonghua;
+
         ApplyWindowConfig();
         LoadHomeParadigm();
+    }
+
+    protected override void OnOpened(System.EventArgs e)
+    {
+        base.OnOpened(e);
+        CheckForUpdates();
+    }
+
+    private void CheckForUpdates()
+    {
+        var config = ConfigManager.Current;
+        var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+
+        if (config.LastSeenVersion != currentVersion)
+        {
+            string changelog = "¡Hola! Estas son las novedades de la versión 1.0.4.0:\n\n" +
+                               "• ¡Nuevo apartado Top Animes! Explora los mejores Animes.\n" +
+                               "• Soporte oficial para MundoDonghua: Ahora puedes buscar, ver y descargar Donghuas nativamente.\n" +
+                               "• Ventana de Notas del Parche integrada para consultar estas novedades directamente desde Ajustes.\n" +
+                               "• El reproductor de MPV ahora se abre por defecto con un tamaño más grande y adaptativo.\n" +
+                               "• Reparado el error (403 Forbidden) al intentar ver o descargar desde servidores externos (VidHide, etc.).\n" +
+                               "• Mejoras internas en la decodificación de enlaces (Base62) y redirecciones, aumentando drásticamente la compatibilidad.\n" +
+                               "• Añadidas notificaciones visuales inteligentes cuando el reproductor externo falla al iniciar o extraer video.\n" +
+                               "• Ahora la ventana de selección de servidor omite la calidad si no aplica, yendo directamente a la mejor calidad disponible.\n\n" +
+                               "¡Gracias por usar AniCS!";
+
+            var changelogWindow = new Controls.ChangelogWindow(currentVersion, changelog);
+            changelogWindow.ShowDialog(this);
+
+            config.LastSeenVersion = currentVersion;
+            ConfigManager.Save(config);
+        }
     }
 
     private void LoadHomeParadigm()
     {
         var config = ConfigManager.Current;
         UserControl targetView;
-        
+
         switch (config.UiParadigm)
         {
             case "Spatial": targetView = new Views.Paradigms.Spatial.SpatialView(); break;
@@ -38,15 +104,27 @@ public partial class MainWindow : Window
             default: targetView = _homeView; break;
         }
 
-        // Inyectamos el ViewModel compartido para que no re-carguen todo al cambiar de vista
         targetView.DataContext = _sharedHomeViewModel;
-        MainContent.Content = targetView;
+        SetMainContent(targetView);
 
-        // Si es la primera vez que se carga la aplicación y la lista está vacía, forzar la carga
         if (_sharedHomeViewModel.AnimeList.Count == 0 && !_sharedHomeViewModel.IsReloading)
         {
             _ = _sharedHomeViewModel.LoadDataAsync();
         }
+    }
+
+    private void SetMainContent(UserControl view)
+    {
+        MainContent.Content = view;
+
+        var isMainView = view is HomeView || view is SearchView || view is TopAnimesView ||
+                         view is Views.Paradigms.Spatial.SpatialView ||
+                         view is Views.Paradigms.Node.NodeView ||
+                         view is Views.Paradigms.Kinetic.KineticView ||
+                         view is Views.Paradigms.ASCII.ASCIIView ||
+                         view is Views.Paradigms.AndroidApp.AndroidAppView;
+
+        SourceTogglePanel.IsVisible = isMainView;
     }
 
     private void ApplyWindowConfig()
@@ -86,7 +164,7 @@ public partial class MainWindow : Window
     {
         _previousView = MainContent.Content as UserControl;
         var detailsView = new AnimeDetailsView(anime);
-        MainContent.Content = detailsView;
+        SetMainContent(detailsView);
         PageTitleText.Text = anime.Title;
     }
 
@@ -94,7 +172,7 @@ public partial class MainWindow : Window
     {
         _previousView = MainContent.Content as UserControl;
         var seeMoreView = new SeeMoreView(title, items);
-        MainContent.Content = seeMoreView;
+        SetMainContent(seeMoreView);
         PageTitleText.Text = title;
     }
 
@@ -102,7 +180,7 @@ public partial class MainWindow : Window
     {
         if (_previousView != null)
         {
-            MainContent.Content = _previousView;
+            SetMainContent(_previousView);
             SetTitleForView(_previousView);
             _previousView = null;
         }
@@ -112,11 +190,12 @@ public partial class MainWindow : Window
             PageTitleText.Text = "Inicio";
         }
     }
-    
+
     private void SetTitleForView(UserControl view)
     {
         if (view is SearchView) PageTitleText.Text = "Buscar Anime";
-        else if (view is CalendarView) PageTitleText.Text = "Calendario";
+        else if (view is CalendarView) PageTitleText.Text = "Horarios";
+        else if (view is TopAnimesView) PageTitleText.Text = "Top Animes";
         else if (view is DownloadsView) PageTitleText.Text = "Descargas";
         else if (view is HistoryView) PageTitleText.Text = "Historial";
         else if (view is SettingsView) PageTitleText.Text = "Configuración";
@@ -132,21 +211,28 @@ public partial class MainWindow : Window
 
     private void OnSearchClicked(object? sender, RoutedEventArgs e)
     {
-        MainContent.Content = _searchView;
+        SetMainContent(_searchView);
         PageTitleText.Text = "Buscar Anime";
         MainSplitView.IsPaneOpen = false;
     }
 
     private void OnCalendarClicked(object? sender, RoutedEventArgs e)
     {
-        MainContent.Content = _calendarView;
-        PageTitleText.Text = "Calendario";
+        SetMainContent(_calendarView);
+        PageTitleText.Text = "Horarios";
+        MainSplitView.IsPaneOpen = false;
+    }
+
+    private void OnTopAnimesClicked(object? sender, RoutedEventArgs e)
+    {
+        SetMainContent(_topAnimesView);
+        PageTitleText.Text = "Top Animes";
         MainSplitView.IsPaneOpen = false;
     }
 
     private void OnDownloadsClicked(object? sender, RoutedEventArgs e)
     {
-        MainContent.Content = _downloadsView;
+        SetMainContent(_downloadsView);
         PageTitleText.Text = "Descargas";
         MainSplitView.IsPaneOpen = false;
     }
@@ -154,7 +240,7 @@ public partial class MainWindow : Window
     private void OnHistoryClicked(object? sender, RoutedEventArgs e)
     {
         _historyView.Reload(); // Refrescar el historial al abrirlo
-        MainContent.Content = _historyView;
+        SetMainContent(_historyView);
         PageTitleText.Text = "Historial";
         MainSplitView.IsPaneOpen = false;
     }
@@ -162,7 +248,7 @@ public partial class MainWindow : Window
     private void OnSettingsClicked(object? sender, RoutedEventArgs e)
     {
         _settingsView.LoadConfig(); // Refrescar por si se cambió desde otro lado
-        MainContent.Content = _settingsView;
+        SetMainContent(_settingsView);
         PageTitleText.Text = "Configuración";
         MainSplitView.IsPaneOpen = false;
     }

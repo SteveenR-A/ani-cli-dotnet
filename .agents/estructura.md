@@ -11,18 +11,27 @@ Este documento describe con mayor detalle la arquitectura de directorios del pro
 │   └── InstallerDependencies/ # Binarios externos (ej. mpv.exe, yt-dlp) si los hubiere
 ├── src/
 │   ├── AniCS.Core/          # Lógica central del negocio (C#)
-│   │   ├── Extractors/      # Clases de web scraping (BaseExtractor, JkAnimeExtractor)
+│   │   ├── Extractors/      # Clases de web scraping (BaseExtractor, JKAnimeExtractor, etc.)
+│   │   ├── History/         # Gestión de historial de episodios vistos
 │   │   ├── Models/          # Entidades (Anime, Episode, AppConfig)
-│   │   └── ConfigManager.cs # Singleton que gestiona la carga/guardado de config.json
+│   │   ├── Services/        # Servicios compartidos del motor central
+│   │   ├── ConfigManager.cs # Singleton que gestiona la carga/guardado de config.json
+│   │   ├── DataCache.cs     # Sistema de caché para evitar requests redundantes
+│   │   └── CoreServiceCollectionExtensions.cs # Configuración de Inyección de Dependencias
 │   ├── AniCS.CLI/           # Interfaz de Consola interactiva
+│   │   ├── Commands/        # Comandos de CLI (Patrón Command)
 │   │   ├── Terminal/        # Lógica de renderizado en terminal (UIHelpers, PlayerManager)
 │   │   └── Program.cs       # Punto de entrada CLI
-│   └── AniCS.Desktop/       # Interfaz Gráfica con Avalonia UI
-│       ├── Views/           # Pantallas XAML (MainWindow, SettingsView, PlayerView)
+│   └── AniCS.Desktop/       # Interfaz Gráfica con Avalonia UI (Patrón MVVM)
 │       ├── Assets/          # Imágenes, íconos y logos
+│       ├── Controls/        # Controles personalizados de usuario (UserControls / TemplatedControls)
+│       ├── Converters/      # Convertidores de Binding de Avalonia (IValueConverter)
+│       ├── Services/        # Servicios específicos de UI (DesktopPlayer, DownloadManager)
+│       ├── ViewModels/      # Lógica de presentación (MVVM Toolkit)
+│       ├── Views/           # Pantallas XAML (MainWindow, SettingsView, PlayerView)
 │       └── ThemeManager.cs  # Gestión de colores dinámicos (Cyberpunk, Dracula, Light, etc)
 ├── build-msi.ps1            # Script de automatización para generar el instalador MSI
-└── AniCS.sln                # Solución principal del proyecto
+└── AniCS.slnx               # Solución principal del proyecto (Formato XML moderno)
 ```
 
 ## Flujo de Datos

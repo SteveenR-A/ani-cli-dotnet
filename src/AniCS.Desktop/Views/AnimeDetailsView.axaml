@@ -36,7 +36,35 @@
                     
                     <StackPanel Grid.Column="1" Margin="20,0,0,0">
                         <SelectableTextBlock Name="TitleText" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" Margin="0,0,0,10" />
-                        <TextBlock Name="SynopsisText" FontSize="16" Foreground="{DynamicResource AppSubtextColor}" TextWrapping="Wrap" Text="Cargando sinopsis..." />
+                        
+                        <!-- Metadatos -->
+                        <WrapPanel Margin="0,0,0,10">
+                            <TextBlock Text="{Binding Type, StringFormat='Tipo: {0}'}" IsVisible="{Binding Type, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="{DynamicResource AppPrimaryColor}" FontWeight="Bold" Margin="0,0,15,5" />
+                            <TextBlock Text="{Binding Status, StringFormat='Estado: {0}'}" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="#A0A0B0" Margin="0,0,15,5" />
+                            <TextBlock Text="{Binding Season, StringFormat='Temporada: {0}'}" IsVisible="{Binding Season, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="#A0A0B0" Margin="0,0,15,5" />
+                            <TextBlock Text="{Binding Studios, StringFormat='Estudio: {0}'}" IsVisible="{Binding Studios, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="#A0A0B0" Margin="0,0,15,5" />
+                        </WrapPanel>
+                        
+                        <TextBlock Name="SynopsisText" FontSize="16" Foreground="{DynamicResource AppSubtextColor}" TextWrapping="Wrap" Text="Cargando sinopsis..." Margin="0,0,0,15" />
+                        
+                        <!-- Generos y Extras -->
+                        <StackPanel IsVisible="{Binding Genres.Count}">
+                            <TextBlock Text="Géneros:" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" Margin="0,0,0,5" />
+                            <ItemsControl ItemsSource="{Binding Genres}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#2A2A40" CornerRadius="4" Padding="8,4" Margin="0,0,5,5">
+                                            <TextBlock Text="{Binding}" Foreground="{DynamicResource AppPrimaryColor}" FontSize="12" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
                 

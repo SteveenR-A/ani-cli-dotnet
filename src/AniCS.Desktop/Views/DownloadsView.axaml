@@ -73,7 +73,7 @@
                     <ItemsControl Name="AnimeList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="services:DownloadedAnime">
-                                <Expander Margin="0,0,0,15" Background="{DynamicResource AppSurfaceColor}" CornerRadius="8">
+                                <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}" Margin="0,0,0,15" Background="{DynamicResource AppSurfaceColor}" CornerRadius="8">
                                     <Expander.Header>
                                         <Grid ColumnDefinitions="100, *, Auto" Margin="5">
                                             <Border Grid.Column="0" CornerRadius="4" ClipToBounds="True">

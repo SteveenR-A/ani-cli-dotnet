@@ -173,7 +173,7 @@ public static class DetailsPrompt
                     {
                         try
                         {
-                            var bytes = await DataCache.GetImageAsync(client, imageUrl, token);
+                            var bytes = await DataCache.GetImageAsync(client, imageUrl, cancellationToken: token);
                             if (token.IsCancellationRequested) return;
 
                             if (bytes.Length > 0 && items[selectedIndex] == itemCopy)

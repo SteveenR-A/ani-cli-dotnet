@@ -10,10 +10,20 @@ namespace AniCS.Desktop.Converters;
 
 public class AsyncImageLoader
 {
-    private static readonly HttpClient _httpClient = new HttpClient();
+    private static readonly HttpClient _httpClient;
 
     public static readonly AttachedProperty<string> SourceUrlProperty =
         AvaloniaProperty.RegisterAttached<AsyncImageLoader, Image, string>("SourceUrl");
+
+    static AsyncImageLoader()
+    {
+        _httpClient = new HttpClient();
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        _httpClient.DefaultRequestHeaders.Add("Referer", "https://www.mundodonghua.com/");
+        
+        SourceUrlProperty.Changed.AddClassHandler<Image>(OnSourceUrlChanged);
+        ApplyDuotoneProperty.Changed.AddClassHandler<Image>(OnSourceUrlChanged);
+    }
 
     public static string GetSourceUrl(Image element)
     {
@@ -38,11 +48,7 @@ public class AsyncImageLoader
         element.SetValue(ApplyDuotoneProperty, value);
     }
 
-    static AsyncImageLoader()
-    {
-        SourceUrlProperty.Changed.AddClassHandler<Image>(OnSourceUrlChanged);
-        ApplyDuotoneProperty.Changed.AddClassHandler<Image>(OnSourceUrlChanged);
-    }
+    // Constructor was moved above
 
     private static async void OnSourceUrlChanged(Image sender, AvaloniaPropertyChangedEventArgs e)
     {
@@ -53,7 +59,8 @@ public class AsyncImageLoader
 
         try
         {
-            var bytes = await DataCache.GetImageAsync(_httpClient, url);
+            string category = ConfigManager.Current.ContentType;
+            var bytes = await DataCache.GetImageAsync(_httpClient, url, category);
             if (bytes != null && bytes.Length > 0)
             {
                 bool applyDuotone = sender.GetValue(ApplyDuotoneProperty);

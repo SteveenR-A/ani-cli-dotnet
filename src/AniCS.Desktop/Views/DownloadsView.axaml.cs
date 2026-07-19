@@ -116,6 +116,7 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
                                     new Episode { EpisodeNumber = active.EpisodeNumber, Title = active.EpisodeTitle, Url = active.EpisodeUrl }, 
                                     defaultDir, 
                                     server.Url, 
+                                    AniCS.ConfigManager.Current.PreferredQuality,
                                     progress => Dispatcher.UIThread.Post(() => active.Progress = progress), 
                                     active.CancellationTokenSource.Token);
 

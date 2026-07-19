@@ -111,12 +111,29 @@ public class DownloadedEpisode
     public DateTime DownloadedAt { get; set; } = DateTime.Now;
 }
 
-public class DownloadedAnime
+public class DownloadedAnime : INotifyPropertyChanged
 {
     public string Title { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
     public List<DownloadedEpisode> Episodes { get; set; } = new();
+
+    private bool _isExpanded;
+    [JsonIgnore]
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (_isExpanded != value)
+            {
+                _isExpanded = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
+            }
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 
 public static class DownloadManager

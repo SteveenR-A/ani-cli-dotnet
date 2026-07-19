@@ -46,22 +46,186 @@ public class JKAnimeExtractor : BaseExtractor
         foreach (var item in items)
         {
             var seriesLink = item.SelectSingleNode(".//div[@class='anime__item__text']//h5/a");
-            var picNode    = item.SelectSingleNode(".//div[contains(@class,'anime__item__pic')]");
+            var picNode = item.SelectSingleNode(".//div[contains(@class,'anime__item__pic')]");
 
             if (seriesLink == null) continue;
 
-            var href  = seriesLink.GetAttributeValue("href", "");
+            var href = seriesLink.GetAttributeValue("href", "");
             var title = WebUtility.HtmlDecode(seriesLink.InnerText.Trim());
             if (string.IsNullOrEmpty(href)) continue;
 
             results.Add(new AnimeResult
             {
-                Title        = title,
-                Url          = href,
+                Title = title,
+                Url = href,
                 ThumbnailUrl = picNode?.GetAttributeValue("data-setbg", "") ?? ""
             });
         }
 
+        return results;
+    }
+
+    public override async Task<List<AnimeResult>> AdvancedSearchAsync(SearchFilters filters)
+    {
+        var results = new List<AnimeResult>();
+
+        if (string.IsNullOrWhiteSpace(filters.FilterBy) &&
+            string.IsNullOrWhiteSpace(filters.Genre) &&
+            string.IsNullOrWhiteSpace(filters.Letter) &&
+            string.IsNullOrWhiteSpace(filters.Demographic) &&
+            string.IsNullOrWhiteSpace(filters.Category) &&
+            string.IsNullOrWhiteSpace(filters.Type) &&
+            string.IsNullOrWhiteSpace(filters.Status) &&
+            string.IsNullOrWhiteSpace(filters.Year) &&
+            string.IsNullOrWhiteSpace(filters.Season) &&
+            string.IsNullOrWhiteSpace(filters.Order) &&
+            !string.IsNullOrWhiteSpace(filters.Query))
+        {
+            return await SearchAsync(filters.Query);
+        }
+
+        var queryParams = new List<string>();
+        if (!string.IsNullOrWhiteSpace(filters.FilterBy)) queryParams.Add($"filtro={Uri.EscapeDataString(filters.FilterBy)}");
+        if (!string.IsNullOrWhiteSpace(filters.Genre)) queryParams.Add($"genero={Uri.EscapeDataString(filters.Genre)}");
+        if (!string.IsNullOrWhiteSpace(filters.Letter)) queryParams.Add($"letra={Uri.EscapeDataString(filters.Letter)}");
+        if (!string.IsNullOrWhiteSpace(filters.Demographic)) queryParams.Add($"demografia={Uri.EscapeDataString(filters.Demographic)}");
+        if (!string.IsNullOrWhiteSpace(filters.Category)) queryParams.Add($"categoria={Uri.EscapeDataString(filters.Category)}");
+        if (!string.IsNullOrWhiteSpace(filters.Type)) queryParams.Add($"tipo={Uri.EscapeDataString(filters.Type)}");
+        if (!string.IsNullOrWhiteSpace(filters.Status)) queryParams.Add($"estado={Uri.EscapeDataString(filters.Status)}");
+        if (!string.IsNullOrWhiteSpace(filters.Year)) queryParams.Add($"fecha={Uri.EscapeDataString(filters.Year)}");
+        if (!string.IsNullOrWhiteSpace(filters.Season)) queryParams.Add($"temporada={Uri.EscapeDataString(filters.Season)}");
+        if (!string.IsNullOrWhiteSpace(filters.Order)) queryParams.Add($"orden={Uri.EscapeDataString(filters.Order)}");
+
+        var url = $"{BaseUrl}/directorio";
+        if (queryParams.Count > 0)
+        {
+            url += "?" + string.Join("&", queryParams);
+        }
+
+        var html = await DownloadWebpageAsync(url, BaseUrl);
+        if (string.IsNullOrEmpty(html)) return results;
+
+        var jsonRaw = SearchRegex(@"var\s+animes\s*=\s*(\{.*?\});", html, null, RegexOptions.Singleline);
+        if (!string.IsNullOrEmpty(jsonRaw))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(jsonRaw);
+                if (doc.RootElement.TryGetProperty("data", out var data))
+                {
+                    foreach (var item in data.EnumerateArray())
+                    {
+                        var title = item.TryGetProperty("title", out var t) ? t.GetString() : "";
+                        var slug = item.TryGetProperty("slug", out var s) ? s.GetString() : "";
+                        var image = item.TryGetProperty("image", out var i) ? i.GetString() : "";
+
+                        if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(slug))
+                        {
+                            results.Add(new AnimeResult
+                            {
+                                Title = WebUtility.HtmlDecode(title),
+                                Url = $"{BaseUrl}/{slug}/",
+                                ThumbnailUrl = image ?? ""
+                            });
+                        }
+                    }
+                }
+            }
+            catch { /* Ignore parse errors */ }
+        }
+
+        return results;
+    }
+
+    // ── Details ────────────────────────────────────────────────────
+    public override async Task<AnimeResult> GetDetailsAsync(string animeUrl)
+    {
+        var result = new AnimeResult { Url = animeUrl };
+        var doc = await GetDocumentAsync(animeUrl, BaseUrl);
+        if (doc == null) return result;
+
+        var titleNode = doc.DocumentNode.SelectSingleNode("//h1");
+        if (titleNode != null) result.Title = WebUtility.HtmlDecode(titleNode.InnerText.Trim());
+
+        var imgNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime__details__pic')]");
+        if (imgNode != null) result.ThumbnailUrl = imgNode.GetAttributeValue("data-setbg", "");
+
+        var synNode = doc.DocumentNode.SelectSingleNode("//p[@itemprop='description']");
+        if (synNode != null) result.Synopsis = WebUtility.HtmlDecode(synNode.InnerText.Trim());
+
+        var listItems = doc.DocumentNode.SelectNodes("//div[contains(@class,'anime__details__widget')]//ul/li");
+        if (listItems != null)
+        {
+            foreach (var li in listItems)
+            {
+                var text = li.InnerText.Trim();
+                if (text.StartsWith("Tipo:")) result.Type = text.Substring(5).Trim();
+                else if (text.StartsWith("Studios:")) result.Studios = text.Substring(8).Trim();
+                else if (text.StartsWith("Temporada:")) result.Season = text.Substring(10).Trim();
+                else if (text.StartsWith("Demografia:")) result.Demography = text.Substring(11).Trim();
+                else if (text.StartsWith("Idiomas:")) result.Languages = text.Substring(8).Trim();
+                else if (text.StartsWith("Episodios:")) result.TotalEpisodes = text.Substring(10).Trim();
+                else if (text.StartsWith("Duracion:")) result.Duration = text.Substring(9).Trim();
+                else if (text.StartsWith("Emitido:")) result.Broadcast = text.Substring(8).Trim();
+                else if (text.StartsWith("Estado:")) result.Status = text.Substring(7).Trim();
+            }
+        }
+
+        var genreNodes = doc.DocumentNode.SelectNodes("//div[contains(@class,'anime__details__widget')]//ul/li[contains(text(), 'Generos:')]//a");
+        if (genreNodes != null)
+        {
+            result.Genres = genreNodes.Select(g => WebUtility.HtmlDecode(g.InnerText.Trim())).ToList();
+        }
+
+        return result;
+    }
+
+    // ── Top Animes ─────────────────────────────────────────────────
+    public override async Task<List<AnimeResult>> GetTopAnimesAsync(string topType, string yearFilter, int page = 1)
+    {
+        var results = new List<AnimeResult>();
+        string url = $"{BaseUrl}/top/";
+
+        if (page > 1) url += $"page/{page}/";
+
+        var doc = await GetDocumentAsync(url, BaseUrl);
+        if (doc == null) return results;
+
+        // JkAnime Top page structure: cards in a grid.
+        // It has filters through URL params normally or AJAX, but we'll extract the current page first.
+        var items = doc.DocumentNode.SelectNodes("//div[contains(@class,'card') and .//div[contains(@class,'ranking')]]");
+        if (items != null)
+        {
+            int rank = 1 + ((page - 1) * 100);
+            foreach (var item in items)
+            {
+                var linkNode = item.SelectSingleNode(".//a");
+                if (linkNode == null) continue;
+                
+                var href = linkNode.GetAttributeValue("href", "");
+                if (string.IsNullOrEmpty(href)) continue;
+
+                var titleNode = item.SelectSingleNode(".//h5[contains(@class,'card-title')]");
+                var picNode = item.SelectSingleNode(".//img[contains(@class,'card-img-top')]");
+                
+                var title = titleNode != null ? WebUtility.HtmlDecode(titleNode.InnerText.Trim()) : "";
+                
+                var votesNode = item.SelectSingleNode(".//div[contains(@class,'card-badge')]");
+                string votes = votesNode?.InnerText.Trim() ?? "0";
+                // Optionally remove the thumb icon text if needed, but InnerText usually gets just text
+                votes = Regex.Replace(votes, @"[^\d]+", "").Trim();
+                if (string.IsNullOrEmpty(votes)) votes = "0";
+
+                results.Add(new AnimeResult
+                {
+                    Title = title,
+                    Url = href,
+                    ThumbnailUrl = picNode?.GetAttributeValue("src", "") ?? "",
+                    Rank = rank++,
+                    Votes = votes
+                });
+            }
+        }
         return results;
     }
 
@@ -75,21 +239,21 @@ public class JKAnimeExtractor : BaseExtractor
         // La página de estrenos usa el mismo layout que la portada (dir1 > card > a)
         var cards = doc.DocumentNode.SelectNodes(
             "//div[contains(@class,'dir1')]//div[contains(@class,'ml-2') and contains(@class,'card')]//a");
-        
+
         if (cards == null) return results;
 
         foreach (var card in cards)
         {
-            var href      = card.GetAttributeValue("href", "");
+            var href = card.GetAttributeValue("href", "");
             var titleNode = card.SelectSingleNode(".//h5[contains(@class,'card-title')]");
-            var imgNode   = card.SelectSingleNode(".//img[contains(@class,'card-img-top')]");
+            var imgNode = card.SelectSingleNode(".//img[contains(@class,'card-img-top')]");
 
             if (titleNode == null || string.IsNullOrEmpty(href)) continue;
 
             results.Add(new AnimeResult
             {
-                Title        = WebUtility.HtmlDecode(titleNode.InnerText.Trim()),
-                Url          = href,
+                Title = WebUtility.HtmlDecode(titleNode.InnerText.Trim()),
+                Url = href,
                 ThumbnailUrl = imgNode?.GetAttributeValue("src", "") ?? ""
             });
         }
@@ -112,19 +276,19 @@ public class JKAnimeExtractor : BaseExtractor
 
         foreach (var card in cards)
         {
-            var href      = card.GetAttributeValue("href", "");
+            var href = card.GetAttributeValue("href", "");
             var titleNode = card.SelectSingleNode(".//h5[contains(@class,'card-title')]");
-            var imgNode   = card.SelectSingleNode(".//img[contains(@class,'card-img-top')]");
-            var epBadge   = card.SelectSingleNode(".//span[contains(@class,'badge-primary')]");
+            var imgNode = card.SelectSingleNode(".//img[contains(@class,'card-img-top')]");
+            var epBadge = card.SelectSingleNode(".//span[contains(@class,'badge-primary')]");
 
             if (titleNode == null || string.IsNullOrEmpty(href)) continue;
 
             episodes.Add(new Episode
             {
-                Title         = WebUtility.HtmlDecode(titleNode.InnerText.Trim()),
+                Title = WebUtility.HtmlDecode(titleNode.InnerText.Trim()),
                 EpisodeNumber = epBadge?.InnerText.Replace("Ep ", "").Trim() ?? "",
-                Url           = href,
-                ThumbnailUrl  = imgNode?.GetAttributeValue("src", "") ?? ""
+                Url = href,
+                ThumbnailUrl = imgNode?.GetAttributeValue("src", "") ?? ""
             });
         }
 
@@ -144,7 +308,7 @@ public class JKAnimeExtractor : BaseExtractor
 
         foreach (var dayBlock in dayBlocks)
         {
-            var h2  = dayBlock.SelectSingleNode(".//h2");
+            var h2 = dayBlock.SelectSingleNode(".//h2");
             var day = h2 != null ? Regex.Replace(h2.InnerText, @"\s+", " ").Trim() : "?";
 
             var links = dayBlock.SelectNodes(".//div[@class='boxx']//a");
@@ -153,11 +317,11 @@ public class JKAnimeExtractor : BaseExtractor
             var addedUrls = new HashSet<string>();
             foreach (var a in links)
             {
-                var href      = a.GetAttributeValue("href", "");
+                var href = a.GetAttributeValue("href", "");
                 if (string.IsNullOrEmpty(href)) continue;
                 if (!addedUrls.Add(href)) continue;
                 var parentDiv = a.ParentNode?.ParentNode;
-                var title     = parentDiv?.GetAttributeValue("title", "")
+                var title = parentDiv?.GetAttributeValue("title", "")
                              ?? a.SelectSingleNode(".//strong")?.InnerText.Trim()
                              ?? "";
                 var img = a.SelectSingleNode(".//img");
@@ -166,9 +330,9 @@ public class JKAnimeExtractor : BaseExtractor
 
                 schedule.Add(new ScheduleItem
                 {
-                    Day          = day,
-                    Title        = WebUtility.HtmlDecode(title),
-                    Url          = href,
+                    Day = day,
+                    Title = WebUtility.HtmlDecode(title),
+                    Url = href,
                     ThumbnailUrl = img?.GetAttributeValue("src", "") ?? ""
                 });
             }
@@ -182,18 +346,18 @@ public class JKAnimeExtractor : BaseExtractor
     {
         var episodes = new List<Episode>();
         var seriesUrl = NormalizeSeriesUrl(animeUrl);
-        var slug      = ExtractSlug(seriesUrl);
+        var slug = ExtractSlug(seriesUrl);
         if (string.IsNullOrEmpty(slug)) return episodes;
 
         // Step 1: GET series page with cookies — extract CSRF token & anime ID
         var (html, cookies) = await DownloadWithCookiesAsync(seriesUrl, BaseUrl);
         if (string.IsNullOrEmpty(html)) return episodes;
 
-        var csrfMatch   = Regex.Match(html, @"name=""csrf-token""\s+content=""([^""]+)""");
+        var csrfMatch = Regex.Match(html, @"name=""csrf-token""\s+content=""([^""]+)""");
         var animeIdMatch = Regex.Match(html, @"ajax/episodes/(\d+)/");
         if (!csrfMatch.Success || !animeIdMatch.Success) return episodes;
 
-        var csrf    = csrfMatch.Groups[1].Value;
+        var csrf = csrfMatch.Groups[1].Value;
         var animeId = animeIdMatch.Groups[1].Value;
 
         // Step 2: POST to /ajax/episodes/{id}/1 with session cookie + CSRF
@@ -201,7 +365,7 @@ public class JKAnimeExtractor : BaseExtractor
         if (epData == null) return episodes;
 
         // Step 3: Build episode list from JSON response
-        var root  = epData.Value;
+        var root = epData.Value;
         int total = root.TryGetProperty("total", out var t) ? t.GetInt32() : 0;
         if (total == 0 && root.TryGetProperty("data", out var data))
             total = data.GetArrayLength();
@@ -210,9 +374,9 @@ public class JKAnimeExtractor : BaseExtractor
         {
             episodes.Add(new Episode
             {
-                Title         = $"Episodio {i}",
+                Title = $"Episodio {i}",
                 EpisodeNumber = i.ToString(),
-                Url           = $"{BaseUrl}/{slug}/{i}/"
+                Url = $"{BaseUrl}/{slug}/{i}/"
             });
         }
 
@@ -263,7 +427,7 @@ public class JKAnimeExtractor : BaseExtractor
         // Parse default servers (Desu, Magi) from video[] arrays
         var defaultNames = Regex.Matches(epHtml, @"<a\s+[^>]*data-id=""(\d+)""[^>]*>([^<]+)</a>");
         var videoArrays = Regex.Matches(epHtml, @"video\[(\d+)\]\s*=\s*'([^']+)'");
-        
+
         var nameMap = new Dictionary<string, string>();
         foreach (Match m in defaultNames) nameMap[m.Groups[1].Value] = m.Groups[2].Value.Trim();
 
@@ -272,11 +436,11 @@ public class JKAnimeExtractor : BaseExtractor
             var id = m.Groups[1].Value;
             var iframeHtml = m.Groups[2].Value;
             var src = SearchRegex(@"src=""([^""]+)""", iframeHtml);
-            
+
             if (!string.IsNullOrEmpty(src))
             {
                 var name = nameMap.TryGetValue(id, out var n) ? n : $"Servidor {id}";
-                bool isSupported = name.Equals("Desu", StringComparison.OrdinalIgnoreCase) || 
+                bool isSupported = name.Equals("Desu", StringComparison.OrdinalIgnoreCase) ||
                                    name.Equals("Magi", StringComparison.OrdinalIgnoreCase) ||
                                    name.Equals("Mediafire", StringComparison.OrdinalIgnoreCase);
                 servers.Add(new VideoServer { Name = name, Url = src.Replace(@"\/", "/"), IsDirectPlaySupported = isSupported });
@@ -297,7 +461,7 @@ public class JKAnimeExtractor : BaseExtractor
                     if (!string.IsNullOrEmpty(remote64))
                     {
                         var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(remote64));
-                        bool isSupported = name.Equals("Desu", StringComparison.OrdinalIgnoreCase) || 
+                        bool isSupported = name.Equals("Desu", StringComparison.OrdinalIgnoreCase) ||
                                            name.Equals("Magi", StringComparison.OrdinalIgnoreCase) ||
                                            name.Equals("Mediafire", StringComparison.OrdinalIgnoreCase);
                         servers.Add(new VideoServer { Name = name, Url = decoded, IsDirectPlaySupported = isSupported });
@@ -478,7 +642,7 @@ public class JKAnimeExtractor : BaseExtractor
                 .Select(c => c.Split(';')[0].Trim())
                 .ToList();
 
-            var html    = await response.Content.ReadAsStringAsync();
+            var html = await response.Content.ReadAsStringAsync();
             var cookies = string.Join("; ", cookieHeaders);
             return (html, cookies);
         }

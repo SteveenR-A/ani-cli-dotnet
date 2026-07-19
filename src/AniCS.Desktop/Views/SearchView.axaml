@@ -7,23 +7,179 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AniCS.Desktop.Views.SearchView">
     
-    <Grid RowDefinitions="Auto, *" Margin="20">
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,20">
-            <TextBox Name="SearchBox" Width="400" PlaceholderText="Buscar anime..." FontSize="18" KeyDown="OnSearchBoxKeyDown"/>
-            <Button Name="SearchButton" Content="Buscar" FontSize="18" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Click="OnSearchClicked"/>
-        </StackPanel>
+    <Grid Margin="20">
+        <ScrollViewer Name="MainScroll" ScrollChanged="OnScrollChanged">
+            <StackPanel>
+                <!-- Text Search -->
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
+                    <TextBox Name="SearchBox" Width="400" PlaceholderText="Buscar anime..." FontSize="18" KeyDown="OnSearchBoxKeyDown"/>
+                    <Button Name="SearchButton" Content="Buscar / Filtrar" FontSize="18" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Click="OnSearchClicked"/>
+                </StackPanel>
+                
+                <!-- Advanced Filters -->
+                <Expander Name="FiltersExpander" Header="Filtros Avanzados (Directorio)" Margin="0,0,0,20">
+                    <Grid RowDefinitions="Auto, Auto, Auto" ColumnDefinitions="*,*,*,*,*" Margin="10">
+                        <!-- Row 0 -->
+                        <StackPanel Name="FilterByPanel" Grid.Row="0" Grid.Column="0" Margin="5">
+                            <TextBlock Text="Ordenar por" Margin="0,0,0,5"/>
+                            <ComboBox Name="FilterByCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Content="Por fecha" Tag=""/>
+                                <ComboBoxItem Content="Por nombre" Tag="nombre"/>
+                                <ComboBoxItem Content="Por popularidad" Tag="popularidad"/>
+                            </ComboBox>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="5">
+                            <TextBlock Text="Genero" Margin="0,0,0,5"/>
+                            <ComboBox Name="GenreCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Content="Sin genero" Tag=""/>
+                                <ComboBoxItem Content="Accion" Tag="accion"/>
+                                <ComboBoxItem Content="Aventura" Tag="aventura"/>
+                                <ComboBoxItem Content="Comedia" Tag="comedia"/>
+                                <ComboBoxItem Content="Drama" Tag="drama"/>
+                                <ComboBoxItem Content="Fantasia" Tag="fantasia"/>
+                                <ComboBoxItem Content="Isekai" Tag="isekai"/>
+                                <ComboBoxItem Content="Magia" Tag="magia"/>
+                                <ComboBoxItem Content="Mecha" Tag="mecha"/>
+                                <ComboBoxItem Content="Romance" Tag="romance"/>
+                                <ComboBoxItem Content="Sci-Fi" Tag="sci-fi"/>
+                                <ComboBoxItem Content="Shoujo" Tag="shoujo"/>
+                                <ComboBoxItem Content="Shounen" Tag="shounen"/>
+                                <ComboBoxItem Content="Cosas de la vida" Tag="cosas-de-la-vida"/>
+                                <ComboBoxItem Content="Ecchi" Tag="ecchi"/>
+                                <ComboBoxItem Content="Misterio" Tag="misterio"/>
+                                <ComboBoxItem Content="Psicologico" Tag="psicologico"/>
+                                <ComboBoxItem Content="Seinen" Tag="seinen"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Name="LetterPanel" Grid.Row="0" Grid.Column="2" Margin="5">
+                            <TextBlock Text="Letra" Margin="0,0,0,5"/>
+                            <ComboBox Name="LetterCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Content="Sin letra" Tag=""/>
+                                <ComboBoxItem Content="A" Tag="A"/><ComboBoxItem Content="B" Tag="B"/><ComboBoxItem Content="C" Tag="C"/>
+                                <ComboBoxItem Content="D" Tag="D"/><ComboBoxItem Content="E" Tag="E"/><ComboBoxItem Content="F" Tag="F"/>
+                                <ComboBoxItem Content="G" Tag="G"/><ComboBoxItem Content="H" Tag="H"/><ComboBoxItem Content="I" Tag="I"/>
+                                <ComboBoxItem Content="J" Tag="J"/><ComboBoxItem Content="K" Tag="K"/><ComboBoxItem Content="L" Tag="L"/>
+                                <ComboBoxItem Content="M" Tag="M"/><ComboBoxItem Content="N" Tag="N"/><ComboBoxItem Content="O" Tag="O"/>
+                                <ComboBoxItem Content="P" Tag="P"/><ComboBoxItem Content="Q" Tag="Q"/><ComboBoxItem Content="R" Tag="R"/>
+                                <ComboBoxItem Content="S" Tag="S"/><ComboBoxItem Content="T" Tag="T"/><ComboBoxItem Content="U" Tag="U"/>
+                                <ComboBoxItem Content="V" Tag="V"/><ComboBoxItem Content="W" Tag="W"/><ComboBoxItem Content="X" Tag="X"/>
+                                <ComboBoxItem Content="Y" Tag="Y"/><ComboBoxItem Content="Z" Tag="Z"/>
+                            </ComboBox>
+                        </StackPanel>
+                        
+                        <StackPanel Name="DemoPanel" Grid.Row="0" Grid.Column="3" Margin="5">
+                            <TextBlock Text="Demografia" Margin="0,0,0,5"/>
+                            <ComboBox Name="DemographicCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Content="Sin demografia" Tag=""/>
+                                <ComboBoxItem Content="Niños" Tag="nios"/>
+                                <ComboBoxItem Content="Shoujo" Tag="shoujo"/>
+                                <ComboBoxItem Content="Shounen" Tag="shounen"/>
+                                <ComboBoxItem Content="Seinen" Tag="seinen"/>
+                                <ComboBoxItem Content="Josei" Tag="josei"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Name="CategoryPanel" Grid.Row="0" Grid.Column="4" Margin="5">
+                            <TextBlock Text="Categoria" Margin="0,0,0,5"/>
+                            <ComboBox Name="CategoryCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Content="Sin categoria" Tag=""/>
+                                <ComboBoxItem Content="Donghua" Tag="donghua"/>
+                                <ComboBoxItem Content="Latino" Tag="latino"/>
+                            </ComboBox>
+                        </StackPanel>
+                        
+                        <!-- Row 1 -->
+                        <StackPanel Name="TypePanel" Grid.Row="1" Grid.Column="0" Margin="5">
+                            <TextBlock Text="Tipo" Margin="0,0,0,5"/>
+                            <ComboBox Name="TypeCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Content="Sin tipo" Tag=""/>
+                                <ComboBoxItem Content="Animes" Tag="animes"/>
+                                <ComboBoxItem Content="Peliculas" Tag="peliculas"/>
+                                <ComboBoxItem Content="Especiales" Tag="especiales"/>
+                                <ComboBoxItem Content="Ovas" Tag="ovas"/>
+                                <ComboBoxItem Content="Onas" Tag="onas"/>
+                            </ComboBox>
+                        </StackPanel>
+                        
+                        <StackPanel Name="StatusPanel" Grid.Row="1" Grid.Column="1" Margin="5">
+                            <TextBlock Text="Estado" Margin="0,0,0,5"/>
+                            <ComboBox Name="StatusCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Content="Ninguno" Tag=""/>
+                                <ComboBoxItem Content="En emisi&#243;n" Tag="emision"/>
+                                <ComboBoxItem Content="Finalizado" Tag="finalizados"/>
+                                <ComboBoxItem Content="Por Estrenar" Tag="estrenos"/>
+                            </ComboBox>
+                        </StackPanel>
+                        
+                        <StackPanel Name="YearPanel" Grid.Row="1" Grid.Column="2" Margin="5">
+                            <TextBlock Text="Año" Margin="0,0,0,5"/>
+                            <ComboBox Name="YearCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Content="Sin año" Tag=""/>
+                                <ComboBoxItem Content="2026" Tag="2026"/>
+                                <ComboBoxItem Content="2025" Tag="2025"/>
+                                <ComboBoxItem Content="2024" Tag="2024"/>
+                                <ComboBoxItem Content="2023" Tag="2023"/>
+                                <ComboBoxItem Content="2022" Tag="2022"/>
+                                <ComboBoxItem Content="2021" Tag="2021"/>
+                                <ComboBoxItem Content="2020" Tag="2020"/>
+                                <ComboBoxItem Content="2019" Tag="2019"/>
+                                <ComboBoxItem Content="2018" Tag="2018"/>
+                                <ComboBoxItem Content="2017" Tag="2017"/>
+                                <ComboBoxItem Content="2016" Tag="2016"/>
+                                <ComboBoxItem Content="2015" Tag="2015"/>
+                            </ComboBox>
+                        </StackPanel>
+                        
+                        <StackPanel Name="SeasonPanel" Grid.Row="1" Grid.Column="3" Margin="5">
+                            <TextBlock Text="Temporada" Margin="0,0,0,5"/>
+                            <ComboBox Name="SeasonCombo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Content="Sin temporada" Tag=""/>
+                                <ComboBoxItem Content="Invierno" Tag="invierno"/>
+                                <ComboBoxItem Content="Primavera" Tag="primavera"/>
+                                <ComboBoxItem Content="Verano" Tag="verano"/>
+                                <ComboBoxItem Content="Otoño" Tag="otoño"/>
+                            </ComboBox>
+                        </StackPanel>
+                        
+                        <StackPanel Name="OrderPanel" Grid.Row="1" Grid.Column="4" Margin="5">
+                            <TextBlock Text="Orden" Margin="0,0,0,5"/>
+                            <ComboBox Name="OrderCombo" HorizontalAlignment="Stretch" SelectedIndex="1">
+                                <ComboBoxItem Content="Ascendente" Tag="asc"/>
+                                <ComboBoxItem Content="Descendente" Tag=""/>
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+                </Expander>
+
+                <Grid MinHeight="200">
+                    <TextBlock Name="StatusText" Text="" FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False"/>
+                    <ItemsControl Name="AnimeList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:AnimeResult">
+                                <controls:AnimeBlockControl />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
         
-        <Grid Grid.Row="1">
-            <TextBlock Name="StatusText" Text="" FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False"/>
-            <ScrollViewer>
-                <ItemsControl Name="AnimeList">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="models:AnimeResult">
-                            <controls:AnimeBlockControl />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Grid>
+        <!-- Botón Volver Arriba -->
+        <Button Name="ScrollTopButton" 
+                Content="↑" 
+                FontSize="24" FontWeight="Bold"
+                Background="{DynamicResource AppPrimaryColor}" 
+                Foreground="{DynamicResource AppPrimaryForegroundColor}"
+                Width="50" Height="50" 
+                CornerRadius="25"
+                HorizontalAlignment="Right" 
+                VerticalAlignment="Bottom" 
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                Margin="20"
+                IsVisible="False"
+                Click="OnScrollTopClicked"/>
     </Grid>
 </UserControl>

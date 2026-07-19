@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:AniCS.Desktop.Views"
+        xmlns:vm="clr-namespace:AniCS.Desktop.ViewModels"
         xmlns:local="clr-namespace:AniCS.Desktop"
         xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
@@ -13,8 +14,8 @@
         
     <Grid RowDefinitions="Auto, *">
         <!-- Top Navigation Bar -->
-        <Border Grid.Row="0" Background="{DynamicResource AppSurfaceColor}" Height="60" Padding="5,0">
-            <Grid ColumnDefinitions="Auto, *">
+        <Border Grid.Row="0" Background="{DynamicResource AppSurfaceColor}" Height="60" Padding="5,0" Name="TopNavigationBar" x:DataType="vm:HomeViewModel">
+            <Grid ColumnDefinitions="Auto, *, Auto, Auto">
                 <Button Grid.Column="0" Name="HamburgerButton" 
                         Background="Transparent" 
                         Foreground="{DynamicResource AppPrimaryColor}" 
@@ -30,6 +31,12 @@
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"
                            ToolTip.Tip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                           
+                <!-- Toggle Anime / Donghua -->
+                <StackPanel Name="SourceTogglePanel" Grid.Column="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="Anime" VerticalAlignment="Center" Foreground="{DynamicResource AppSubtextColor}" Margin="0,0,10,0" />
+                    <ToggleSwitch Name="SourceToggle" IsChecked="{Binding IsDonghuaMode}" OnContent="Donghua" OffContent="" VerticalAlignment="Center" Margin="0,0,15,0" />
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -60,7 +67,7 @@
                             HorizontalContentAlignment="Left"
                             Click="OnSearchClicked"/>
                             
-                    <Button Content="Calendario" 
+                    <Button Name="CalendarNavBtn" Content="Horarios" 
                             Classes="SidebarBtn"
                             Background="Transparent"
                             Foreground="{DynamicResource AppSubtextColor}"
@@ -68,6 +75,15 @@
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left"
                             Click="OnCalendarClicked"/>
+
+                    <Button Name="TopAnimesNavBtn" Content="Top Animes" 
+                            Classes="SidebarBtn"
+                            Background="Transparent"
+                            Foreground="{DynamicResource AppSubtextColor}"
+                            FontSize="16"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Click="OnTopAnimesClicked"/>
 
                     <Button Content="Descargas" 
                             Classes="SidebarBtn"
@@ -107,9 +123,11 @@
 
             <SplitView.Content>
                 <Border Background="{DynamicResource AppBackgroundColor}">
-                    <ContentControl Name="MainContent">
-                        <!-- Loaded dynamically -->
-                    </ContentControl>
+                    <TransitioningContentControl Name="MainContent">
+                        <TransitioningContentControl.PageTransition>
+                            <CrossFade Duration="0:0:0.2" />
+                        </TransitioningContentControl.PageTransition>
+                    </TransitioningContentControl>
                 </Border>
             </SplitView.Content>
         </SplitView>

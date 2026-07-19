@@ -9,7 +9,9 @@ namespace AniCS.Commands
         public void Execute()
         {
             var config = ConfigManager.Current;
-            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var context = new AppConfigJsonContext(options);
+            var json = JsonSerializer.Serialize(config, context.AppConfig);
 
             var panel = new Panel($"[green]{Markup.Escape(json)}[/]")
             {

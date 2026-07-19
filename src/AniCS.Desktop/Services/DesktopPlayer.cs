@@ -16,6 +16,7 @@ public enum DownloadResult
 public static class DesktopPlayer
 {
     private static readonly List<Process> _activeProcesses = new();
+    public static event Action<string>? OnPlayerError;
 
     static DesktopPlayer()
     {
@@ -39,7 +40,7 @@ public static class DesktopPlayer
         }
     }
 
-    public static void Play(string url, string title, string? referer)
+    public static void Play(string url, string title, string? referer, string quality = "Mejor")
     {
         var exe = GetExecutablePath("mpv") ?? GetExecutablePath("mpvnet");
 
@@ -51,9 +52,17 @@ public static class DesktopPlayer
         var args = new List<string>
         {
             "--force-window=yes",
+            "--autofit=1024x576", // Para evitar la ventana super pequeña en JKAnime
             "--cache=yes",
             "--cache-pause-wait=1"
         };
+
+        if (quality != "Mejor" && !url.Contains(".m3u8") && !url.Contains(".mp4"))
+        {
+            // mpv soporta ytdl-format solo para sitios soportados, si es directo m3u8 lo ignoramos para que no lance error
+            string height = quality.Replace("p", "");
+            args.Add($"--ytdl-format=bestvideo[height<=?{height}]+bestaudio/best[height<=?{height}]");
+        }
 
         bool isJkAnime = referer != null && referer.Contains("jkanime.net", StringComparison.OrdinalIgnoreCase);
         bool isMediafire = referer != null && referer.Contains("mediafire.com", StringComparison.OrdinalIgnoreCase);
@@ -68,27 +77,54 @@ public static class DesktopPlayer
             args.Add("--network-timeout=15");
             args.Add("--demuxer-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_on_http_error=4xx,reconnect_delay_max=10");
 
-            // mpv 0.40+ acepta --http-header-fields una vez por cabecera (no separadas por coma)
+            // mpv soporta --http-header-fields separado por comas para compatibilidad máxima con versiones antiguas
             string origin = isJkAnime ? "https://jkanime.net" : "https://www.mediafire.com";
+            var headerList = new System.Collections.Generic.List<string>
+            {
+                "Accept-Language: es-419",
+                "Accept: */*",
+                "Sec-Fetch-Dest: video",
+                "Sec-Fetch-Mode: no-cors",
+                "Sec-Fetch-Site: cross-site",
+                $"User-Agent: {AniCS.ConfigManager.Current.RandomUserAgent}"
+            };
+
             if (!string.IsNullOrEmpty(referer))
             {
-                args.Add($"--http-header-fields=Referer: {referer}");
-                args.Add($"--http-header-fields=Origin: {origin}");
+                headerList.Add($"Referer: {referer}");
+                headerList.Add($"Origin: {origin}");
             }
-            args.Add("--http-header-fields=Accept-Language: es-419");
-            args.Add("--http-header-fields=Accept: */*");
-            args.Add("--http-header-fields=Sec-Fetch-Dest: video");
-            args.Add("--http-header-fields=Sec-Fetch-Mode: no-cors");
-            args.Add("--http-header-fields=Sec-Fetch-Site: cross-site");
+            
+            args.Add($"--http-header-fields={string.Join(",", headerList)}");
         }
         else
         {
             args.Add("--demuxer-max-bytes=150M");
             args.Add("--demuxer-max-back-bytes=50M");
             args.Add("--demuxer-readahead-secs=120");
-            if (!string.IsNullOrEmpty(referer))
+            
+            if (exe.Contains("mpv", StringComparison.OrdinalIgnoreCase))
             {
-                args.Add($"--http-header-fields=Referer: {referer}");
+                args.Add("--force-window=immediate");
+                args.Add("--keep-open=yes");
+                args.Add("--geometry=65%"); // Hace la ventana mucho más grande por defecto
+                args.Add("--autofit=1280x720"); // Asegura un mínimo buen tamaño
+
+                if (!string.IsNullOrEmpty(referer))
+                {
+                    try 
+                    {
+                        var uri = new Uri(referer);
+                        string originUrl = uri.GetLeftPart(UriPartial.Authority);
+                        string ua = AniCS.ConfigManager.Current.RandomUserAgent;
+                        args.Add($"--http-header-fields=Referer: {referer},Origin: {originUrl},User-Agent: {ua}");
+                    }
+                    catch 
+                    {
+                        string ua = AniCS.ConfigManager.Current.RandomUserAgent;
+                        args.Add($"--http-header-fields=Referer: {referer},User-Agent: {ua}");
+                    }
+                }
             }
         }
 
@@ -114,6 +150,18 @@ public static class DesktopPlayer
             p.Exited += (s, e) =>
             {
                 lock (_activeProcesses) _activeProcesses.Remove(p);
+                try
+                {
+                    if (p.ExitCode != 0)
+                    {
+                        var duration = p.ExitTime - p.StartTime;
+                        if (duration.TotalSeconds < 10)
+                        {
+                            OnPlayerError?.Invoke($"El reproductor falló (Código: {p.ExitCode}). El video podría no estar disponible.");
+                        }
+                    }
+                }
+                catch { }
             };
             lock (_activeProcesses) _activeProcesses.Add(p);
             p.Start();
@@ -124,7 +172,7 @@ public static class DesktopPlayer
         }
     }
 
-    public static async System.Threading.Tasks.Task<DownloadResult> DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null, Action<double>? onProgress = null, System.Threading.CancellationToken cancellationToken = default)
+    public static async System.Threading.Tasks.Task<DownloadResult> DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null, string quality = "Mejor", Action<double>? onProgress = null, System.Threading.CancellationToken cancellationToken = default)
     {
         string animeDir = "";
         string episodeNumStr = "";
@@ -139,14 +187,31 @@ public static class DesktopPlayer
             var filenamePattern = $"Episodio {episodeNumStr}.%(ext)s";
             var outputPath = Path.Combine(animeDir, filenamePattern);
 
-            var refererArg = string.IsNullOrEmpty(referer) ? "" : $"--add-header \"Referer:{referer}\" ";
+            string headerArgs = $"--add-header \"User-Agent:{AniCS.ConfigManager.Current.RandomUserAgent}\" ";
+            if (!string.IsNullOrEmpty(referer))
+            {
+                headerArgs += $"--add-header \"Referer:{referer}\" ";
+                try
+                {
+                    var uri = new Uri(referer);
+                    headerArgs += $"--add-header \"Origin:{uri.GetLeftPart(UriPartial.Authority)}\" ";
+                }
+                catch { }
+            }
+
+            var qualityArg = "";
+            if (quality != "Mejor")
+            {
+                string height = quality.Replace("p", "");
+                qualityArg = $"-S \"res:{height}\" ";
+            }
 
             p = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "yt-dlp",
-                    Arguments = $"--newline --concurrent-fragments 1 --hls-prefer-native {refererArg}-o \"{outputPath}\" \"{videoUrl}\"",
+                    Arguments = $"--newline --concurrent-fragments 1 --hls-prefer-native {headerArgs}{qualityArg}-o \"{outputPath}\" \"{videoUrl}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,

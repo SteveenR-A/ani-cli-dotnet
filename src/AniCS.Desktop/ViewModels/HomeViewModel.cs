@@ -94,6 +94,24 @@ public class HomeViewModel : ViewModelBase
 
     public RelayCommand ReloadCommand { get; }
 
+    public bool IsDonghuaMode
+    {
+        get => AniCS.ConfigManager.Current.ContentType == "Donghua";
+        set
+        {
+            if (value)
+            {
+                AniCS.ConfigManager.Current.ContentType = "Donghua";
+            }
+            else
+            {
+                AniCS.ConfigManager.Current.ContentType = "Anime";
+            }
+            OnPropertyChanged();
+            _ = LoadDataAsync();
+        }
+    }
+
     public HomeViewModel()
     {
         ReloadCommand = new RelayCommand(async () => await LoadDataAsync(), () => !IsReloading);
@@ -112,7 +130,7 @@ public class HomeViewModel : ViewModelBase
         PremieresList.Clear();
         HistoryList.Clear();
 
-        var extractor = new JKAnimeExtractor(_httpClient);
+        var extractor = ExtractorFactory.GetExtractor();
         var watchHistory = new AniCS.History.WatchHistory();
 
         // Lanzar las tres tareas simultáneamente para que vayan renderizando apenas salgan
@@ -124,9 +142,13 @@ public class HomeViewModel : ViewModelBase
         {
             await Task.WhenAll(latestTask, premieresTask, historyTask);
         }
+        catch (HttpRequestException)
+        {
+            StatusText = "Sin conexión a Internet. Verifica tu red.";
+        }
         catch (Exception ex)
         {
-            StatusText = $"Error parcial: {ex.Message}";
+            StatusText = $"Error: {ex.Message}";
         }
         finally
         {
@@ -135,11 +157,13 @@ public class HomeViewModel : ViewModelBase
         }
     }
 
-    private async Task LoadLatestAsync(JKAnimeExtractor extractor)
+    private async Task LoadLatestAsync(IAnimeExtractor extractor)
     {
         try
         {
-            var episodes = await extractor.GetLatestReleasesAsync();
+            var cacheKey = $"Latest_{extractor.Domain}";
+            var episodes = await DataCache.GetOrFetchDataAsync(cacheKey, TimeSpan.FromMinutes(15), 
+                async () => await extractor.GetLatestReleasesAsync());
             var results = new ObservableCollection<AnimeResult>();
             
             foreach (var ep in episodes)
@@ -169,11 +193,13 @@ public class HomeViewModel : ViewModelBase
         catch { /* Ignore */ }
     }
 
-    private async Task LoadPremieresAsync(JKAnimeExtractor extractor)
+    private async Task LoadPremieresAsync(IAnimeExtractor extractor)
     {
         try
         {
-            var premieres = await extractor.GetPremieresAsync();
+            var cacheKey = $"Premieres_{extractor.Domain}";
+            var premieres = await DataCache.GetOrFetchDataAsync(cacheKey, TimeSpan.FromMinutes(15), 
+                async () => await extractor.GetPremieresAsync());
             if (premieres != null && premieres.Count > 0)
             {
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => 

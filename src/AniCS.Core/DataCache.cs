@@ -26,28 +26,28 @@ public static class DataCache
         }
     }
 
-    public static string GetImageCachePath(string url)
+    public static string GetImageCachePath(string url, string category = "")
     {
         if (string.IsNullOrEmpty(url)) return string.Empty;
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(url)));
-        // Use .jpg extension so that ImageSharp (used by Spectre.Console CanvasImage)
-        // can correctly detect the image format from the file extension.
-        return Path.Combine(CacheDir, hash + ".jpg");
+        var targetDir = string.IsNullOrEmpty(category) ? CacheDir : Path.Combine(CacheDir, category);
+        return Path.Combine(targetDir, hash + ".jpg");
     }
 
     /// <summary>
     /// Disk-based cache for images. Images are downloaded once and read from disk to save bandwidth and memory.
     /// </summary>
-    public static async Task<byte[]> GetImageAsync(HttpClient client, string url, CancellationToken cancellationToken = default)
+    public static async Task<byte[]> GetImageAsync(HttpClient client, string url, string category = "", CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(url)) return [];
 
-        if (_imageSessionCache.TryGetValue(url, out var sessionBytes))
+        var sessionKey = category + "_" + url;
+        if (_imageSessionCache.TryGetValue(sessionKey, out var sessionBytes))
         {
             return sessionBytes;
         }
 
-        var filePath = GetImageCachePath(url);
+        var filePath = GetImageCachePath(url, category);
 
         if (File.Exists(filePath))
         {
@@ -55,7 +55,7 @@ public static class DataCache
             {
                 var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
                 File.SetLastAccessTimeUtc(filePath, DateTime.UtcNow);
-                _imageSessionCache[url] = bytes;
+                _imageSessionCache[sessionKey] = bytes;
                 return bytes;
             }
             catch { /* Corrupted file or locked */ }
@@ -70,7 +70,7 @@ public static class DataCache
                 Directory.CreateDirectory(dir);
             }
             await File.WriteAllBytesAsync(filePath, bytes, cancellationToken);
-            _imageSessionCache[url] = bytes;
+            _imageSessionCache[sessionKey] = bytes;
             return bytes;
         }
         catch
@@ -149,7 +149,7 @@ public static class DataCache
 
         try
         {
-            var files = Directory.GetFiles(CacheDir, "*.jpg")
+            var files = Directory.GetFiles(CacheDir, "*.jpg", SearchOption.AllDirectories)
                 .Select(f => new FileInfo(f))
                 .OrderBy(f => f.LastAccessTimeUtc) // Oldest first
                 .ToList();

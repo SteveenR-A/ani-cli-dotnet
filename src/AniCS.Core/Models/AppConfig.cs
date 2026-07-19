@@ -2,7 +2,8 @@ namespace AniCS.Models;
 
 public class AppConfig
 {
-    public int MaxImageCacheCount { get; set; } = 30;
+    public string LastSeenVersion { get; set; } = "";
+    public int MaxImageCacheCount { get; set; } = 100;
     
     // Can be Auto, Mpv, Vlc
     public string DefaultPlayer { get; set; } = "Auto";
@@ -10,6 +11,9 @@ public class AppConfig
     // Path to executable if not in PATH
     public string CustomPlayerExePath { get; set; } = string.Empty;
     
+    // Content type preference (Anime or Donghua)
+    public string ContentType { get; set; } = "Anime";
+
     // Extractor domain/name, e.g. "jkanime.net" or "animeav1.com"
     public string DefaultExtractor { get; set; } = "jkanime.net";
     
@@ -30,7 +34,7 @@ public class AppConfig
             if (UserAgents == null || UserAgents.Count == 0)
                 return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
             
-            return UserAgents[new System.Random().Next(UserAgents.Count)];
+            return UserAgents[System.Random.Shared.Next(UserAgents.Count)];
         }
     }
 
@@ -39,6 +43,9 @@ public class AppConfig
 
     // Window State
     public string WindowState { get; set; } = "Maximized";
+    
+    public string PreferredQuality { get; set; } = "720p";
+
     public double WindowWidth { get; set; } = 1000;
     public double WindowHeight { get; set; } = 700;
 
@@ -47,4 +54,9 @@ public class AppConfig
 
     // Use Spatial HUD for episode selection
     public bool UseSpatialHud { get; set; } = false;
+}
+
+[System.Text.Json.Serialization.JsonSerializable(typeof(AppConfig))]
+public partial class AppConfigJsonContext : System.Text.Json.Serialization.JsonSerializerContext
+{
 }
