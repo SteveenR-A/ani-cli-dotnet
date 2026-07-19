@@ -105,6 +105,13 @@ cd ani-cli-dotnet
 - `Spectre.Console` (CLI UI)
 - `Avalonia UI` (Desktop UI)
 
+## 👨‍💻 Para Desarrolladores: Compilación y Dependencias
+
+Si clonaste este repositorio desde GitHub, notarás que no hay carpetas `bin/`, `obj/`, ni archivos `.dll` o `.exe` pesados. Esto es **completamente normal y una buena práctica**.
+
+1. **Dependencias C# (.dll)**: No se suben a GitHub. Al ejecutar `dotnet build` o `dotnet run`, el SDK de .NET leerá los archivos `.csproj` y **descargará automáticamente** todas las librerías necesarias (Avalonia, HtmlAgilityPack, etc.) desde NuGet.
+2. **Dependencias Externas (mpv.exe / yt-dlp.exe)**: Tampoco se suben a GitHub porque harían el repositorio inmensamente pesado. Debes descargarlos por tu cuenta (ej. `scoop install mpv yt-dlp`) y asegurarte de que estén en tu PATH. Si vas a generar el instalador `.msi` usando `build-msi.ps1`, el código asumirá que el usuario final los instalará por su cuenta o deberás colocarlos en la carpeta `InstallerDependencies/` (la cual es ignorada por Git) si decides empaquetarlos tú mismo en una versión local.
+
 ---
 
 ## 🏗️ Arquitectura del Código
