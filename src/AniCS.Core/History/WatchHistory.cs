@@ -96,5 +96,21 @@ public class WatchHistory
 
     public WatchEntry? FindByTitle(string title) =>
         _entries.FirstOrDefault(e => e.AnimeTitle.Contains(title, StringComparison.OrdinalIgnoreCase));
+
+    public void RemoveEntry(string animeUrl)
+    {
+        var entry = _entries.FirstOrDefault(e => e.AnimeUrl.Equals(animeUrl, StringComparison.OrdinalIgnoreCase));
+        if (entry != null)
+        {
+            _entries.Remove(entry);
+            Save();
+        }
+    }
+
+    public void Clear()
+    {
+        _entries.Clear();
+        Save();
+    }
 }
 

@@ -133,7 +133,8 @@ public class MundoDonghuaExtractor : BaseExtractor
         var titleNode = doc.DocumentNode.SelectSingleNode("//h1");
         if (titleNode != null) result.Title = titleNode.InnerText.Trim();
 
-        var synNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'sinopsis')]") ??
+        var synNode = doc.DocumentNode.SelectSingleNode("//p[contains(@class, 'md-detail-synopsis')]") ??
+                      doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'sinopsis')]") ??
                       doc.DocumentNode.SelectSingleNode("//p[contains(@class, 'description')]");
         if (synNode != null) result.Synopsis = synNode.InnerText.Trim();
 
@@ -199,6 +200,16 @@ public class MundoDonghuaExtractor : BaseExtractor
     public override async Task<List<VideoServer>> GetVideoServersAsync(string episodeUrl)
     {
         var servers = new List<VideoServer>();
+        
+        // Fix legacy history links that used dashes instead of slashes for episodes
+        // e.g. /ver/martial-master-669 -> /ver/martial-master/669
+        var legacyUrlMatch = System.Text.RegularExpressions.Regex.Match(episodeUrl, @"/ver/(.+?)-(\d+)$");
+        if (legacyUrlMatch.Success)
+        {
+            int index = legacyUrlMatch.Groups[2].Index;
+            episodeUrl = episodeUrl.Substring(0, index - 1) + "/" + legacyUrlMatch.Groups[2].Value;
+        }
+
         var doc = await GetDocumentAsync(episodeUrl, BaseUrl);
         if (doc == null) return servers;
 
@@ -241,6 +252,7 @@ public class MundoDonghuaExtractor : BaseExtractor
                         }
                     }
                 }
+
             }
             catch { }
         }

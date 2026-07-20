@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using System.Linq;
 using AniCS.Models;
 
 namespace AniCS.Desktop.Controls;
@@ -29,12 +30,12 @@ public partial class ServerPickerDialog : Window
         Window owner,
         List<VideoServer> servers,
         string episodeTitle,
-        bool showQualitySelector = true)
+        bool showQualitySelector = true) // Parameter kept for interface compatibility but ignored
     {
         var dialog = new ServerPickerDialog();
         dialog.EpisodeTitleText.Text = episodeTitle;
         dialog.BuildServerButtons(servers);
-        
+
         // Hereda el tema de la ventana padre aplicando sus recursos
         dialog.RequestedThemeVariant = owner.RequestedThemeVariant;
 
@@ -68,6 +69,8 @@ public partial class ServerPickerDialog : Window
                 FontSize = 15,
                 FontWeight = FontWeight.SemiBold,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxWidth = 180
             };
 
             var badge = new Border
@@ -77,7 +80,7 @@ public partial class ServerPickerDialog : Window
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                 Child = new TextBlock
                 {
-                    Text = server.IsDirectPlaySupported ? "Nativo (Ver/Descargar)" : "yt-dlp (Inestable)",
+                    Text = server.IsDirectPlaySupported ? "Nativo" : "yt-dlp",
                     FontSize = 11,
                     Foreground = Brushes.White,
                 }
@@ -117,6 +120,7 @@ public partial class ServerPickerDialog : Window
         {
             _selectedServer = server;
             _selectedQuality = "Mejor";
+            
             Close(_selectedServer);
         }
     }

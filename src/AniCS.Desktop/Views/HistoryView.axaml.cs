@@ -61,4 +61,21 @@ public partial class HistoryView : UserControl
             }
         }
     }
+
+    private void OnClearClicked(object? sender, RoutedEventArgs e)
+    {
+        var history = new WatchHistory();
+        history.Clear();
+        LoadData();
+    }
+
+    private void OnDeleteEntryClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is WatchEntry entry)
+        {
+            var history = new WatchHistory();
+            history.RemoveEntry(entry.AnimeUrl);
+            LoadData();
+        }
+    }
 }

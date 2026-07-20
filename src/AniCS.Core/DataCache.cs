@@ -140,6 +140,24 @@ public static class DataCache
         }
     }
 
+    private static HashSet<string> GetProtectedHashes()
+    {
+        var hashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var history = new AniCS.History.WatchHistory();
+            foreach (var entry in history.GetAll())
+            {
+                if (!string.IsNullOrEmpty(entry.AnimeThumbnailUrl))
+                {
+                    hashes.Add(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(entry.AnimeThumbnailUrl))) + ".jpg");
+                }
+            }
+        }
+        catch { }
+        return hashes;
+    }
+
     /// <summary>
     /// Performs an LRU cleanup on the disk image cache, keeping only the most recently accessed files.
     /// </summary>
@@ -149,12 +167,35 @@ public static class DataCache
 
         try
         {
-            var files = Directory.GetFiles(CacheDir, "*.jpg", SearchOption.AllDirectories)
+            var subDirs = Directory.GetDirectories(CacheDir);
+            
+            // Dividir el límite de archivos entre las categorías disponibles (ej. 100 / 2 = 50 por carpeta)
+            int limitPerFolder = subDirs.Length > 0 ? Math.Max(1, maxFiles / subDirs.Length) : maxFiles;
+
+            var protectedFiles = GetProtectedHashes();
+
+            foreach (var dir in subDirs)
+            {
+                CleanFolder(dir, limitPerFolder, protectedFiles);
+            }
+
+            // También limpiar la raíz en caso de haber imágenes sin categoría
+            CleanFolder(CacheDir, limitPerFolder, protectedFiles);
+        }
+        catch { /* Ignore directory access errors */ }
+    }
+
+    private static void CleanFolder(string folderPath, int maxFilesInFolder, HashSet<string> protectedFiles)
+    {
+        try
+        {
+            var files = Directory.GetFiles(folderPath, "*.jpg", SearchOption.TopDirectoryOnly)
                 .Select(f => new FileInfo(f))
+                .Where(f => !protectedFiles.Contains(f.Name)) // Ignorar archivos protegidos por el historial
                 .OrderBy(f => f.LastAccessTimeUtc) // Oldest first
                 .ToList();
 
-            int filesToDelete = files.Count - maxFiles;
+            int filesToDelete = files.Count - maxFilesInFolder;
             if (filesToDelete <= 0) return;
 
             foreach (var file in files.Take(filesToDelete))
