@@ -122,7 +122,7 @@ public partial class SettingsView : UserControl
     private void OnViewChangelogClicked(object? sender, RoutedEventArgs e)
     {
         var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
-        string changelog = "¡Hola! Estas son las novedades de la versión 1.0.4.0:\n\n" +
+        string changelog = "¡Hola! Estas son las novedades de la versión 1.5.1:\n\n" +
                            "• ¡Nuevo apartado Top Animes! Explora los mejores Animes y Donghuas del momento.\n" +
                            "• Soporte oficial para MundoDonghua: Ahora puedes buscar, ver y descargar Donghuas nativamente.\n" +
                            "• Ventana de Notas del Parche integrada para consultar estas novedades directamente desde Ajustes.\n" +

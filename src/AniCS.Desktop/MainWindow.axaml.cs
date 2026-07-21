@@ -70,7 +70,7 @@ public partial class MainWindow : Window
 
         if (config.LastSeenVersion != currentVersion)
         {
-            string changelog = "¡Hola! Estas son las novedades de la versión 1.0.4.0:\n\n" +
+            string changelog = "¡Hola! Estas son las novedades de la versión 1.5.1:\n\n" +
                                "• ¡Nuevo apartado Top Animes! Explora los mejores Animes.\n" +
                                "• Soporte oficial para MundoDonghua: Ahora puedes buscar, ver y descargar Donghuas nativamente.\n" +
                                "• Ventana de Notas del Parche integrada para consultar estas novedades directamente desde Ajustes.\n" +

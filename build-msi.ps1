@@ -4,6 +4,7 @@ Write-Host "=== AniCS MSI Builder ===" -ForegroundColor Cyan
 Write-Host "1. Compilando AniCS.Desktop (Release - win-x64)..." -ForegroundColor Yellow
 
 # Compilar el proyecto tal y como lo espera el archivo Components.xml de WiX
+dotnet clean src\AniCS.Desktop\AniCS.Desktop.csproj -c Release
 dotnet publish src\AniCS.Desktop\AniCS.Desktop.csproj -c Release -r win-x64
 
 Write-Host "`n2. Comprobando herramientas de WiX Toolset..." -ForegroundColor Yellow

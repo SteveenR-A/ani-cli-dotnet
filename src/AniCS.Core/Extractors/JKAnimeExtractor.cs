@@ -150,8 +150,13 @@ public class JKAnimeExtractor : BaseExtractor
         var imgNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime__details__pic')]");
         if (imgNode != null) result.ThumbnailUrl = imgNode.GetAttributeValue("data-setbg", "");
 
-        var synNode = doc.DocumentNode.SelectSingleNode("//p[@itemprop='description']");
+        var synNode = doc.DocumentNode.SelectSingleNode("//p[@class='scroll']") ??
+                      doc.DocumentNode.SelectSingleNode("//p[@rel='sinopsis']") ??
+                      doc.DocumentNode.SelectSingleNode("//p[@itemprop='description']") ??
+                      doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'sinopsis-box')]//p");
+                      
         if (synNode != null) result.Synopsis = WebUtility.HtmlDecode(synNode.InnerText.Trim());
+        else result.Synopsis = "Sinopsis no disponible.";
 
         var listItems = doc.DocumentNode.SelectNodes("//div[contains(@class,'anime__details__widget')]//ul/li");
         if (listItems != null)
@@ -493,6 +498,7 @@ public class JKAnimeExtractor : BaseExtractor
         // or just a <p> inside a <div class="sinopsis-box">
         var pNode = doc.DocumentNode.SelectSingleNode("//p[@class='scroll']") ??
                     doc.DocumentNode.SelectSingleNode("//p[@rel='sinopsis']") ??
+                    doc.DocumentNode.SelectSingleNode("//p[@itemprop='description']") ??
                     doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'sinopsis-box')]//p");
 
         if (pNode != null)
