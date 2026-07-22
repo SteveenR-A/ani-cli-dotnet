@@ -144,8 +144,12 @@ public class JKAnimeExtractor : BaseExtractor
         var doc = await GetDocumentAsync(animeUrl, BaseUrl);
         if (doc == null) return result;
 
-        var titleNode = doc.DocumentNode.SelectSingleNode("//h1");
+        var titleNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime_info')]//h3") ??
+                        doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime__details__title')]//h3") ??
+                        doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime__details__title')]//h1") ??
+                        doc.DocumentNode.SelectSingleNode("//h1");
         if (titleNode != null) result.Title = WebUtility.HtmlDecode(titleNode.InnerText.Trim());
+
 
         var imgNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime__details__pic')]");
         if (imgNode != null) result.ThumbnailUrl = imgNode.GetAttributeValue("data-setbg", "");
@@ -176,11 +180,19 @@ public class JKAnimeExtractor : BaseExtractor
             }
         }
 
-        var genreNodes = doc.DocumentNode.SelectNodes("//div[contains(@class,'anime__details__widget')]//ul/li[contains(text(), 'Generos:')]//a");
-        if (genreNodes != null)
+        var genreLi = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime__details__widget')]//ul/li[contains(text(), 'Generos:')]") ??
+                      doc.DocumentNode.SelectSingleNode("//li[contains(text(), 'Generos:')]");
+        if (genreLi != null)
         {
-            result.Genres = genreNodes.Select(g => WebUtility.HtmlDecode(g.InnerText.Trim())).ToList();
+            var text = genreLi.InnerText.Trim();
+            if (text.StartsWith("Generos:"))
+            {
+                var genresStr = text.Substring(8).Trim();
+                result.Genres = genresStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                                         .Select(g => WebUtility.HtmlDecode(g)).ToList();
+            }
         }
+
 
         return result;
     }

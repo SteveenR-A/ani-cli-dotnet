@@ -1,5 +1,6 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
-  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.5.1" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" Scope="perMachine">
+  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.5.2" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" Scope="perMachine">
+
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="Ya tienes instalada una versiÃƒÂ³n mÃƒÂ¡s reciente de AniCS." />
     <MediaTemplate EmbedCab="yes" />
     <Icon Id="AppIcon" SourceFile="src\AniCS.Desktop\Assets\Incono\favicon.ico" />

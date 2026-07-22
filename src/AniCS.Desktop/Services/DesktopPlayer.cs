@@ -226,8 +226,12 @@ public static class DesktopPlayer
         Process? p = null;
         try
         {
-            var safeTitle = string.Join("_", anime.Title.Split(Path.GetInvalidFileNameChars()));
+            var rawTitle = string.IsNullOrWhiteSpace(anime.Title) ? "Anime_Desconocido" : anime.Title;
+            var safeTitle = string.Join("_", rawTitle.Split(Path.GetInvalidFileNameChars())).Trim();
+            if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
+
             animeDir = Path.Combine(downloadDir, safeTitle);
+
             
             if (!Directory.Exists(downloadDir))
             {

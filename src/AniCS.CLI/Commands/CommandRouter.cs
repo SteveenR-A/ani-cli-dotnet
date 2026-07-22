@@ -15,6 +15,8 @@ namespace AniCS.Commands
         private readonly HistoryCommand _historyCommand;
         private readonly SourceCommand _sourceCommand;
         private readonly PremieresCommand _premieresCommand;
+        private readonly TopCommand _topCommand;
+        private readonly DirectoryCommand _directoryCommand;
         private readonly ConfigCommand _configCommand;
 
         public CommandRouter(AppState state)
@@ -28,8 +30,11 @@ namespace AniCS.Commands
             _historyCommand = new HistoryCommand(state, _playback);
             _sourceCommand = new SourceCommand(state);
             _premieresCommand = new PremieresCommand(state, _playback);
+            _topCommand = new TopCommand(state, _playback);
+            _directoryCommand = new DirectoryCommand(state, _playback);
             _configCommand = new ConfigCommand();
         }
+
 
         public async Task<bool> RouteAsync(string input)
         {
@@ -70,6 +75,18 @@ namespace AniCS.Commands
                 case "e":
                     await _premieresCommand.ExecuteAsync();
                     break;
+
+                case "top":
+                case "t":
+                    await _topCommand.ExecuteAsync();
+                    break;
+
+                case "directorio":
+                case "dir":
+                case "d":
+                    await _directoryCommand.ExecuteAsync();
+                    break;
+
 
                 case "history":
                 case "h":

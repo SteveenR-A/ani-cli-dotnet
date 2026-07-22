@@ -211,6 +211,26 @@ public class AnimeAV1Extractor : BaseExtractor
         return "Sinopsis no disponible.";
     }
 
+    public override async Task<AnimeResult> GetDetailsAsync(string animeUrl)
+    {
+        var result = new AnimeResult { Url = animeUrl };
+        var doc = await GetDocumentAsync(animeUrl, BaseUrl);
+        if (doc == null) return result;
+
+        var titleNode = doc.DocumentNode.SelectSingleNode("//h1") ??
+                        doc.DocumentNode.SelectSingleNode("//h2") ??
+                        doc.DocumentNode.SelectSingleNode("//h3");
+        if (titleNode != null) result.Title = System.Net.WebUtility.HtmlDecode(titleNode.InnerText.Trim());
+
+        var imgNode = doc.DocumentNode.SelectSingleNode("//meta[@property='og:image']") ??
+                      doc.DocumentNode.SelectSingleNode("//img[contains(@class, 'cover')]");
+        if (imgNode != null) result.ThumbnailUrl = imgNode.GetAttributeValue("content", "") ?? imgNode.GetAttributeValue("src", "");
+
+        result.Synopsis = await GetSynopsisAsync(animeUrl);
+
+        return result;
+    }
+
     public override async Task<string> ResolveVideoUrlAsync(string url)
     {
         // If the URL is already an external server (like mp4upload), return it so mpv/yt-dlp can handle it.
@@ -233,3 +253,4 @@ public class AnimeAV1Extractor : BaseExtractor
         return string.Empty;
     }
 }
+

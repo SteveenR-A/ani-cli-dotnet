@@ -49,7 +49,8 @@ public partial class AnimeDetailsView : UserControl
             var details = await extractor.GetDetailsAsync(_anime.Url);
             Dispatcher.UIThread.Invoke(() =>
             {
-                // Conservar Thumbnail si GetDetailsAsync no lo trajo
+                // Conservar Title y Thumbnail si GetDetailsAsync no los trajo
+                if (string.IsNullOrWhiteSpace(details.Title)) details.Title = _anime.Title;
                 if (string.IsNullOrEmpty(details.ThumbnailUrl)) details.ThumbnailUrl = _anime.ThumbnailUrl;
                 
                 _anime = details;
@@ -59,6 +60,7 @@ public partial class AnimeDetailsView : UserControl
                 {
                     AniCS.Desktop.Converters.AsyncImageLoader.SetSourceUrl(CoverImage, _anime.ThumbnailUrl);
                 }
+
                 
                 SynopsisText.Text = string.IsNullOrEmpty(_anime.Synopsis) ? "Sinopsis no disponible." : _anime.Synopsis;
             });
@@ -430,6 +432,10 @@ public partial class AnimeDetailsView : UserControl
             StatusText.IsVisible = true;
 
             var videoUrl = await extractor.ResolveVideoUrlAsync(chosenServer.Url);
+            if (string.IsNullOrEmpty(videoUrl) && AniCS.Desktop.Services.YtDlpService.IsAvailable())
+            {
+                videoUrl = chosenServer.Url;
+            }
 
             if (!string.IsNullOrEmpty(videoUrl))
             {
@@ -437,9 +443,10 @@ public partial class AnimeDetailsView : UserControl
                 StatusText.IsVisible = true;
                 var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
 
+                var animeTitle = string.IsNullOrWhiteSpace(_anime.Title) ? "Anime_Desconocido" : _anime.Title;
                 var activeDownload = new AniCS.Desktop.Services.ActiveDownload
                 {
-                    AnimeTitle = _anime.Title,
+                    AnimeTitle = animeTitle,
                     AnimeUrl = _anime.Url,
                     ThumbnailUrl = _anime.ThumbnailUrl,
                     EpisodeUrl = vm.Url,
@@ -448,6 +455,7 @@ public partial class AnimeDetailsView : UserControl
                     State = AniCS.Desktop.Services.DownloadState.Downloading,
                     Progress = 0
                 };
+
                 AniCS.Desktop.Services.DownloadManager.AddActiveDownload(activeDownload);
 
                 _ = System.Threading.Tasks.Task.Run(async () =>
@@ -459,10 +467,12 @@ public partial class AnimeDetailsView : UserControl
 
                     if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
                     {
-                        var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars()));
+                        var safeTitle = string.Join("_", animeTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
+                        if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
                         var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
                         AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
                     }
+
 
                     await Dispatcher.UIThread.InvokeAsync(() =>
                     {

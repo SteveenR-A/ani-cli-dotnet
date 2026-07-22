@@ -21,6 +21,8 @@ namespace AniCS.Terminal
             table.AddRow("[bold]search[/] [[título]]", "[grey]s[/]",   "Busca un anime específico");
             table.AddRow("[bold]latest[/]",             "[grey]l[/]",   "Últimos episodios estrenados");
             table.AddRow("[bold]estrenos[/]",           "[grey]e[/]",   "Nuevas series y estrenos");
+            table.AddRow("[bold]top[/]",                "[grey]t[/]",   "Ranking Top Anime más votados");
+            table.AddRow("[bold]directorio[/]",         "[grey]dir[/]", "Explorar catálogo con filtros (género, estado, tipo)");
             table.AddRow("[bold]scoop[/]",              "[grey]sc[/]",  "Cartelera semanal de estrenos");
             table.AddRow("[bold]history[/]",            "[grey]h[/]",   "Ver historial de animes vistos");
             table.AddRow("[bold]fuente[/]",             "[grey]f[/]",   "Cambiar la fuente activa");
@@ -28,6 +30,7 @@ namespace AniCS.Terminal
             table.AddRow("[bold]clear[/]",              "[grey]cls[/]", "Limpiar pantalla");
             table.AddRow("[bold]clearcache[/]",         "[grey]cc[/]",  "Limpiar caché de RAM (forzar actualización)");
             table.AddRow("[bold]exit[/]",               "[grey]q[/]",   "Salir de la aplicación");
+
 
             AnsiConsole.Write(table);
 

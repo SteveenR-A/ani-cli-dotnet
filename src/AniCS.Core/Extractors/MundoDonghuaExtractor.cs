@@ -38,7 +38,8 @@ public class MundoDonghuaExtractor : BaseExtractor
         else if (!string.IsNullOrEmpty(filters.Query))
         {
             // Búsqueda normal por texto
-            url = $"{BaseUrl}/busquedas/{Uri.EscapeDataString(filters.Query)}";
+            url = $"{BaseUrl}/busquedas/?donghua={Uri.EscapeDataString(filters.Query)}";
+
         }
         else
         {

@@ -73,7 +73,9 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
             if (wasPaused)
             {
                 var defaultDir = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyVideos), "AniCS");
-                var safeTitle = string.Join("_", active.AnimeTitle.Split(System.IO.Path.GetInvalidFileNameChars()));
+                var rawTitle = string.IsNullOrWhiteSpace(active.AnimeTitle) ? "Anime_Desconocido" : active.AnimeTitle;
+                var safeTitle = string.Join("_", rawTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
+                if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
                 var episodeNumStr = string.IsNullOrWhiteSpace(active.EpisodeNumber) ? "Desconocido" : active.EpisodeNumber;
                 DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
             }
@@ -103,6 +105,10 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
                     {
                         var server = servers.Find(s => s.IsDirectPlaySupported) ?? servers[0];
                         var videoUrl = await extractor.ResolveVideoUrlAsync(server.Url);
+                        if (string.IsNullOrEmpty(videoUrl) && AniCS.Desktop.Services.YtDlpService.IsAvailable())
+                        {
+                            videoUrl = server.Url;
+                        }
 
                         if (!string.IsNullOrEmpty(videoUrl))
                         {
@@ -122,7 +128,9 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
 
                                 if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && active.State == AniCS.Desktop.Services.DownloadState.Cancelled)
                                 {
-                                    var safeTitle = string.Join("_", active.AnimeTitle.Split(System.IO.Path.GetInvalidFileNameChars()));
+                                    var rawTitle = string.IsNullOrWhiteSpace(active.AnimeTitle) ? "Anime_Desconocido" : active.AnimeTitle;
+                                    var safeTitle = string.Join("_", rawTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
+                                    if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
                                     var episodeNumStr = string.IsNullOrWhiteSpace(active.EpisodeNumber) ? "Desconocido" : active.EpisodeNumber;
                                     AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
                                 }
