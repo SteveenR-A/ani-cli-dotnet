@@ -233,7 +233,8 @@ public class MundoDonghuaExtractor : BaseExtractor
                 {
                     string url = iframeMatch.Groups[1].Value.Replace("\\", "");
                     string name = GetServerNameFromUrl(url);
-                    bool isDirect = name == "VidHide" || name == "Embedwish";
+                    // VidHide y Embedwish ahora dependen de yt-dlp debido a protección Cloudflare (ya no son Nativo)
+                    bool isDirect = false;
                     if (!servers.Any(s => s.Url == url))
                     {
                         servers.Add(new VideoServer { Name = name, Url = url, IsDirectPlaySupported = isDirect });
@@ -245,7 +246,7 @@ public class MundoDonghuaExtractor : BaseExtractor
                     var fileMatch = System.Text.RegularExpressions.Regex.Match(unpacked, @"file:\s*\\?['""]([^'""]+)\\?['""]");
                     if (fileMatch.Success)
                     {
-                        string url = fileMatch.Groups[1].Value;
+                        string url = fileMatch.Groups[1].Value.Replace("\\", "");
                         if (!servers.Any(s => s.Url == url))
                         {
                             servers.Add(new VideoServer { Name = "MundoDonghua HLS", Url = url, IsDirectPlaySupported = true });
@@ -269,7 +270,7 @@ public class MundoDonghuaExtractor : BaseExtractor
                     if (!string.IsNullOrEmpty(src))
                     {
                         string name = GetServerNameFromUrl(src);
-                        bool isDirect = name == "VidHide" || name == "Embedwish";
+                        bool isDirect = false; // VidHide/EmbedWish ya no son nativos
                         servers.Add(new VideoServer
                         {
                             Name = name,
@@ -293,8 +294,8 @@ public class MundoDonghuaExtractor : BaseExtractor
         if (url.Contains("mp4upload")) return "Mp4Upload";
         if (url.Contains("yourupload")) return "YourUpload";
         if (url.Contains("dood")) return "DoodStream";
-        if (url.Contains("vidhide") || url.Contains("callistanise")) return "VidHide";
-        if (url.Contains("embedwish")) return "Embedwish";
+        if (url.Contains("vidhide") || url.Contains("callistanise") || url.Contains("streamhide") || url.Contains("closeload")) return "VidHide";
+        if (url.Contains("embedwish") || url.Contains("streamwish") || url.Contains("mwish")) return "Embedwish";
         return "Servidor Extra";
     }
 
@@ -324,75 +325,129 @@ public class MundoDonghuaExtractor : BaseExtractor
         return chars[c].ToString();
     }
 
-    public override async Task<string> ResolveVideoUrlAsync(string url)
+    private async Task<string> ResolveRedirectorUrlAsync(string url)
     {
+        if (string.IsNullOrEmpty(url)) return string.Empty;
+        url = url.Replace("\\", "");
+
         if (url.Contains("redirector.php"))
         {
             try
             {
-                var handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false };
+                using var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, url);
+                request.Headers.UserAgent.ParseAdd(AniCS.ConfigManager.Current.RandomUserAgent);
+                request.Headers.Referrer = new Uri("https://www.mundodonghua.com/");
+                request.Headers.Add("Origin", "https://www.mundodonghua.com");
+
+                using var handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = true };
                 using var client = new System.Net.Http.HttpClient(handler);
-                client.DefaultRequestHeaders.Add("User-Agent", AniCS.ConfigManager.Current.RandomUserAgent);
-                var response = await client.GetAsync(url);
-                if (response.StatusCode == System.Net.HttpStatusCode.Found || response.StatusCode == System.Net.HttpStatusCode.Redirect || response.StatusCode == System.Net.HttpStatusCode.MovedPermanently)
+                using var response = await client.SendAsync(request);
+
+                if (response.RequestMessage?.RequestUri != null && 
+                    !response.RequestMessage.RequestUri.ToString().Contains("redirector.php"))
                 {
-                    if (response.Headers.Location != null)
+                    return response.RequestMessage.RequestUri.ToString();
+                }
+
+                // Si la respuesta sigue teniendo redirector.php (es decir, devolvió 200 OK con HTML), analizar el HTML
+                var html = await response.Content.ReadAsStringAsync();
+                if (!string.IsNullOrEmpty(html))
+                {
+                    // 1. Buscar directamente .m3u8 o .mp4
+                    var streamMatch = System.Text.RegularExpressions.Regex.Match(html, @"https?://[^\s""'<>\\]+\.(?:m3u8|mp4)[^\s""'<>\\]*");
+                    if (streamMatch.Success)
                     {
-                        if (!response.Headers.Location.IsAbsoluteUri)
-                        {
-                            return new Uri(new Uri(url), response.Headers.Location).ToString();
-                        }
-                        return response.Headers.Location.ToString();
+                        return streamMatch.Value.Replace("\\", "");
+                    }
+
+                    // 2. Buscar file: "..." o src: "..."
+                    var fileMatch = System.Text.RegularExpressions.Regex.Match(html, @"(?:file|src):\s*[""'](https?://[^""']+)[""']");
+                    if (fileMatch.Success)
+                    {
+                        return fileMatch.Groups[1].Value.Replace("\\", "");
+                    }
+
+                    // 3. Buscar iframe
+                    var iframeMatch = System.Text.RegularExpressions.Regex.Match(html, @"<iframe[^>]+src=[""']([^""']+)[""']");
+                    if (iframeMatch.Success)
+                    {
+                        return iframeMatch.Groups[1].Value.Replace("\\", "");
                     }
                 }
             }
             catch { }
-            return url;
         }
 
-        if (url.EndsWith(".m3u8") || url.EndsWith(".mp4") || url.Contains(".mp4?") || url.Contains(".m3u8?"))
+        return url;
+    }
+
+    public override async Task<string> ResolveVideoUrlAsync(string url)
+    {
+        // 1. Limpiar URL y seguir redirección de redirector.php con Referer correcto
+        url = await ResolveRedirectorUrlAsync(url);
+
+        // 2. Si ya es una URL directa de stream (.m3u8 / .mp4), devolverla
+        if (url.Contains(".m3u8") || url.Contains(".mp4"))
         {
             return url;
         }
 
+        // 3. Si es un iframe de VidHide, EmbedWish u otro servidor externo conocido, devolver la URL del iframe
+        // para que mpv / yt-dlp lo procesen con sus cookies.
+        if (url.Contains("vidhide") || url.Contains("embedwish") || url.Contains("streamwish") || 
+            url.Contains("streamhide") || url.Contains("callistanise") || url.Contains("closeload") || url.Contains("mwish"))
+        {
+            return url;
+        }
+
+        // 4. Descargar la página embed e intentar extraer el stream m3u8 o mp4 (desempaquetando JS si aplica)
         try
         {
-            var html = await Http.GetStringAsync(url);
-            
-            // Attempt to unpack eval scripts (common in VidHide, Embedwish, etc.)
-            var evalMatch = System.Text.RegularExpressions.Regex.Match(html, @"eval\(function\(p,a,c,k,e,d\).*?return p}\('(.*?)',(\d+),(\d+),'(.*?)'\.split\('\|'\)");
-            if (evalMatch.Success)
+            var html = await DownloadWebpageAsync(url, BaseUrl);
+            if (!string.IsNullOrEmpty(html))
             {
-                string p = evalMatch.Groups[1].Value;
-                int a = int.Parse(evalMatch.Groups[2].Value);
-                int c = int.Parse(evalMatch.Groups[3].Value);
-                string[] k = evalMatch.Groups[4].Value.Split('|');
-                
-                string unpacked = Unpack(p, a, c, k);
-                
-                var match = System.Text.RegularExpressions.Regex.Match(unpacked, @"https?://[^""'\s]+\.(?:m3u8|mp4)[^""'\s]*");
-                if (!match.Success)
+                // Intentar desempaquetar scripts eval
+                var evalMatch = System.Text.RegularExpressions.Regex.Match(html, @"eval\(function\(p,a,c,k,e,d\).*?return p}\('(.*?)',(\d+),(\d+),'(.*?)'\.split\('\|'\)");
+                if (evalMatch.Success)
                 {
-                    match = System.Text.RegularExpressions.Regex.Match(unpacked, @"https?://[^""'\s]+redirector\.php\?slug=[^""'\s]+");
-                }
-                
-                if (match.Success)
-                    return match.Value;
-            }
-            
-            // Search raw HTML if no packed script is found
-            var rawMatch = System.Text.RegularExpressions.Regex.Match(html, @"https?://[^""'\s]+\.(?:m3u8|mp4)[^""'\s]*");
-            if (!rawMatch.Success)
-            {
-                rawMatch = System.Text.RegularExpressions.Regex.Match(html, @"https?://[^""'\s]+redirector\.php\?slug=[^""'\s]+");
-            }
+                    string p = evalMatch.Groups[1].Value;
+                    int a = int.Parse(evalMatch.Groups[2].Value);
+                    int c = int.Parse(evalMatch.Groups[3].Value);
+                    string[] k = evalMatch.Groups[4].Value.Split('|');
 
-            if (rawMatch.Success)
-                return rawMatch.Value;
+                    string unpacked = Unpack(p, a, c, k);
+
+                    var match = System.Text.RegularExpressions.Regex.Match(unpacked, @"https?://[^\s""'<>\\]+\.(?:m3u8|mp4)[^\s""'<>\\]*");
+                    if (!match.Success)
+                    {
+                        match = System.Text.RegularExpressions.Regex.Match(unpacked, @"file:\s*[""'](https?://[^""']+)[""']");
+                    }
+
+                    if (match.Success)
+                    {
+                        string target = match.Groups.Count > 1 && match.Groups[1].Success ? match.Groups[1].Value : match.Value;
+                        return target.Replace("\\", "");
+                    }
+                }
+
+                // Buscar en el HTML crudo
+                var rawMatch = System.Text.RegularExpressions.Regex.Match(html, @"https?://[^\s""'<>\\]+\.(?:m3u8|mp4)[^\s""'<>\\]*");
+                if (!rawMatch.Success)
+                {
+                    rawMatch = System.Text.RegularExpressions.Regex.Match(html, @"file:\s*[""'](https?://[^""']+)[""']");
+                }
+
+                if (rawMatch.Success)
+                {
+                    string target = rawMatch.Groups.Count > 1 && rawMatch.Groups[1].Success ? rawMatch.Groups[1].Value : rawMatch.Value;
+                    return target.Replace("\\", "");
+                }
+            }
         }
         catch { }
 
-        return string.Empty; // Fallback to yt-dlp
+        // Si nada de lo anterior extrajo un m3u8 específico, devolver la URL resuelta como fallback para yt-dlp
+        return url;
     }
 
     public override Task<List<ScheduleItem>> GetWeeklyScoopAsync()

@@ -40,8 +40,65 @@ public static class DesktopPlayer
         }
     }
 
+    public static async System.Threading.Tasks.Task<string> ResolveRedirectorUrlAsync(string url)
+    {
+        if (string.IsNullOrEmpty(url) || !url.Contains("redirector.php"))
+            return url;
+
+        url = url.Replace("\\", "");
+
+        try
+        {
+            using var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, url);
+            request.Headers.UserAgent.ParseAdd(AniCS.ConfigManager.Current.RandomUserAgent);
+            request.Headers.Referrer = new Uri("https://www.mundodonghua.com/");
+            request.Headers.Add("Origin", "https://www.mundodonghua.com");
+
+            using var handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = true };
+            using var client = new System.Net.Http.HttpClient(handler);
+            using var response = await client.SendAsync(request);
+
+            if (response.RequestMessage?.RequestUri != null && 
+                !response.RequestMessage.RequestUri.ToString().Contains("redirector.php"))
+            {
+                return response.RequestMessage.RequestUri.ToString();
+            }
+
+            // Si la respuesta sigue teniendo redirector.php (es decir, devolvió 200 OK con HTML), analizar el HTML
+            var html = await response.Content.ReadAsStringAsync();
+            if (!string.IsNullOrEmpty(html))
+            {
+                // 1. Buscar directamente .m3u8 o .mp4
+                var streamMatch = System.Text.RegularExpressions.Regex.Match(html, @"https?://[^\s""'<>\\]+\.(?:m3u8|mp4)[^\s""'<>\\]*");
+                if (streamMatch.Success)
+                {
+                    return streamMatch.Value.Replace("\\", "");
+                }
+
+                // 2. Buscar file: "..." o src: "..."
+                var fileMatch = System.Text.RegularExpressions.Regex.Match(html, @"(?:file|src):\s*[""'](https?://[^""']+)[""']");
+                if (fileMatch.Success)
+                {
+                    return fileMatch.Groups[1].Value.Replace("\\", "");
+                }
+
+                // 3. Buscar iframe
+                var iframeMatch = System.Text.RegularExpressions.Regex.Match(html, @"<iframe[^>]+src=[""']([^""']+)[""']");
+                if (iframeMatch.Success)
+                {
+                    return iframeMatch.Groups[1].Value.Replace("\\", "");
+                }
+            }
+        }
+        catch { }
+
+        return url;
+    }
+
     public static void Play(string url, string title, string? referer, string quality = "Mejor")
     {
+        url = System.Threading.Tasks.Task.Run(() => ResolveRedirectorUrlAsync(url)).GetAwaiter().GetResult();
+
         var exe = GetExecutablePath("mpv") ?? GetExecutablePath("mpvnet");
 
         if (exe == null)
@@ -54,78 +111,64 @@ public static class DesktopPlayer
             "--force-window=yes",
             "--autofit=1024x576", // Para evitar la ventana super pequeña en JKAnime
             "--cache=yes",
-            "--cache-pause-wait=1"
+            "--cache-pause=no" // Iniciar reproducción inmediatamente sin esperar a llenar el búfer
         };
 
-        if (quality != "Mejor" && !url.Contains(".m3u8") && !url.Contains(".mp4"))
+        if (url.Contains(".m3u8") || url.Contains(".mp4"))
         {
-            // mpv soporta ytdl-format solo para sitios soportados, si es directo m3u8 lo ignoramos para que no lance error
+            // Si el enlace ya es directo, omitir yt-dlp por completo ahorra hasta 5 segundos de carga inicial
+            args.Add("--ytdl=no");
+        }
+        else if (quality != "Mejor")
+        {
+            // mpv soporta ytdl-format solo para sitios soportados
             string height = quality.Replace("p", "");
             args.Add($"--ytdl-format=bestvideo[height<=?{height}]+bestaudio/best[height<=?{height}]");
         }
 
-        bool isJkAnime = referer != null && referer.Contains("jkanime.net", StringComparison.OrdinalIgnoreCase);
-        bool isMediafire = referer != null && referer.Contains("mediafire.com", StringComparison.OrdinalIgnoreCase);
-
-        if (isJkAnime || isMediafire)
+        if (!string.IsNullOrEmpty(referer))
         {
-            args.Add("--demuxer-max-bytes=150M");
-            args.Add("--demuxer-max-back-bytes=50M");
-            args.Add("--demuxer-readahead-secs=120");
-            args.Add("--cache-secs=120");
-            args.Add("--hr-seek=yes");
-            args.Add("--network-timeout=15");
-            args.Add("--demuxer-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_on_http_error=4xx,reconnect_delay_max=10");
+            referer = System.Threading.Tasks.Task.Run(() => ResolveRedirectorUrlAsync(referer)).GetAwaiter().GetResult();
+        }
 
-            // mpv soporta --http-header-fields separado por comas para compatibilidad máxima con versiones antiguas
-            string origin = isJkAnime ? "https://jkanime.net" : "https://www.mediafire.com";
-            var headerList = new System.Collections.Generic.List<string>
+        args.Add("--demuxer-max-bytes=150M");
+        args.Add("--demuxer-max-back-bytes=50M");
+        args.Add("--demuxer-readahead-secs=120");
+        args.Add("--cache-secs=120");
+        args.Add("--hr-seek=yes");
+        args.Add("--network-timeout=15");
+        args.Add("--demuxer-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_on_http_error=4xx,reconnect_delay_max=10");
+
+        if (exe.Contains("mpv", StringComparison.OrdinalIgnoreCase))
+        {
+            args.Add("--force-window=immediate");
+            args.Add("--keep-open=yes");
+            args.Add("--geometry=65%");
+            args.Add("--autofit=1280x720");
+
+            var ua = AniCS.ConfigManager.Current.RandomUserAgent.Replace(",", ";");
+            var headerList = new List<string>
             {
                 "Accept-Language: es-419",
                 "Accept: */*",
-                "Sec-Fetch-Dest: video",
-                "Sec-Fetch-Mode: no-cors",
+                "Sec-Fetch-Dest: empty",
+                "Sec-Fetch-Mode: cors",
                 "Sec-Fetch-Site: cross-site",
-                $"User-Agent: {AniCS.ConfigManager.Current.RandomUserAgent}"
+                $"User-Agent: {ua}"
             };
 
             if (!string.IsNullOrEmpty(referer))
             {
                 headerList.Add($"Referer: {referer}");
-                headerList.Add($"Origin: {origin}");
-            }
-            
-            args.Add($"--http-header-fields={string.Join(",", headerList)}");
-        }
-        else
-        {
-            args.Add("--demuxer-max-bytes=150M");
-            args.Add("--demuxer-max-back-bytes=50M");
-            args.Add("--demuxer-readahead-secs=120");
-            
-            if (exe.Contains("mpv", StringComparison.OrdinalIgnoreCase))
-            {
-                args.Add("--force-window=immediate");
-                args.Add("--keep-open=yes");
-                args.Add("--geometry=65%"); // Hace la ventana mucho más grande por defecto
-                args.Add("--autofit=1280x720"); // Asegura un mínimo buen tamaño
-
-                if (!string.IsNullOrEmpty(referer))
+                try
                 {
-                    try 
-                    {
-                        var uri = new Uri(referer);
-                        string originUrl = uri.GetLeftPart(UriPartial.Authority);
-                        string ua = AniCS.ConfigManager.Current.RandomUserAgent;
-                        args.Add($"--http-header-fields=Referer: {referer},Origin: {originUrl},User-Agent: {ua}");
-                    }
-                    catch 
-                    {
-                        string ua = AniCS.ConfigManager.Current.RandomUserAgent;
-                        args.Add($"--http-header-fields=Referer: {referer},User-Agent: {ua}");
-                    }
+                    var uri = new Uri(referer);
+                    headerList.Add($"Origin: {uri.GetLeftPart(UriPartial.Authority)}");
                 }
+                catch { }
             }
+
+            args.Add($"--http-header-fields={string.Join(",", headerList)}");
         }
 
         args.Add($"--title={title}");
@@ -136,8 +179,6 @@ public static class DesktopPlayer
             var startInfo = new ProcessStartInfo
             {
                 FileName = exe,
-                // UseShellExecute = false: permite usar ArgumentList (escaping 100% seguro por .NET).
-                // CreateNoWindow = false: NO suprime la ventana de video de mpv.
                 UseShellExecute = false,
                 CreateNoWindow = false,
             };
@@ -174,6 +215,12 @@ public static class DesktopPlayer
 
     public static async System.Threading.Tasks.Task<DownloadResult> DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null, string quality = "Mejor", Action<double>? onProgress = null, System.Threading.CancellationToken cancellationToken = default)
     {
+        videoUrl = await ResolveRedirectorUrlAsync(videoUrl);
+        if (!string.IsNullOrEmpty(referer))
+        {
+            referer = await ResolveRedirectorUrlAsync(referer);
+        }
+
         string animeDir = "";
         string episodeNumStr = "";
         Process? p = null;
@@ -181,7 +228,16 @@ public static class DesktopPlayer
         {
             var safeTitle = string.Join("_", anime.Title.Split(Path.GetInvalidFileNameChars()));
             animeDir = Path.Combine(downloadDir, safeTitle);
-            Directory.CreateDirectory(animeDir);
+            
+            if (!Directory.Exists(downloadDir))
+            {
+                Directory.CreateDirectory(downloadDir);
+            }
+
+            if (!Directory.Exists(animeDir))
+            {
+                Directory.CreateDirectory(animeDir);
+            }
 
             episodeNumStr = string.IsNullOrWhiteSpace(episode.EpisodeNumber) ? "Desconocido" : episode.EpisodeNumber;
             var filenamePattern = $"Episodio {episodeNumStr}.%(ext)s";

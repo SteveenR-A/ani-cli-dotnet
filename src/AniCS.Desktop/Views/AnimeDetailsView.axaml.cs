@@ -287,9 +287,21 @@ public partial class AnimeDetailsView : UserControl
 
             var videoUrl = await extractor.ResolveVideoUrlAsync(chosenServer.Url);
 
-            // Fallback: si el extractor interno no pudo resolver la URL (servidor externo o JS-rendered),
-            // intentar con yt-dlp que soporta docenas de hosts de video.
-            if (string.IsNullOrEmpty(videoUrl))
+            // Si el enlace obtenido no es un stream directo (.m3u8 / .mp4) y yt-dlp está disponible,
+            // resolvemos el video en segundo plano dentro de la app ANTES de abrir mpv para no mostrar una ventana negra vacía.
+            if (!string.IsNullOrEmpty(videoUrl) && !videoUrl.Contains(".m3u8") && !videoUrl.Contains(".mp4"))
+            {
+                if (AniCS.Desktop.Services.YtDlpService.IsAvailable())
+                {
+                    StatusText.Text = $"Obteniendo enlace directo con yt-dlp ({chosenServer.Name})... Por favor, espera.";
+                    var resolved = await AniCS.Desktop.Services.YtDlpService.ResolveAsync(videoUrl, chosenServer.Url);
+                    if (!string.IsNullOrEmpty(resolved))
+                    {
+                        videoUrl = resolved;
+                    }
+                }
+            }
+            else if (string.IsNullOrEmpty(videoUrl))
             {
                 if (AniCS.Desktop.Services.YtDlpService.IsAvailable())
                 {

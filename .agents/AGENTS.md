@@ -23,4 +23,9 @@ Adicionalmente:
 ## Flujo de Trabajo (Workflow)
 1. Modificar interfaz (Desktop/CLI) -> Validar -> Construir.
 2. Si un proveedor de anime (web) cambia, actualizar ÚNICAMENTE el `Extractor` correspondiente en `AniCS.Core` y probar.
-3. Para generar una nueva versión pública, incrementar la versión en `AniCS-Installer.wxs` y correr `build-msi.ps1`.
+3. **Actualización de Versiones (Version Bumping)**: Al generar una nueva versión pública (ej. `1.5.1`), se deben actualizar las versiones y notas de parche en las siguientes ubicaciones obligatorias:
+   - `src/AniCS.Desktop/AniCS.Desktop.csproj`: Modificar `<Version>`, `<AssemblyVersion>` y `<FileVersion>`.
+   - `Installer/AniCS-Installer.wxs`: Modificar el atributo `Version` en el nodo `<Package>`.
+   - `src/AniCS.Desktop/MainWindow.axaml.cs`: Actualizar el texto del `changelog` dentro de `CheckForUpdates()` para notificar al usuario al iniciar tras actualizar.
+   - `src/AniCS.Desktop/Views/SettingsView.axaml.cs`: Actualizar el texto del `changelog` en `OnViewChangelogClicked()` para coincidir con la ventana de Ajustes.
+4. Para generar el instalador final, correr `build-msi.ps1`.

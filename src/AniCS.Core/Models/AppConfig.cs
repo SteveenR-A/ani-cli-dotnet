@@ -20,21 +20,28 @@ public class AppConfig
     // List of User-Agents to rotate automatically to avoid bot detection
     public System.Collections.Generic.List<string> UserAgents { get; set; } = new()
     {
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/125.0.0.0 Safari/537.36",
         "Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML like Gecko) Version/17.5 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"
     };
+
+    private string? _sessionUserAgent;
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string RandomUserAgent
     {
         get
         {
+            if (_sessionUserAgent != null)
+                return _sessionUserAgent;
+                
             if (UserAgents == null || UserAgents.Count == 0)
-                return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
-            
-            return UserAgents[System.Random.Shared.Next(UserAgents.Count)];
+                _sessionUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+            else
+                _sessionUserAgent = UserAgents[System.Random.Shared.Next(UserAgents.Count)];
+                
+            return _sessionUserAgent;
         }
     }
 

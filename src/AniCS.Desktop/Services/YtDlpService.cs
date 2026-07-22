@@ -64,6 +64,22 @@ public static class YtDlpService
         var ytdlp = GetExecutablePath();
         if (ytdlp == null) return string.Empty;
 
+        if (pageUrl.Contains("redirector.php"))
+        {
+            try
+            {
+                var handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false };
+                using var client = new System.Net.Http.HttpClient(handler);
+                client.DefaultRequestHeaders.Add("User-Agent", AniCS.ConfigManager.Current.RandomUserAgent);
+                var resp = await client.GetAsync(pageUrl);
+                if (resp.Headers.Location != null)
+                {
+                    pageUrl = resp.Headers.Location.IsAbsoluteUri ? resp.Headers.Location.ToString() : new Uri(new Uri(pageUrl), resp.Headers.Location).ToString();
+                }
+            }
+            catch { }
+        }
+
         try
         {
             var si = new ProcessStartInfo

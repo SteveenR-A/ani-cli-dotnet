@@ -327,6 +327,7 @@ public static class DownloadManager
 
     public static bool IsEpisodeDownloaded(string animeUrl, string episodeNumber)
     {
+        CleanupMissingFiles();
         var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
         if (anime != null)
         {

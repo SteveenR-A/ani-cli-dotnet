@@ -96,7 +96,7 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
                 
                 try
                 {
-                    var extractor = new AniCS.Extractors.JKAnimeExtractor(new System.Net.Http.HttpClient());
+                    var extractor = AniCS.Extractors.ExtractorFactory.GetExtractor();
                     var servers = await extractor.GetVideoServersAsync(active.EpisodeUrl);
 
                     if (servers.Count > 0)

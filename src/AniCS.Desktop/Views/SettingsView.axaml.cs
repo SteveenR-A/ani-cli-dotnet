@@ -122,21 +122,24 @@ public partial class SettingsView : UserControl
     private void OnViewChangelogClicked(object? sender, RoutedEventArgs e)
     {
         var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
-        string changelog = "¡Hola! Estas son las novedades de la versión 1.5.1:\n\n" +
-                           "• ¡Nuevo apartado Top Animes! Explora los mejores Animes y Donghuas del momento.\n" +
-                           "• Soporte oficial para MundoDonghua: Ahora puedes buscar, ver y descargar Donghuas nativamente.\n" +
-                           "• Ventana de Notas del Parche integrada para consultar estas novedades directamente desde Ajustes.\n" +
-                           "• El reproductor de MPV ahora se abre por defecto con un tamaño más grande y adaptativo.\n" +
-                           "• Reparado el error (403 Forbidden) al intentar ver o descargar desde servidores externos (VidHide, etc.).\n" +
-                           "• Mejoras internas en la decodificación de enlaces (Base62) y redirecciones, aumentando drásticamente la compatibilidad.\n" +
-                           "• Añadidas notificaciones visuales inteligentes cuando el reproductor externo falla al iniciar o extraer video.\n" +
-                           "• Ahora la ventana de selección de servidor omite la calidad si no aplica, yendo directamente a la mejor calidad disponible.\n\n" +
+        string changelog = "¡Hola! Estas son las novedades de la versión 1.5.1 (Parche de Correcciones):\n\n" +
+                           "• Gran mejora en la velocidad de inicio de reproducción (inicio instantáneo de streams directos).\n" +
+                           "• Optimización de flujo: El reproductor mpv ya no se abre con ventana negra a esperar, la app resuelve el enlace antes de lanzarlo.\n" +
+                           "• En Modo Donghua, el servidor nativo principal y funcional es MundoDonghua HLS.\n" +
+                           "• Solución al problema de bloqueo/congelamiento completo de la interfaz al dar clic en Reproducir.\n" +
+                           "• Corregido el botón 'Ver Notas del Parche' en Ajustes que no abría la ventana emergente.\n" +
+                           "• Servidores externos (VidHide / Embedwish) marcados adecuadamente y procesados vía yt-dlp en segundo plano.\n\n" +
                            "¡Gracias por usar AniCS!";
         
-        if (VisualRoot is Window window)
+        var window = TopLevel.GetTopLevel(this) as Window;
+        var changelogWindow = new Controls.ChangelogWindow(currentVersion, changelog);
+        if (window != null)
         {
-            var changelogWindow = new Controls.ChangelogWindow(currentVersion, changelog);
             changelogWindow.ShowDialog(window);
+        }
+        else
+        {
+            changelogWindow.Show();
         }
     }
 }
