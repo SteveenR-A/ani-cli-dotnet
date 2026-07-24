@@ -88,7 +88,7 @@
                                             <SelectableTextBlock Text="{Binding Title}" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Button>
-                                    <Grid Grid.Column="1" ColumnDefinitions="*, Auto" IsVisible="{Binding IsDownloadButtonVisible}">
+                                    <Grid Grid.Column="1" ColumnDefinitions="*, Auto, Auto" IsVisible="{Binding IsDownloadButtonVisible}">
                                         <Button Grid.Column="0" Background="{DynamicResource AppSurfaceColor}" 
                                                 CornerRadius="0,4,4,0" 
                                                 Padding="15,10" 
@@ -104,10 +104,19 @@
                                         <Button Grid.Column="1" IsVisible="{Binding IsDownloading}"
                                                 Click="OnCancelDownloadClicked"
                                                 Background="#E53935" Foreground="White"
+                                                ToolTip.Tip="Cancelar descarga"
                                                 Margin="5,0,0,0">
                                             <material:MaterialIcon Kind="Close" Width="16" Height="16" />
                                         </Button>
+                                        <Button Grid.Column="2" IsVisible="{Binding IsDownloaded}"
+                                                Click="OnDeleteDownloadedEpisodeClicked"
+                                                Background="#E53935" Foreground="White"
+                                                ToolTip.Tip="Eliminar episodio descargado"
+                                                Margin="5,0,0,0">
+                                            <material:MaterialIcon Kind="TrashCan" Width="16" Height="16" />
+                                        </Button>
                                     </Grid>
+
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

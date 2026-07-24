@@ -39,6 +39,7 @@
                     <ComboBoxItem Content="Dracula" Tag="Dracula"/>
                     <ComboBoxItem Content="Tokyo Night" Tag="TokyoNight"/>
                     <ComboBoxItem Content="Cyberpunk" Tag="Cyberpunk"/>
+                    <ComboBoxItem Content="Catppuccin" Tag="Catppuccin"/>
                 </ComboBox>
             </StackPanel>
 

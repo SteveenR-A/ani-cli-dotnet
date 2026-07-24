@@ -123,7 +123,11 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
                                     defaultDir, 
                                     server.Url, 
                                     AniCS.ConfigManager.Current.PreferredQuality,
-                                    progress => Dispatcher.UIThread.Post(() => active.Progress = progress), 
+                                    (progress, sizeInfo) => Dispatcher.UIThread.Post(() => {
+                                        active.Progress = progress;
+                                        if (!string.IsNullOrEmpty(sizeInfo)) active.SizeText = sizeInfo;
+                                    }), 
+
                                     active.CancellationTokenSource.Token);
 
                                 if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && active.State == AniCS.Desktop.Services.DownloadState.Cancelled)
@@ -194,6 +198,10 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
         }
     }
 
+    private DownloadedAnime? _currentAnime;
+    private DownloadedEpisode? _currentEpisode;
+    private DownloadedEpisode? _nextEpisode;
+
     private void OnPlayEpisodeClicked(object? sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is DownloadedEpisode episode)
@@ -201,8 +209,97 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
             var parentExpander = btn.GetVisualAncestors().OfType<Expander>().FirstOrDefault();
             if (parentExpander?.DataContext is DownloadedAnime anime)
             {
-                DesktopPlayer.Play(episode.FilePath, $"AniCS - {anime.Title} - {episode.EpisodeTitle}", null);
+                PlayEpisodeWithQuickControl(anime, episode);
             }
+        }
+    }
+
+    private void PlayEpisodeWithQuickControl(DownloadedAnime anime, DownloadedEpisode episode)
+    {
+        _currentAnime = anime;
+        _currentEpisode = episode;
+        _nextEpisode = DownloadManager.GetNextEpisode(anime.Url, episode.EpisodeNumber);
+
+        // Si estaba sin ver, marcarlo como en progreso al reproducir
+        if (episode.Status == EpisodeWatchStatus.Unwatched)
+        {
+            DownloadManager.UpdateEpisodeStatus(anime.Url, episode.EpisodeNumber, EpisodeWatchStatus.InProgress);
+        }
+
+        UpdateQuickControlBar();
+
+        DesktopPlayer.Play(episode.FilePath, $"AniCS - {anime.Title} - {episode.EpisodeTitle}", null);
+    }
+
+    private void UpdateQuickControlBar()
+    {
+        if (_currentAnime != null && _currentEpisode != null)
+        {
+            QuickControlBar.IsVisible = true;
+            QuickControlInfoText.Text = $"Último reproducido: {_currentAnime.Title} - {_currentEpisode.EpisodeTitle}";
+
+            if (_nextEpisode != null)
+            {
+                PlayNextBtn.IsVisible = true;
+                PlayNextBtnText.Text = $"Reproducir Siguiente (Ep {_nextEpisode.EpisodeNumber})";
+            }
+            else
+            {
+                PlayNextBtn.IsVisible = false;
+            }
+        }
+    }
+
+    private void OnPlayNextEpisodeClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is DownloadedEpisode episode)
+        {
+            var parentExpander = btn.GetVisualAncestors().OfType<Expander>().FirstOrDefault();
+            if (parentExpander?.DataContext is DownloadedAnime anime)
+            {
+                var nextEp = DownloadManager.GetNextEpisode(anime.Url, episode.EpisodeNumber);
+                if (nextEp != null)
+                {
+                    // Marcar el actual como completado y reproducir el siguiente
+                    DownloadManager.UpdateEpisodeStatus(anime.Url, episode.EpisodeNumber, EpisodeWatchStatus.Completed);
+                    PlayEpisodeWithQuickControl(anime, nextEp);
+                }
+            }
+        }
+    }
+
+    private void OnToggleStatusClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is DownloadedEpisode episode)
+        {
+            var parentExpander = btn.GetVisualAncestors().OfType<Expander>().FirstOrDefault();
+            if (parentExpander?.DataContext is DownloadedAnime anime)
+            {
+                var nextStatus = episode.Status switch
+                {
+                    EpisodeWatchStatus.Unwatched => EpisodeWatchStatus.InProgress,
+                    EpisodeWatchStatus.InProgress => EpisodeWatchStatus.Completed,
+                    _ => EpisodeWatchStatus.Unwatched
+                };
+                DownloadManager.UpdateEpisodeStatus(anime.Url, episode.EpisodeNumber, nextStatus);
+            }
+        }
+    }
+
+    private void OnMarkCurrentCompletedClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_currentAnime != null && _currentEpisode != null)
+        {
+            DownloadManager.UpdateEpisodeStatus(_currentAnime.Url, _currentEpisode.EpisodeNumber, EpisodeWatchStatus.Completed);
+        }
+    }
+
+    private void OnPlayNextFromBarClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_currentAnime != null && _currentEpisode != null && _nextEpisode != null)
+        {
+            DownloadManager.UpdateEpisodeStatus(_currentAnime.Url, _currentEpisode.EpisodeNumber, EpisodeWatchStatus.Completed);
+            PlayEpisodeWithQuickControl(_currentAnime, _nextEpisode);
         }
     }
 

@@ -137,6 +137,7 @@ public partial class AnimeDetailsView : UserControl
             vm.DownloadIcon = "Check";
             vm.CanDownload = false;
             vm.IsDownloading = false;
+            vm.IsDownloaded = true;
             if (vm.ActiveDownload != null)
             {
                 vm.ActiveDownload.PropertyChanged -= Vm_ActiveDownload_PropertyChanged;
@@ -145,6 +146,7 @@ public partial class AnimeDetailsView : UserControl
         }
         else
         {
+            vm.IsDownloaded = false;
             var active = AniCS.Desktop.Services.DownloadManager.GetActiveDownload(_anime.Url, vm.EpisodeNumber);
             if (active != null)
             {
@@ -173,6 +175,7 @@ public partial class AnimeDetailsView : UserControl
             }
         }
     }
+
 
     private void Vm_ActiveDownload_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -462,7 +465,11 @@ public partial class AnimeDetailsView : UserControl
                 {
                     var result = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
                         videoUrl, _anime, vm.Episode, defaultDir, chosenServer.Url, chosenQuality,
-                        progress => Dispatcher.UIThread.Post(() => activeDownload.Progress = progress),
+                        (progress, sizeInfo) => Dispatcher.UIThread.Post(() => {
+                            activeDownload.Progress = progress;
+                            if (!string.IsNullOrEmpty(sizeInfo)) activeDownload.SizeText = sizeInfo;
+                        }),
+
                         activeDownload.CancellationTokenSource.Token);
 
                     if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
@@ -529,6 +536,15 @@ public partial class AnimeDetailsView : UserControl
             }
         }
     }
+
+    private void OnDeleteDownloadedEpisodeClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is EpisodeViewModel vm)
+        {
+            AniCS.Desktop.Services.DownloadManager.DeleteEpisode(_anime.Url, vm.EpisodeNumber);
+            UpdateEpisodeViewModelState(vm);
+        }
+    }
 }
 
 public class EpisodeViewModel : System.ComponentModel.INotifyPropertyChanged
@@ -565,8 +581,16 @@ public class EpisodeViewModel : System.ComponentModel.INotifyPropertyChanged
         get => _isDownloading;
         set { _isDownloading = value; OnPropertyChanged(); }
     }
+
+    private bool _isDownloaded = false;
+    public bool IsDownloaded
+    {
+        get => _isDownloaded;
+        set { _isDownloaded = value; OnPropertyChanged(); }
+    }
     
     public bool IsDownloadButtonVisible => !AniCS.ConfigManager.Current.UseSpatialHud;
+
     
     public AniCS.Desktop.Services.ActiveDownload? ActiveDownload { get; set; }
     

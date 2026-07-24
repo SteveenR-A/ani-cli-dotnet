@@ -70,16 +70,11 @@ public partial class MainWindow : Window
 
         if (config.LastSeenVersion != currentVersion)
         {
-            string changelog = "¡Hola! Novedades de la versión 1.5.2 (Parche \"Arreglando lo que rompimos al arreglar\"):\n\n" +
-                               "• 🐛 Se agregaron nuevos bugs misteriosos creados con cariño al intentar corregir el bug anterior de las descargas.\n" +
-                               "• 📁 Corregido el despiste espacial: Los animes sin título ya no se descargan revueltos en la misma carpeta raíz matándose entre sí.\n" +
-                               "• 🗑️ Arreglado el efecto dominó: Al borrar el capítulo de un anime ya no se borra mágicamente el otro anime que compartía archivo.\n" +
-                               "• 🏷️ Reparado JKAnime: Ahora la app sí lee el título del anime en lugar de dejar un vacío existencial.\n" +
-                               "• 🌸 Géneros rescatados: JKAnime devolvió los géneros que habían desaparecido por cambios en su web.\n" +
-                               "• 🔍 MundoDonghua revivido: La búsqueda volvió a la vida tras actualizar el formato de URLs de consulta.\n" +
-                               "• 💻 Navegación CLI renovada: Se agregaron los comandos 'top' (ranking) y 'directorio' (filtros por género/estado/tipo) en la consola.\n" +
-                               "• 📂 Carpeta tests limpia: Se organizaron todos los archivos de prueba que estaban flotando en el proyecto.\n\n" +
-                               "¡Gracias por usar AniCS y sobrevivir a nuestros parches!";
+            string changelog = "¡Hola! Novedades de la versión 1.5.3:\n\n" +
+                               "• 🐱 Nuevo tema Catppuccin: Disfruta de la elegante paleta Mocha integrada en toda la aplicación.\n" +
+                               "• 🎨 Indicadores de estado en descargas: Visualiza el estado de cada capítulo (Sin ver, En progreso y Terminado) con colores adaptados dinámicamente al tema activo.\n" +
+                               "• ⚡ Control rápido de reproducción: Nueva barra de control rápido en descargas para marcar capítulos como terminados y pasar directamente al siguiente episodio.\n\n" +
+                               "¡Gracias por usar AniCS!";
 
 
             var changelogWindow = new Controls.ChangelogWindow(currentVersion, changelog);

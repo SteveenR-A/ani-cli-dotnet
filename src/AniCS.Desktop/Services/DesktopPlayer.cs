@@ -213,7 +213,7 @@ public static class DesktopPlayer
         }
     }
 
-    public static async System.Threading.Tasks.Task<DownloadResult> DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null, string quality = "Mejor", Action<double>? onProgress = null, System.Threading.CancellationToken cancellationToken = default)
+    public static async System.Threading.Tasks.Task<DownloadResult> DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null, string quality = "Mejor", Action<double, string>? onProgress = null, System.Threading.CancellationToken cancellationToken = default)
     {
         videoUrl = await ResolveRedirectorUrlAsync(videoUrl);
         if (!string.IsNullOrEmpty(referer))
@@ -294,21 +294,21 @@ public static class DesktopPlayer
                 try { if (!p.HasExited) p.Kill(true); } catch { }
             });
 
-            var regex = new System.Text.RegularExpressions.Regex(@"\[download\]\s+(\d+\.\d+)%");
-
             while (true)
             {
                 var line = await p.StandardOutput.ReadLineAsync();
                 if (line == null) break;
                 if (onProgress != null)
                 {
-                    var match = regex.Match(line);
-                    if (match.Success && double.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double progress))
+                    var (progress, sizeInfo) = ParseYtDlpProgress(line, animeDir, episodeNumStr);
+                    if (progress >= 0)
                     {
-                        onProgress(progress);
+                        onProgress(progress, sizeInfo);
                     }
                 }
             }
+
+
 
             await p.WaitForExitAsync(cancellationToken);
 
@@ -386,4 +386,119 @@ public static class DesktopPlayer
 
         return null;
     }
+
+    private static DateTime _lastDiskCheckTime = DateTime.MinValue;
+    private static long _cachedDiskBytes = 0;
+
+    private static long GetDiskBytesForEpisode(string animeDir, string episodeNumStr)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(animeDir) || !Directory.Exists(animeDir)) return 0;
+
+            // Throttle metadata check to 500 ms (0.5s interval, like btop/htop monitors)
+            if ((DateTime.UtcNow - _lastDiskCheckTime).TotalMilliseconds < 500 && _cachedDiskBytes > 0)
+            {
+                return _cachedDiskBytes;
+            }
+
+
+            _lastDiskCheckTime = DateTime.UtcNow;
+            var files = Directory.GetFiles(animeDir, $"Episodio {episodeNumStr}.*");
+            long totalBytes = 0;
+            foreach (var f in files)
+            {
+                var info = new FileInfo(f);
+                totalBytes += info.Length;
+            }
+            _cachedDiskBytes = totalBytes;
+            return totalBytes;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+
+    public static (double progress, string sizeInfo) ParseYtDlpProgress(string line, string? animeDir = null, string? episodeNumStr = null)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return (-1, string.Empty);
+
+        string speedStr = string.Empty;
+        var speedMatch = System.Text.RegularExpressions.Regex.Match(line, @"at\s+(\d+(?:\.\d+)?\s*[KMGTP]?i?B/s)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (speedMatch.Success)
+        {
+            speedStr = $" - {speedMatch.Groups[1].Value}";
+        }
+
+        double pct = -1;
+        var pctMatch = System.Text.RegularExpressions.Regex.Match(line, @"\[download\]\s+(\d+(?:\.\d+)?)\%");
+        if (pctMatch.Success && double.TryParse(pctMatch.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedPct))
+        {
+            pct = parsedPct;
+        }
+
+        // High-precision physical disk calculation if animeDir and episodeNumStr are available
+        if (pct > 0 && !string.IsNullOrEmpty(animeDir) && !string.IsNullOrEmpty(episodeNumStr))
+        {
+            long diskBytes = GetDiskBytesForEpisode(animeDir, episodeNumStr);
+            if (diskBytes > 0)
+            {
+                double dlMB = diskBytes / (1024.0 * 1024.0);
+                double estTotalMB = dlMB / (pct / 100.0);
+                bool isFinal = pct >= 99.9;
+                string tilde = isFinal ? "" : "~";
+                return (pct, $"{dlMB:F1} MB / {tilde}{estTotalMB:F1} MB{speedStr}");
+            }
+        }
+
+        // Fallback parsing directly from yt-dlp output line
+        // 1. Explicit downloaded of total size: e.g. "[download] 45.10MiB of ~300.00MiB"
+        var explicitMatch = System.Text.RegularExpressions.Regex.Match(line, @"\[download\]\s+(~?\s*\d+(?:\.\d+)?\s*[KMGTP]?i?B)\s+of\s+(~?\s*\d+(?:\.\d+)?)\s*([KMGTP]?i?B)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (explicitMatch.Success)
+        {
+            var dlRaw = explicitMatch.Groups[1].Value.Replace(" ", "");
+            var totalRaw = explicitMatch.Groups[2].Value.Replace(" ", "");
+            var unit = explicitMatch.Groups[3].Value;
+
+            double.TryParse(dlRaw.Replace("~", "").Replace(unit, ""), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double dl);
+            double.TryParse(totalRaw.Replace("~", ""), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double total);
+
+            if (total > 0)
+            {
+                if (pct < 0) pct = Math.Min(100.0, (dl / total) * 100.0);
+                bool isEstimate = line.Contains("of ~") || line.Contains("of  ~");
+                string tilde = isEstimate ? "~" : "";
+                return (pct, $"{dl:F1} {unit} / {tilde}{total:F1} {unit}{speedStr}");
+            }
+        }
+
+        // 2. Percentage of total size: e.g. "[download] 12.5% of ~320.50MiB"
+        var percentSizeMatch = System.Text.RegularExpressions.Regex.Match(line, @"\[download\]\s+(\d+(?:\.\d+)?)\%\s+of\s+(~?\s*\d+(?:\.\d+)?)\s*([KMGTP]?i?B)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (percentSizeMatch.Success && pct > 0)
+        {
+            var totalRaw = percentSizeMatch.Groups[2].Value.Replace(" ", "");
+            var unit = percentSizeMatch.Groups[3].Value;
+            double.TryParse(totalRaw.Replace("~", ""), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double total);
+
+            if (total > 0)
+            {
+                double downloaded = (pct / 100.0) * total;
+                bool isEstimate = line.Contains("of ~") || line.Contains("of  ~");
+                string tilde = isEstimate ? "~" : "";
+                return (pct, $"{downloaded:F1} {unit} / {tilde}{total:F1} {unit}{speedStr}");
+            }
+        }
+
+        if (pct >= 0)
+        {
+            return (pct, speedStr.TrimStart(' ', '-'));
+        }
+
+        return (-1, string.Empty);
+    }
 }
+
+
+

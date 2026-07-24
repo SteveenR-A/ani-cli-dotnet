@@ -37,6 +37,13 @@ public class ActiveDownload : INotifyPropertyChanged
         set { _progress = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); }
     }
 
+    private string _sizeText = string.Empty;
+    public string SizeText
+    {
+        get => _sizeText;
+        set { _sizeText = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); }
+    }
+
     private DownloadState _state;
     public DownloadState State
     {
@@ -49,13 +56,16 @@ public class ActiveDownload : INotifyPropertyChanged
 
     public string StatusText => State switch
     {
-        DownloadState.Downloading => $"Descargando... {Progress:F1}%",
+        DownloadState.Downloading => string.IsNullOrWhiteSpace(SizeText)
+            ? $"Descargando... {Progress:F1}%"
+            : $"Descargando... {SizeText} ({Progress:F1}%)",
         DownloadState.Completed => "Descargado",
         DownloadState.Error => "Error",
         DownloadState.Cancelled => "Cancelado",
         DownloadState.Paused => "Pausado",
         _ => State.ToString()
     };
+
 
     public string StatusIcon => State switch
     {
@@ -103,12 +113,76 @@ public class ActiveDownload : INotifyPropertyChanged
     }
 }
 
-public class DownloadedEpisode
+public enum EpisodeWatchStatus
+{
+    Unwatched,
+    InProgress,
+    Completed
+}
+
+public class DownloadedEpisode : INotifyPropertyChanged
 {
     public string EpisodeNumber { get; set; } = string.Empty;
     public string EpisodeTitle { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty;
     public DateTime DownloadedAt { get; set; } = DateTime.Now;
+
+    private EpisodeWatchStatus _status = EpisodeWatchStatus.Unwatched;
+    public EpisodeWatchStatus Status
+    {
+        get => _status;
+        set
+        {
+            if (_status != value)
+            {
+                _status = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(StatusText));
+                OnPropertyChanged(nameof(StatusIcon));
+                OnPropertyChanged(nameof(StatusColorResource));
+                OnPropertyChanged(nameof(NextStatusTooltip));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string StatusText => Status switch
+    {
+        EpisodeWatchStatus.Completed => "Terminado",
+        EpisodeWatchStatus.InProgress => "En progreso",
+        _ => "Sin ver"
+    };
+
+    [JsonIgnore]
+    public string StatusIcon => Status switch
+    {
+        EpisodeWatchStatus.Completed => "CheckCircleOutline",
+        EpisodeWatchStatus.InProgress => "PlayCircleOutline",
+        _ => "EyeOffOutline"
+    };
+
+    [JsonIgnore]
+    public string StatusColorResource => Status switch
+    {
+        EpisodeWatchStatus.Completed => "AppStatusCompletedColor",
+        EpisodeWatchStatus.InProgress => "AppStatusInProgressColor",
+        _ => "AppStatusUnwatchedColor"
+    };
+
+    [JsonIgnore]
+    public string NextStatusTooltip => Status switch
+    {
+        EpisodeWatchStatus.Unwatched => "Marcar como En progreso",
+        EpisodeWatchStatus.InProgress => "Marcar como Terminado",
+        EpisodeWatchStatus.Completed => "Marcar como Sin ver",
+        _ => "Cambiar estado"
+    };
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 public class DownloadedAnime : INotifyPropertyChanged
@@ -153,6 +227,26 @@ public static class DownloadManager
         Load();
     }
 
+    public static double ParseEpisodeNumber(string epNum)
+    {
+        if (string.IsNullOrWhiteSpace(epNum)) return double.MaxValue;
+        var match = System.Text.RegularExpressions.Regex.Match(epNum, @"\d+(?:\.\d+)?");
+        if (match.Success && double.TryParse(match.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double num))
+        {
+            return num;
+        }
+        return double.MaxValue;
+    }
+
+    public static void SortEpisodes(DownloadedAnime anime)
+    {
+        if (anime?.Episodes == null) return;
+        anime.Episodes = anime.Episodes
+            .OrderBy(e => ParseEpisodeNumber(e.EpisodeNumber))
+            .ThenBy(e => e.EpisodeNumber)
+            .ToList();
+    }
+
     private static void Load()
     {
         try
@@ -161,6 +255,10 @@ public static class DownloadManager
             {
                 var json = File.ReadAllText(DownloadsFile);
                 _downloads = JsonSerializer.Deserialize<List<DownloadedAnime>>(json) ?? new();
+                foreach (var anime in _downloads)
+                {
+                    SortEpisodes(anime);
+                }
                 CleanupMissingFiles();
             }
         }
@@ -190,6 +288,7 @@ public static class DownloadManager
                 anime.Episodes = existingEpisodes;
                 changed = true;
             }
+            SortEpisodes(anime);
             if (anime.Episodes.Count == 0)
             {
                 _downloads.Remove(anime);
@@ -259,6 +358,7 @@ public static class DownloadManager
                 DownloadedAt = DateTime.Now
             });
         }
+        SortEpisodes(anime);
         Save();
         DownloadsChanged?.Invoke(null, EventArgs.Empty);
     }
@@ -266,8 +366,13 @@ public static class DownloadManager
     public static IReadOnlyList<DownloadedAnime> GetAll()
     {
         CleanupMissingFiles();
+        foreach (var anime in _downloads)
+        {
+            SortEpisodes(anime);
+        }
         return _downloads.AsReadOnly();
     }
+
 
     public static void DeleteEpisode(string animeUrl, string episodeNumber)
     {
@@ -336,6 +441,37 @@ public static class DownloadManager
         }
         return false;
     }
+
+    public static void UpdateEpisodeStatus(string animeUrl, string episodeNumber, EpisodeWatchStatus status)
+    {
+        var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
+        if (anime != null)
+        {
+            var ep = anime.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
+            if (ep != null)
+            {
+                ep.Status = status;
+                Save();
+                DownloadsChanged?.Invoke(null, EventArgs.Empty);
+            }
+        }
+    }
+
+    public static DownloadedEpisode? GetNextEpisode(string animeUrl, string currentEpisodeNumber)
+    {
+        var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
+        if (anime != null && anime.Episodes.Count > 0)
+        {
+            SortEpisodes(anime);
+            int idx = anime.Episodes.FindIndex(e => e.EpisodeNumber == currentEpisodeNumber);
+            if (idx >= 0 && idx + 1 < anime.Episodes.Count)
+            {
+                return anime.Episodes[idx + 1];
+            }
+        }
+        return null;
+    }
+
 
     public static void CleanupPartialFiles(string downloadDir, string safeTitle, string episodeNumStr)
     {
