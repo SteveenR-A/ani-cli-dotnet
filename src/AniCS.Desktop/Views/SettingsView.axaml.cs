@@ -122,10 +122,10 @@ public partial class SettingsView : UserControl
     private void OnViewChangelogClicked(object? sender, RoutedEventArgs e)
     {
         var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
-        string changelog = "¡Hola! Novedades de la versión 1.5.3:\n\n" +
-                           "• 🐱 Nuevo tema Catppuccin: Disfruta de la elegante paleta Mocha integrada en toda la aplicación.\n" +
-                           "• 🎨 Indicadores de estado en descargas: Visualiza el estado de cada capítulo (Sin ver, En progreso y Terminado) con colores adaptados dinámicamente al tema activo.\n" +
-                           "• ⚡ Control rápido de reproducción: Nueva barra de control rápido en descargas para marcar capítulos como terminados y pasar directamente al siguiente episodio.\n\n" +
+        string changelog = "¡Hola! Novedades de la versión 1.5.4:\n\n" +
+                           "• 🖼️ Unificación de Caché de Imágenes: Se optimizó DataCache para almacenar imágenes de forma unificada en el disco, evitando descargas duplicadas y carpetas mezcladas.\n" +
+                           "• 🎨 Integración Total de Temas de Color: Todos los botones e indicadores en Descargas, Historial y Detalles responden dinámicamente a la paleta del tema activo (Dracula, TokyoNight, Cyberpunk, etc.) con alto contraste.\n" +
+                           "• 🎬 Visualización de Estudios de Animación: Se incorporó la etiqueta 'Studios:' y la extracción mejorada de estudios de animación y metadatos detallados en los detalles de anime.\n\n" +
                            "¡Gracias por usar AniCS!";
 
 
