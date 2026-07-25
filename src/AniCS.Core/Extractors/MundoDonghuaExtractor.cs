@@ -139,25 +139,30 @@ public class MundoDonghuaExtractor : BaseExtractor
                       doc.DocumentNode.SelectSingleNode("//p[contains(@class, 'description')]");
         if (synNode != null) result.Synopsis = synNode.InnerText.Trim();
 
-        // Extract genres and other details if present (using generic label matching as fallback)
-        var detailNodes = doc.DocumentNode.SelectNodes("//li | //div[contains(@class, 'info')]//p");
-        if (detailNodes != null)
+        var genreNodes = doc.DocumentNode.SelectNodes("//a[contains(@class, 'md-genre-tag')] | //div[contains(@class, 'md-genres-block')]//a");
+        if (genreNodes != null)
         {
-            foreach (var node in detailNodes)
+            result.Genres = genreNodes.Select(g => WebUtility.HtmlDecode(g.InnerText.Trim())).Where(g => !string.IsNullOrEmpty(g)).Distinct().ToList();
+        }
+
+        var infoNodes = doc.DocumentNode.SelectNodes("//p[contains(@class, 'md-info-item')] | //div[contains(@class, 'info')]//p | //li");
+        if (infoNodes != null)
+        {
+            foreach (var node in infoNodes)
             {
-                var text = node.InnerText.Trim();
-                if (text.StartsWith("Géneros:", StringComparison.OrdinalIgnoreCase))
-                {
-                    result.Genres = text.Substring(8).Split(',').Select(g => g.Trim()).ToList();
-                }
-                else if (text.StartsWith("Estudio:", StringComparison.OrdinalIgnoreCase)) result.Studios = text.Substring(8).Trim();
-                else if (text.StartsWith("Estado:", StringComparison.OrdinalIgnoreCase)) result.Status = text.Substring(7).Trim();
-                else if (text.StartsWith("Episodios:", StringComparison.OrdinalIgnoreCase)) result.TotalEpisodes = text.Substring(10).Trim();
+                var text = WebUtility.HtmlDecode(node.InnerText.Trim());
+                text = Regex.Replace(text, @"\s+", " ");
+
+                if (text.StartsWith("Tipo:", StringComparison.OrdinalIgnoreCase)) result.Type = text.Substring(5).Trim();
+                else if (text.StartsWith("Estudio:", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Studios:", StringComparison.OrdinalIgnoreCase)) result.Studios = text.Substring(text.IndexOf(':') + 1).Trim();
+                else if (text.StartsWith("Estado:", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Emisión:", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Emision:", StringComparison.OrdinalIgnoreCase)) result.Status = text.Substring(text.IndexOf(':') + 1).Trim();
+                else if (text.StartsWith("Episodios:", StringComparison.OrdinalIgnoreCase)) result.TotalEpisodes = text.Substring(text.IndexOf(':') + 1).Trim();
             }
         }
 
         return result;
     }
+
 
     public override async Task<List<Episode>> GetEpisodesAsync(string animeUrl)
     {

@@ -20,8 +20,10 @@ public class AnimeResult
     public string Duration { get; set; } = string.Empty;
     public string Broadcast { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public string OpeningUrl { get; set; } = string.Empty;
     
     // Top Animes properties
+
     public int Rank { get; set; } = 0;
     public string Votes { get; set; } = string.Empty;
 }

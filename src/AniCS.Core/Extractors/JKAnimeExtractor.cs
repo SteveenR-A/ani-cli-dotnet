@@ -162,40 +162,74 @@ public class JKAnimeExtractor : BaseExtractor
         if (synNode != null) result.Synopsis = WebUtility.HtmlDecode(synNode.InnerText.Trim());
         else result.Synopsis = "Sinopsis no disponible.";
 
-        var listItems = doc.DocumentNode.SelectNodes("//div[contains(@class,'anime__details__widget')]//ul/li");
+        var listItems = doc.DocumentNode.SelectNodes("//li[span]");
         if (listItems != null)
         {
             foreach (var li in listItems)
             {
-                var text = li.InnerText.Trim();
-                if (text.StartsWith("Tipo:")) result.Type = text.Substring(5).Trim();
-                else if (text.StartsWith("Studios:")) result.Studios = text.Substring(8).Trim();
-                else if (text.StartsWith("Temporada:")) result.Season = text.Substring(10).Trim();
-                else if (text.StartsWith("Demografia:")) result.Demography = text.Substring(11).Trim();
-                else if (text.StartsWith("Idiomas:")) result.Languages = text.Substring(8).Trim();
-                else if (text.StartsWith("Episodios:")) result.TotalEpisodes = text.Substring(10).Trim();
-                else if (text.StartsWith("Duracion:")) result.Duration = text.Substring(9).Trim();
-                else if (text.StartsWith("Emitido:")) result.Broadcast = text.Substring(8).Trim();
-                else if (text.StartsWith("Estado:")) result.Status = text.Substring(7).Trim();
+                var span = li.SelectSingleNode("./span");
+                if (span == null) continue;
+                var label = span.InnerText.Trim().ToLower().Replace(":", "").Replace(" ", "");
+                var fullText = WebUtility.HtmlDecode(li.InnerText.Trim());
+
+                if (label.Contains("tipo"))
+                {
+                    result.Type = Regex.Replace(fullText, @"^Tipo:\s*", "", RegexOptions.IgnoreCase).Trim();
+                }
+                else if (label.Contains("genero"))
+                {
+                    var aNodes = li.SelectNodes(".//a");
+                    if (aNodes != null)
+                    {
+                        result.Genres = aNodes.Select(a => WebUtility.HtmlDecode(a.InnerText.Trim())).Where(g => !string.IsNullOrEmpty(g)).ToList();
+                    }
+                }
+                else if (label.Contains("estado"))
+                {
+                    result.Status = Regex.Replace(fullText, @"^Estado:\s*", "", RegexOptions.IgnoreCase).Trim();
+                }
+                else if (label.Contains("estudio"))
+                {
+                    result.Studios = Regex.Replace(fullText, @"^Estudio[s]?:\s*", "", RegexOptions.IgnoreCase).Trim();
+                }
+                else if (label.Contains("temporada"))
+                {
+                    result.Season = Regex.Replace(fullText, @"^Temporada:\s*", "", RegexOptions.IgnoreCase).Trim();
+                }
+                else if (label.Contains("demografia"))
+                {
+                    result.Demography = Regex.Replace(fullText, @"^Demografia:\s*", "", RegexOptions.IgnoreCase).Trim();
+                }
+                else if (label.Contains("episodios"))
+                {
+                    result.TotalEpisodes = Regex.Replace(fullText, @"^Episodios:\s*", "", RegexOptions.IgnoreCase).Trim();
+                }
+                else if (label.Contains("duracion"))
+                {
+                    result.Duration = Regex.Replace(fullText, @"^Duracion:\s*", "", RegexOptions.IgnoreCase).Trim();
+                }
+                else if (label.Contains("emitido"))
+                {
+                    result.Broadcast = Regex.Replace(fullText, @"^Emitido:\s*", "", RegexOptions.IgnoreCase).Trim();
+                }
             }
         }
 
-        var genreLi = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime__details__widget')]//ul/li[contains(text(), 'Generos:')]") ??
-                      doc.DocumentNode.SelectSingleNode("//li[contains(text(), 'Generos:')]");
-        if (genreLi != null)
+        // Opening / Trailer detection
+        var trailerNode = doc.DocumentNode.SelectSingleNode("//div[@data-yt]");
+        if (trailerNode != null)
         {
-            var text = genreLi.InnerText.Trim();
-            if (text.StartsWith("Generos:"))
+            var ytId = trailerNode.GetAttributeValue("data-yt", "");
+            if (!string.IsNullOrEmpty(ytId))
             {
-                var genresStr = text.Substring(8).Trim();
-                result.Genres = genresStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                                         .Select(g => WebUtility.HtmlDecode(g)).ToList();
+                result.OpeningUrl = $"https://www.youtube-nocookie.com/embed/{ytId}";
             }
-        }
 
+        }
 
         return result;
     }
+
 
     // ── Top Animes ─────────────────────────────────────────────────
     public override async Task<List<AnimeResult>> GetTopAnimesAsync(string topType, string yearFilter, int page = 1)

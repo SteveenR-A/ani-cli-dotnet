@@ -95,16 +95,38 @@ public static class DesktopPlayer
         return url;
     }
 
+    private static Process? _activeAudioProcess = null;
+    public static event Action? AudioStateChanged;
+    public static bool IsAudioPlaying => _activeAudioProcess != null && !_activeAudioProcess.HasExited;
+
+    public static void StopAudio()
+    {
+        try
+        {
+            if (_activeAudioProcess != null && !_activeAudioProcess.HasExited)
+            {
+                _activeAudioProcess.Kill(true);
+            }
+        }
+        catch { }
+        finally
+        {
+            _activeAudioProcess = null;
+            AudioStateChanged?.Invoke();
+        }
+    }
+
     public static void Play(string url, string title, string? referer, string quality = "Mejor")
     {
+        StopAudio();
         url = System.Threading.Tasks.Task.Run(() => ResolveRedirectorUrlAsync(url)).GetAwaiter().GetResult();
 
         var exe = GetExecutablePath("mpv") ?? GetExecutablePath("mpvnet");
-
         if (exe == null)
         {
             throw new Exception("mpv no está instalado. Por favor, descarga mpv y agrégalo al PATH o a la carpeta del programa.");
         }
+
 
         var args = new List<string>
         {
@@ -213,6 +235,91 @@ public static class DesktopPlayer
         }
     }
 
+    public static void OpenInBrowser(string url)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(url)) return;
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+        }
+        catch { }
+    }
+
+    public static void PlayAudio(string url, string title, string? referer = null)
+    {
+        StopAudio();
+
+        var exe = GetExecutablePath("mpv") ?? GetExecutablePath("mpvnet");
+        if (exe == null)
+        {
+            OpenInBrowser(url);
+            return;
+        }
+
+        var ytdlpPath = GetExecutablePath("yt-dlp");
+
+        var args = new List<string>
+        {
+            "--force-window=immediate",
+            "--autofit=520x280",
+            "--cache=yes",
+            "--cache-pause=no"
+        };
+
+        if (!string.IsNullOrEmpty(ytdlpPath))
+        {
+            args.Add($"--script-opts=ytdl_hook-ytdl_path={ytdlpPath.Replace("\\", "/")}");
+        }
+
+        args.Add($"--title={title}");
+        args.Add(url);
+
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = exe,
+                UseShellExecute = false,
+                CreateNoWindow = false
+            };
+            foreach (var arg in args) startInfo.ArgumentList.Add(arg);
+
+            var p = new Process { StartInfo = startInfo };
+            p.EnableRaisingEvents = true;
+            p.Exited += (s, e) =>
+            {
+                lock (_activeProcesses) _activeProcesses.Remove(p);
+                if (_activeAudioProcess == p)
+                {
+                    _activeAudioProcess = null;
+                    AudioStateChanged?.Invoke();
+                }
+                try
+                {
+                    if (p.ExitCode != 0)
+                    {
+                        OpenInBrowser(url);
+                    }
+                }
+                catch { }
+            };
+            lock (_activeProcesses) _activeProcesses.Add(p);
+            _activeAudioProcess = p;
+            p.Start();
+            AudioStateChanged?.Invoke();
+        }
+        catch
+        {
+            OpenInBrowser(url);
+        }
+    }
+
+
+
     public static async System.Threading.Tasks.Task<DownloadResult> DownloadAsync(string videoUrl, AniCS.Models.AnimeResult anime, AniCS.Models.Episode episode, string downloadDir, string? referer = null, string quality = "Mejor", Action<double, string>? onProgress = null, System.Threading.CancellationToken cancellationToken = default)
     {
         videoUrl = await ResolveRedirectorUrlAsync(videoUrl);
@@ -312,16 +419,20 @@ public static class DesktopPlayer
 
             await p.WaitForExitAsync(cancellationToken);
 
-            if (p.ExitCode == 0 && !cancellationToken.IsCancellationRequested)
+            var actualFileName = Directory.GetFiles(animeDir, $"Episodio {episodeNumStr}.*").FirstOrDefault();
+            bool fileDownloadedSuccessfully = actualFileName != null && new FileInfo(actualFileName).Length > 0;
+
+            if ((p.ExitCode == 0 || fileDownloadedSuccessfully) && !cancellationToken.IsCancellationRequested)
             {
-                var actualFileName = Directory.GetFiles(animeDir, $"Episodio {episodeNumStr}.*").FirstOrDefault();
                 if (actualFileName != null)
                 {
                     DownloadManager.RecordDownload(anime.Title, anime.Url, anime.ThumbnailUrl, episode.EpisodeNumber, episode.Title, actualFileName);
                     return DownloadResult.Success;
                 }
             }
+
             return cancellationToken.IsCancellationRequested ? DownloadResult.Cancelled : DownloadResult.Error;
+
         }
         catch (OperationCanceledException)
         {

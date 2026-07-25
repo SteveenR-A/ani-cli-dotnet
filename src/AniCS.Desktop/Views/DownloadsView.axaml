@@ -117,49 +117,87 @@
                                         </Grid>
                                     </Expander.Header>
                                     
-                                    <ItemsControl ItemsSource="{Binding Episodes}" Margin="10">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="services:DownloadedEpisode">
-                                                <Border BorderBrush="#333333" BorderThickness="0,0,0,1" Padding="10">
-                                                    <Grid ColumnDefinitions="Auto, *, Auto, Auto">
-                                                        <TextBlock Grid.Column="0" Text="{Binding EpisodeNumber}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Width="40" VerticalAlignment="Center"/>
-                                                        
-                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
-                                                            <SelectableTextBlock Text="{Binding EpisodeTitle}" FontSize="16" Foreground="{DynamicResource AppTitleColor}"/>
+                                    <StackPanel Margin="10" Spacing="10">
+                                        <!-- Openings / Trailers Section -->
+                                        <Border IsVisible="{Binding HasSpecialEpisodes}"
+                                                Background="{DynamicResource AppSurfaceColor}"
+                                                CornerRadius="6" Padding="12" Margin="0,0,0,5"
+                                                BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                                            <StackPanel Spacing="8">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <material:MaterialIcon Kind="Music" Width="16" Height="16" Foreground="{DynamicResource AppPrimaryColor}" />
+                                                    <TextBlock Text="OPENINGS / TRAILERS DESCARGADOS" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <ItemsControl ItemsSource="{Binding SpecialEpisodes}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="services:DownloadedEpisode">
+                                                            <Grid ColumnDefinitions="Auto, *, Auto, Auto" Margin="0,4">
+                                                                <TextBlock Grid.Column="0" Text="🎵" FontSize="16" Width="30" VerticalAlignment="Center"/>
+                                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
+                                                                    <SelectableTextBlock Text="{Binding EpisodeTitle}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}"/>
+                                                                </StackPanel>
+                                                                <Button Grid.Column="2" Click="OnPlayEpisodeClicked" Tag="{Binding}" Margin="0,0,8,0" Background="#43A047" Foreground="White" ToolTip.Tip="Reproducir Opening/Trailer">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                        <material:MaterialIcon Kind="Play" Width="16" Height="16" />
+                                                                        <TextBlock Text="Reproducir" VerticalAlignment="Center" />
+                                                                    </StackPanel>
+                                                                </Button>
+                                                                <Button Grid.Column="3" Click="OnDeleteEpisodeClicked" Tag="{Binding}" Background="#E53935" Foreground="White" ToolTip.Tip="Eliminar Opening/Trailer">
+                                                                    <material:MaterialIcon Kind="Delete" Width="16" Height="16" />
+                                                                </Button>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Regular Episodes Section -->
+                                        <ItemsControl ItemsSource="{Binding RegularEpisodes}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="services:DownloadedEpisode">
+                                                    <Border BorderBrush="{DynamicResource AppSurfaceColor}" BorderThickness="0,0,0,1" Padding="10">
+                                                        <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+                                                            <TextBlock Grid.Column="0" Text="{Binding EpisodeNumber}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Width="40" VerticalAlignment="Center"/>
                                                             
-                                                            <!-- Badge Indicador de Estado Clicable -->
-                                                            <Button Click="OnToggleStatusClicked" Tag="{Binding}"
-                                                                    Background="Transparent"
-                                                                    BorderBrush="{Binding Status, Converter={StaticResource EpisodeStatusBrushConverter}}"
-                                                                    BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,4,0,0"
-                                                                    HorizontalAlignment="Left" Cursor="Hand"
-                                                                    ToolTip.Tip="{Binding NextStatusTooltip}">
-                                                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                    <material:MaterialIcon Kind="{Binding StatusIcon}" Width="14" Height="14"
-                                                                                           Foreground="{Binding Status, Converter={StaticResource EpisodeStatusBrushConverter}}"/>
-                                                                    <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold"
-                                                                               Foreground="{Binding Status, Converter={StaticResource EpisodeStatusBrushConverter}}"/>
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
+                                                                <SelectableTextBlock Text="{Binding EpisodeTitle}" FontSize="16" Foreground="{DynamicResource AppTitleColor}"/>
+                                                                
+                                                                <!-- Badge Indicador de Estado Clicable -->
+                                                                <Button Click="OnToggleStatusClicked" Tag="{Binding}"
+                                                                        Background="Transparent"
+                                                                        BorderBrush="{Binding Status, Converter={StaticResource EpisodeStatusBrushConverter}}"
+                                                                        BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,4,0,0"
+                                                                        HorizontalAlignment="Left" Cursor="Hand"
+                                                                        ToolTip.Tip="{Binding NextStatusTooltip}">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                        <material:MaterialIcon Kind="{Binding StatusIcon}" Width="14" Height="14"
+                                                                                               Foreground="{Binding Status, Converter={StaticResource EpisodeStatusBrushConverter}}"/>
+                                                                        <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold"
+                                                                                   Foreground="{Binding Status, Converter={StaticResource EpisodeStatusBrushConverter}}"/>
+                                                                    </StackPanel>
+                                                                </Button>
+                                                            </StackPanel>
+                                                            
+                                                            <!-- Botón reproducir episodio -->
+                                                            <Button Grid.Column="2" Click="OnPlayEpisodeClicked" Tag="{Binding}" Margin="0,0,8,0" Background="#43A047" Foreground="White" ToolTip.Tip="Reproducir capítulo">
+                                                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                    <material:MaterialIcon Kind="Play" Width="16" Height="16" />
+                                                                    <TextBlock Text="Reproducir" VerticalAlignment="Center" />
                                                                 </StackPanel>
                                                             </Button>
-                                                        </StackPanel>
-                                                        
-                                                        <!-- Botón reproducir episodio -->
-                                                        <Button Grid.Column="2" Click="OnPlayEpisodeClicked" Tag="{Binding}" Margin="0,0,8,0" Background="#43A047" Foreground="White" ToolTip.Tip="Reproducir capítulo">
-                                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                                <material:MaterialIcon Kind="Play" Width="16" Height="16" />
-                                                                <TextBlock Text="Reproducir" VerticalAlignment="Center" />
-                                                            </StackPanel>
-                                                        </Button>
 
-                                                        <!-- Botón eliminar episodio -->
-                                                        <Button Grid.Column="3" Click="OnDeleteEpisodeClicked" Tag="{Binding}" Background="#E53935" Foreground="White" ToolTip.Tip="Eliminar capítulo">
-                                                            <material:MaterialIcon Kind="Delete" Width="16" Height="16" />
-                                                        </Button>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                                            <!-- Botón eliminar episodio -->
+                                                            <Button Grid.Column="3" Click="OnDeleteEpisodeClicked" Tag="{Binding}" Background="#E53935" Foreground="White" ToolTip.Tip="Eliminar capítulo">
+                                                                <material:MaterialIcon Kind="Delete" Width="16" Height="16" />
+                                                            </Button>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
                                 </Expander>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

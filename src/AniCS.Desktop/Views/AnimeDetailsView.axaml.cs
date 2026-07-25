@@ -7,6 +7,8 @@ using AniCS.Models;
 using AniCS.Desktop.Converters;
 using AniCS.Desktop.Controls;
 using System;
+using System.Linq;
+
 
 namespace AniCS.Desktop.Views;
 
@@ -99,6 +101,9 @@ public partial class AnimeDetailsView : UserControl
         }
 
         AniCS.Desktop.Services.DesktopPlayer.OnPlayerError += OnPlayerErrorReceived;
+        AniCS.Desktop.Services.DesktopPlayer.AudioStateChanged += OnAudioStateChanged;
+        OnAudioStateChanged();
+        UpdateOpeningDownloadState();
     }
 
     private void OnPlayerErrorReceived(string message)
@@ -113,7 +118,9 @@ public partial class AnimeDetailsView : UserControl
     {
         AniCS.Desktop.Services.DownloadManager.DownloadsChanged -= OnDownloadsChanged;
         AniCS.Desktop.Services.DesktopPlayer.OnPlayerError -= OnPlayerErrorReceived;
+        AniCS.Desktop.Services.DesktopPlayer.AudioStateChanged -= OnAudioStateChanged;
     }
+
 
     private void OnDownloadsChanged(object? sender, EventArgs e)
     {
@@ -125,6 +132,46 @@ public partial class AnimeDetailsView : UserControl
                 {
                     UpdateEpisodeViewModelState(vm);
                 }
+            }
+            UpdateOpeningDownloadState();
+        });
+    }
+
+    private void UpdateOpeningDownloadState()
+    {
+        if (_anime == null || string.IsNullOrEmpty(_anime.OpeningUrl)) return;
+
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (DownloadOpeningBtn == null) return;
+
+            var active = AniCS.Desktop.Services.DownloadManager.ActiveDownloads
+                .FirstOrDefault(d => d.AnimeUrl == _anime.Url && d.EpisodeNumber == "Opening");
+
+
+            if (active != null)
+            {
+                DownloadOpeningBtn.IsEnabled = false;
+                DownloadOpeningBtnText.Text = active.Progress > 0 ? $"Descargando {active.Progress:F0}%" : "Descargando...";
+                DownloadOpeningBtnIcon.Kind = Material.Icons.MaterialIconKind.Refresh;
+                CancelOpeningDownloadBtn.IsVisible = true;
+                DeleteOpeningDownloadBtn.IsVisible = false;
+            }
+            else if (AniCS.Desktop.Services.DownloadManager.IsEpisodeDownloaded(_anime.Url, "Opening"))
+            {
+                DownloadOpeningBtn.IsEnabled = false;
+                DownloadOpeningBtnText.Text = "Descargado";
+                DownloadOpeningBtnIcon.Kind = Material.Icons.MaterialIconKind.Check;
+                CancelOpeningDownloadBtn.IsVisible = false;
+                DeleteOpeningDownloadBtn.IsVisible = true;
+            }
+            else
+            {
+                DownloadOpeningBtn.IsEnabled = true;
+                DownloadOpeningBtnText.Text = "Descargar";
+                DownloadOpeningBtnIcon.Kind = Material.Icons.MaterialIconKind.Download;
+                CancelOpeningDownloadBtn.IsVisible = false;
+                DeleteOpeningDownloadBtn.IsVisible = false;
             }
         });
     }
@@ -545,7 +592,147 @@ public partial class AnimeDetailsView : UserControl
             UpdateEpisodeViewModelState(vm);
         }
     }
+
+    private void OnAudioStateChanged()
+    {
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (AniCS.Desktop.Services.DesktopPlayer.IsAudioPlaying)
+            {
+                PlayAudioBtnText.Text = "Detener Audio";
+                PlayAudioBtnIcon.Kind = Material.Icons.MaterialIconKind.Stop;
+                if (this.TryFindResource("AppStatusInProgressColor", out var resStop) && resStop is Avalonia.Media.IBrush bStop)
+                {
+                    PlayAudioBtn.Background = bStop;
+                }
+            }
+
+            else
+            {
+                PlayAudioBtnText.Text = "Audio en App";
+                PlayAudioBtnIcon.Kind = Material.Icons.MaterialIconKind.VolumeHigh;
+                if (this.TryFindResource("AppPrimaryColor", out var res) && res is Avalonia.Media.IBrush b)
+                {
+                    PlayAudioBtn.Background = b;
+                }
+            }
+        });
+    }
+
+    private void OnPlayOpeningAudioClicked(object? sender, RoutedEventArgs e)
+    {
+        if (AniCS.Desktop.Services.DesktopPlayer.IsAudioPlaying)
+        {
+            AniCS.Desktop.Services.DesktopPlayer.StopAudio();
+        }
+        else if (_anime != null && !string.IsNullOrEmpty(_anime.OpeningUrl))
+        {
+            AniCS.Desktop.Services.DesktopPlayer.PlayAudio(_anime.OpeningUrl, $"AniCS - {_anime.Title} - Opening/Trailer", null);
+        }
+    }
+
+    private void OnOpenOpeningInBrowserClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_anime != null && !string.IsNullOrEmpty(_anime.OpeningUrl))
+        {
+            AniCS.Desktop.Services.DesktopPlayer.OpenInBrowser(_anime.OpeningUrl);
+        }
+    }
+
+
+
+    private async void OnDownloadOpeningClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_anime == null || string.IsNullOrEmpty(_anime.OpeningUrl)) return;
+
+        var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+        var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
+        if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
+        var animeDir = System.IO.Path.Combine(defaultDir, safeTitle);
+
+        var activeDownload = new AniCS.Desktop.Services.ActiveDownload
+        {
+            AnimeTitle = _anime.Title,
+            AnimeUrl = _anime.Url,
+            ThumbnailUrl = _anime.ThumbnailUrl,
+            EpisodeUrl = _anime.OpeningUrl,
+            EpisodeNumber = "Opening",
+            EpisodeTitle = "Opening / Trailer",
+            State = AniCS.Desktop.Services.DownloadState.Downloading
+        };
+
+        AniCS.Desktop.Services.DownloadManager.AddActiveDownload(activeDownload);
+        UpdateOpeningDownloadState();
+
+        var dummyEpisode = new Episode { EpisodeNumber = "Opening", Title = "Opening / Trailer", Url = _anime.OpeningUrl };
+        var cancellationToken = activeDownload.CancellationTokenSource.Token;
+        var result = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
+            _anime.OpeningUrl,
+            _anime,
+            dummyEpisode,
+            defaultDir,
+            null,
+            "Mejor",
+            (progress, sizeInfo) =>
+            {
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    activeDownload.Progress = progress;
+                    if (!string.IsNullOrEmpty(sizeInfo)) activeDownload.SizeText = sizeInfo;
+                    UpdateOpeningDownloadState();
+                });
+            },
+            cancellationToken);
+
+        if (result == AniCS.Desktop.Services.DownloadResult.Success)
+        {
+            activeDownload.State = AniCS.Desktop.Services.DownloadState.Completed;
+            var filePath = System.IO.Path.Combine(animeDir, "Episodio Opening.mp4");
+            if (!System.IO.File.Exists(filePath))
+            {
+                var files = System.IO.Directory.GetFiles(animeDir, "Episodio Opening.*");
+                if (files.Length > 0) filePath = files[0];
+            }
+            AniCS.Desktop.Services.DownloadManager.RecordDownload(_anime.Title, _anime.Url, _anime.ThumbnailUrl, "Opening", "Opening / Trailer", filePath);
+        }
+        else if (result == AniCS.Desktop.Services.DownloadResult.Error)
+        {
+            activeDownload.State = AniCS.Desktop.Services.DownloadState.Error;
+        }
+
+        UpdateOpeningDownloadState();
+    }
+
+    private void OnCancelOpeningDownloadClicked(object? sender, RoutedEventArgs e)
+    {
+        var active = AniCS.Desktop.Services.DownloadManager.ActiveDownloads
+            .FirstOrDefault(d => d.AnimeUrl == _anime.Url && d.EpisodeNumber == "Opening");
+
+
+        if (active != null)
+        {
+            active.Cancel();
+            var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+            var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
+            if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
+
+            AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, "Opening");
+            AniCS.Desktop.Services.DownloadManager.RemoveActiveDownload(active);
+            UpdateOpeningDownloadState();
+        }
+    }
+
+    private void OnDeleteOpeningDownloadClicked(object? sender, RoutedEventArgs e)
+    {
+        if (_anime != null)
+        {
+            AniCS.Desktop.Services.DownloadManager.DeleteEpisode(_anime.Url, "Opening");
+            UpdateOpeningDownloadState();
+        }
+    }
 }
+
+
 
 public class EpisodeViewModel : System.ComponentModel.INotifyPropertyChanged
 {

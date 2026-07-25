@@ -26,51 +26,131 @@
         
         <ScrollViewer Grid.Row="1">
             <StackPanel>
-                <!-- Header: Cover, Title, Synopsis -->
-                <Grid ColumnDefinitions="200, *" Margin="0,0,0,20">
-                    <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="200" VerticalAlignment="Top">
-                        <Image Name="CoverImage"
-                               converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}"
-                               Stretch="Uniform" />
-                    </Border>
+                <!-- Header: Left (Cover + Sidebar Info), Right (Title, Opening Player Card, Synopsis) -->
+                <Grid ColumnDefinitions="220, *" Margin="0,0,0,20">
+                    <!-- Left Column: Cover & Information Card -->
+                    <StackPanel Grid.Column="0" Spacing="15">
+                        <Border CornerRadius="8" ClipToBounds="True" Width="220">
+                            <Image Name="CoverImage"
+                                   converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}"
+                                   Stretch="Uniform" />
+                        </Border>
+                        
+                        <!-- Metadata Card -->
+                        <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="8" Padding="12">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="INFORMACIÓN" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,0,0,4"/>
+                                
+                                <StackPanel IsVisible="{Binding Type, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="Tipo:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
+                                    <TextBlock Text="{Binding Type}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}" />
+                                </StackPanel>
+                                
+                                <StackPanel IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="Estado:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
+                                    <TextBlock Text="{Binding Status}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}" />
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding Studios, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="Estudio:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
+                                    <TextBlock Text="{Binding Studios}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding TotalEpisodes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="Episodios:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
+                                    <TextBlock Text="{Binding TotalEpisodes}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}" />
+                                </StackPanel>
+                                
+                                <StackPanel IsVisible="{Binding Season, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="Temporada:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
+                                    <TextBlock Text="{Binding Season}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}" />
+                                </StackPanel>
+
+                                <!-- Géneros Badge List -->
+                                <StackPanel IsVisible="{Binding Genres.Count}" Margin="0,5,0,0">
+                                    <TextBlock Text="Géneros:" FontSize="11" Foreground="{DynamicResource AppTextColor}" Margin="0,0,0,4" />
+                                    <ItemsControl ItemsSource="{Binding Genres}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{DynamicResource AppSurfaceColor}" BorderThickness="1" BorderBrush="{DynamicResource AppPrimaryColor}" CornerRadius="12" Padding="8,3" Margin="0,0,4,4">
+                                                    <TextBlock Text="{Binding}" Foreground="{DynamicResource AppPrimaryColor}" FontSize="11" FontWeight="SemiBold" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                     
-                    <StackPanel Grid.Column="1" Margin="20,0,0,0">
-                        <SelectableTextBlock Name="TitleText" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                    <!-- Right Column: Title, Opening, Synopsis, Episode List -->
+                    <StackPanel Grid.Column="1" Margin="20,0,0,0" Spacing="15">
+                        <SelectableTextBlock Name="TitleText" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" />
                         
-                        <!-- Metadatos -->
-                        <WrapPanel Margin="0,0,0,10">
-                            <TextBlock Text="{Binding Type, StringFormat='Tipo: {0}'}" IsVisible="{Binding Type, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="{DynamicResource AppPrimaryColor}" FontWeight="Bold" Margin="0,0,15,5" />
-                            <TextBlock Text="{Binding Status, StringFormat='Estado: {0}'}" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="#A0A0B0" Margin="0,0,15,5" />
-                            <TextBlock Text="{Binding Season, StringFormat='Temporada: {0}'}" IsVisible="{Binding Season, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="#A0A0B0" Margin="0,0,15,5" />
-                            <TextBlock Text="{Binding Studios, StringFormat='Estudio: {0}'}" IsVisible="{Binding Studios, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Foreground="#A0A0B0" Margin="0,0,15,5" />
-                        </WrapPanel>
+                        <!-- Opening / Trailer Card -->
+                        <Border Name="OpeningCard" IsVisible="{Binding OpeningUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                Background="{DynamicResource AppSurfaceColor}" CornerRadius="8" Padding="15" BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <material:MaterialIcon Kind="Music" Width="20" Height="20" Foreground="{DynamicResource AppPrimaryColor}" />
+                                        <TextBlock Text="OPENING / TRAILER" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock Text="Escucha el audio en la app, míralo directamente en YouTube o descárgalo." FontSize="12" Foreground="{DynamicResource AppTextColor}" Margin="0,4,0,0" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Button Name="PlayAudioBtn" Click="OnPlayOpeningAudioClicked" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="10,8" ToolTip.Tip="Reproducir solo audio en la app">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <material:MaterialIcon Name="PlayAudioBtnIcon" Kind="VolumeHigh" Width="16" Height="16" />
+                                            <TextBlock Name="PlayAudioBtnText" Text="Audio en App" FontWeight="Bold" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Click="OnOpenOpeningInBrowserClicked" Background="{DynamicResource AppStatusInProgressColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="10,8" ToolTip.Tip="Abrir directamente en YouTube">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <material:MaterialIcon Kind="Youtube" Width="16" Height="16" />
+                                            <TextBlock Text="Ver en YouTube" FontWeight="Bold" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Name="DownloadOpeningBtn" Click="OnDownloadOpeningClicked" Background="{DynamicResource AppStatusCompletedColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="10,8" ToolTip.Tip="Descargar archivo en máxima calidad">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <material:MaterialIcon Name="DownloadOpeningBtnIcon" Kind="Download" Width="16" Height="16" />
+                                            <TextBlock Name="DownloadOpeningBtnText" Text="Descargar" FontWeight="Bold" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Name="CancelOpeningDownloadBtn" IsVisible="False" Click="OnCancelOpeningDownloadClicked" Background="#E53935" Foreground="White" Padding="8" ToolTip.Tip="Cancelar descarga">
+                                        <material:MaterialIcon Kind="Close" Width="16" Height="16" />
+                                    </Button>
+                                    <Button Name="DeleteOpeningDownloadBtn" IsVisible="False" Click="OnDeleteOpeningDownloadClicked" Background="#E53935" Foreground="White" Padding="8" ToolTip.Tip="Eliminar descarga de Opening">
+                                        <material:MaterialIcon Kind="TrashCan" Width="16" Height="16" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+
                         
-                        <TextBlock Name="SynopsisText" FontSize="16" Foreground="{DynamicResource AppSubtextColor}" TextWrapping="Wrap" Text="Cargando sinopsis..." Margin="0,0,0,15" />
-                        
-                        <!-- Generos y Extras -->
-                        <StackPanel IsVisible="{Binding Genres.Count}">
-                            <TextBlock Text="Géneros:" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" Margin="0,0,0,5" />
-                            <ItemsControl ItemsSource="{Binding Genres}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="#2A2A40" CornerRadius="4" Padding="8,4" Margin="0,0,5,5">
-                                            <TextBlock Text="{Binding}" Foreground="{DynamicResource AppPrimaryColor}" FontSize="12" />
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
+                        <!-- Synopsis Card -->
+                        <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="8" Padding="15">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="SINOPSIS" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" />
+                                <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                                    <SelectableTextBlock Name="SynopsisText" FontSize="15" Foreground="{DynamicResource AppTextColor}" TextWrapping="Wrap" Text="Cargando sinopsis..." LineHeight="22" />
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Grid>
+
                 
                 <!-- Episodes List -->
                 <StackPanel>
-                    <TextBlock Name="StatusText" Text="Cargando episodios..." FontSize="18" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" Margin="0,0,0,15" IsVisible="True" TextWrapping="Wrap"/>
+                    <TextBlock Name="StatusText" Text="Cargando episodios..." FontSize="18" Foreground="{DynamicResource AppTextColor}" HorizontalAlignment="Center" Margin="0,0,0,15" IsVisible="True" TextWrapping="Wrap"/>
                     <ItemsControl Name="EpisodesList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="views:EpisodeViewModel">
@@ -80,8 +160,6 @@
                                             Padding="15,10" 
                                             HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Left"
-                                            BorderThickness="1,1,0,1"
-                                            BorderBrush="#333333"
                                             Click="OnEpisodeClicked">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                             <TextBlock Text="{Binding EpisodeNumber}" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Width="40"/>
@@ -93,12 +171,10 @@
                                                 CornerRadius="0,4,4,0" 
                                                 Padding="15,10" 
                                                 IsEnabled="{Binding CanDownload}"
-                                                BorderThickness="1"
-                                                BorderBrush="#333333"
                                                 Click="OnDownloadEpisodeClicked">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
                                                 <material:MaterialIcon Kind="{Binding DownloadIcon}" Width="16" Height="16" />
-                                                <TextBlock Text="{Binding DownloadText}" />
+                                                <TextBlock Text="{Binding DownloadText}" Foreground="{DynamicResource AppTitleColor}" />
                                             </StackPanel>
                                         </Button>
                                         <Button Grid.Column="1" IsVisible="{Binding IsDownloading}"
@@ -122,6 +198,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -192,6 +192,22 @@ public class DownloadedAnime : INotifyPropertyChanged
     public string ThumbnailUrl { get; set; } = string.Empty;
     public List<DownloadedEpisode> Episodes { get; set; } = new();
 
+    [JsonIgnore]
+    public List<DownloadedEpisode> RegularEpisodes => Episodes
+        .Where(e => e.EpisodeNumber != "Opening" && !e.EpisodeNumber.Equals("Trailer", StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    [JsonIgnore]
+    public List<DownloadedEpisode> SpecialEpisodes => Episodes
+        .Where(e => e.EpisodeNumber == "Opening" || e.EpisodeNumber.Equals("Trailer", StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    [JsonIgnore]
+    public bool HasSpecialEpisodes => SpecialEpisodes.Count > 0;
+
+    [JsonIgnore]
+    public bool HasRegularEpisodes => RegularEpisodes.Count > 0;
+
     private bool _isExpanded;
     [JsonIgnore]
     public bool IsExpanded
@@ -209,6 +225,7 @@ public class DownloadedAnime : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 }
+
 
 public static class DownloadManager
 {
