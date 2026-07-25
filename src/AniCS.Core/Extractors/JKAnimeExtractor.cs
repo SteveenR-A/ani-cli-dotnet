@@ -188,9 +188,9 @@ public class JKAnimeExtractor : BaseExtractor
                 {
                     result.Status = Regex.Replace(fullText, @"^Estado:\s*", "", RegexOptions.IgnoreCase).Trim();
                 }
-                else if (label.Contains("estudio"))
+                else if (label.Contains("estudio") || label.Contains("studio"))
                 {
-                    result.Studios = Regex.Replace(fullText, @"^Estudio[s]?:\s*", "", RegexOptions.IgnoreCase).Trim();
+                    result.Studios = Regex.Replace(fullText, @"^(Estudio[s]?|Studio[s]?):\s*", "", RegexOptions.IgnoreCase).Trim();
                 }
                 else if (label.Contains("temporada"))
                 {

@@ -18,7 +18,7 @@
                     <TextBlock Text="Recargar" VerticalAlignment="Center" FontSize="14" />
                 </StackPanel>
             </Button>
-            <Button Name="ClearButton" Background="#E53935" Foreground="White" VerticalAlignment="Center" Click="OnClearClicked">
+            <Button Name="ClearButton" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}" VerticalAlignment="Center" Click="OnClearClicked">
                 <StackPanel Orientation="Horizontal" Spacing="5">
                     <material:MaterialIcon Kind="DeleteSweep" Width="16" Height="16" />
                     <TextBlock Text="Vaciar Historial" VerticalAlignment="Center" FontSize="14" />
@@ -48,7 +48,7 @@
                                     
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                         <Button Content="Ir al Anime" Click="OnGoToAnimeClicked" Tag="{Binding}" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="15,10"/>
-                                        <Button Click="OnDeleteEntryClicked" Tag="{Binding}" Background="#E53935" Foreground="White" Padding="10">
+                                        <Button Click="OnDeleteEntryClicked" Tag="{Binding}" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}" Padding="10">
                                             <material:MaterialIcon Kind="Delete" Width="20" Height="20" />
                                         </Button>
                                     </StackPanel>

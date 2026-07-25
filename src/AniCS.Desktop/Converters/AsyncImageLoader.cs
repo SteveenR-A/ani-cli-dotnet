@@ -59,8 +59,7 @@ public class AsyncImageLoader
 
         try
         {
-            string category = ConfigManager.Current.ContentType;
-            var bytes = await DataCache.GetImageAsync(_httpClient, url, category);
+            var bytes = await DataCache.GetImageAsync(_httpClient, url);
             if (bytes != null && bytes.Length > 0)
             {
                 bool applyDuotone = sender.GetValue(ApplyDuotoneProperty);

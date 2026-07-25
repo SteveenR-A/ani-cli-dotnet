@@ -29,9 +29,27 @@ public static class DataCache
     public static string GetImageCachePath(string url, string category = "")
     {
         if (string.IsNullOrEmpty(url)) return string.Empty;
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(url)));
-        var targetDir = string.IsNullOrEmpty(category) ? CacheDir : Path.Combine(CacheDir, category);
-        return Path.Combine(targetDir, hash + ".jpg");
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(url))) + ".jpg";
+
+        // 1. Path en la raíz unificada (por defecto)
+        var rootPath = Path.Combine(CacheDir, hash);
+        if (File.Exists(rootPath)) return rootPath;
+
+        // 2. Si no está en la raíz, buscar si existe en la categoría indicada
+        if (!string.IsNullOrEmpty(category))
+        {
+            var categoryPath = Path.Combine(CacheDir, category, hash);
+            if (File.Exists(categoryPath)) return categoryPath;
+        }
+
+        // 3. Fallback: buscar en subcarpetas legacy (Anime / Donghua)
+        var animePath = Path.Combine(CacheDir, "Anime", hash);
+        if (File.Exists(animePath)) return animePath;
+
+        var donghuaPath = Path.Combine(CacheDir, "Donghua", hash);
+        if (File.Exists(donghuaPath)) return donghuaPath;
+
+        return rootPath;
     }
 
     /// <summary>
@@ -41,7 +59,7 @@ public static class DataCache
     {
         if (string.IsNullOrEmpty(url)) return [];
 
-        var sessionKey = category + "_" + url;
+        var sessionKey = url;
         if (_imageSessionCache.TryGetValue(sessionKey, out var sessionBytes))
         {
             return sessionBytes;
@@ -64,12 +82,14 @@ public static class DataCache
         try
         {
             var bytes = await client.GetByteArrayAsync(url, cancellationToken);
-            var dir = Path.GetDirectoryName(filePath);
+            // Guardar siempre en la raíz de CacheDir para unificar todas las imágenes
+            var targetPath = Path.Combine(CacheDir, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(url))) + ".jpg");
+            var dir = Path.GetDirectoryName(targetPath);
             if (dir != null && !Directory.Exists(dir))
             {
                 Directory.CreateDirectory(dir);
             }
-            await File.WriteAllBytesAsync(filePath, bytes, cancellationToken);
+            await File.WriteAllBytesAsync(targetPath, bytes, cancellationToken);
             _imageSessionCache[sessionKey] = bytes;
             return bytes;
         }
@@ -167,35 +187,15 @@ public static class DataCache
 
         try
         {
-            var subDirs = Directory.GetDirectories(CacheDir);
-            
-            // Dividir el límite de archivos entre las categorías disponibles (ej. 100 / 2 = 50 por carpeta)
-            int limitPerFolder = subDirs.Length > 0 ? Math.Max(1, maxFiles / subDirs.Length) : maxFiles;
-
             var protectedFiles = GetProtectedHashes();
 
-            foreach (var dir in subDirs)
-            {
-                CleanFolder(dir, limitPerFolder, protectedFiles);
-            }
-
-            // También limpiar la raíz en caso de haber imágenes sin categoría
-            CleanFolder(CacheDir, limitPerFolder, protectedFiles);
-        }
-        catch { /* Ignore directory access errors */ }
-    }
-
-    private static void CleanFolder(string folderPath, int maxFilesInFolder, HashSet<string> protectedFiles)
-    {
-        try
-        {
-            var files = Directory.GetFiles(folderPath, "*.jpg", SearchOption.TopDirectoryOnly)
+            var files = Directory.GetFiles(CacheDir, "*.jpg", SearchOption.AllDirectories)
                 .Select(f => new FileInfo(f))
                 .Where(f => !protectedFiles.Contains(f.Name)) // Ignorar archivos protegidos por el historial
                 .OrderBy(f => f.LastAccessTimeUtc) // Oldest first
                 .ToList();
 
-            int filesToDelete = files.Count - maxFilesInFolder;
+            int filesToDelete = files.Count - maxFiles;
             if (filesToDelete <= 0) return;
 
             foreach (var file in files.Take(filesToDelete))

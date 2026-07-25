@@ -52,7 +52,7 @@
                                 </StackPanel>
 
                                 <StackPanel IsVisible="{Binding Studios, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                    <TextBlock Text="Estudio:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
+                                    <TextBlock Text="Studios:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
                                     <TextBlock Text="{Binding Studios}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" />
                                 </StackPanel>
 
@@ -64,6 +64,21 @@
                                 <StackPanel IsVisible="{Binding Season, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                                     <TextBlock Text="Temporada:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
                                     <TextBlock Text="{Binding Season}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}" />
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding Duration, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="Duración:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
+                                    <TextBlock Text="{Binding Duration}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}" />
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding Broadcast, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="Emitido:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
+                                    <TextBlock Text="{Binding Broadcast}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding Demography, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="Demografía:" FontSize="11" Foreground="{DynamicResource AppTextColor}" />
+                                    <TextBlock Text="{Binding Demography}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}" />
                                 </StackPanel>
 
                                 <!-- Géneros Badge List -->
@@ -123,10 +138,10 @@
                                             <TextBlock Name="DownloadOpeningBtnText" Text="Descargar" FontWeight="Bold" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Name="CancelOpeningDownloadBtn" IsVisible="False" Click="OnCancelOpeningDownloadClicked" Background="#E53935" Foreground="White" Padding="8" ToolTip.Tip="Cancelar descarga">
+                                    <Button Name="CancelOpeningDownloadBtn" IsVisible="False" Click="OnCancelOpeningDownloadClicked" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}" Padding="8" ToolTip.Tip="Cancelar descarga">
                                         <material:MaterialIcon Kind="Close" Width="16" Height="16" />
                                     </Button>
-                                    <Button Name="DeleteOpeningDownloadBtn" IsVisible="False" Click="OnDeleteOpeningDownloadClicked" Background="#E53935" Foreground="White" Padding="8" ToolTip.Tip="Eliminar descarga de Opening">
+                                    <Button Name="DeleteOpeningDownloadBtn" IsVisible="False" Click="OnDeleteOpeningDownloadClicked" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}" Padding="8" ToolTip.Tip="Eliminar descarga de Opening">
                                         <material:MaterialIcon Kind="TrashCan" Width="16" Height="16" />
                                     </Button>
                                 </StackPanel>
@@ -179,14 +194,14 @@
                                         </Button>
                                         <Button Grid.Column="1" IsVisible="{Binding IsDownloading}"
                                                 Click="OnCancelDownloadClicked"
-                                                Background="#E53935" Foreground="White"
+                                                Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}"
                                                 ToolTip.Tip="Cancelar descarga"
                                                 Margin="5,0,0,0">
                                             <material:MaterialIcon Kind="Close" Width="16" Height="16" />
                                         </Button>
                                         <Button Grid.Column="2" IsVisible="{Binding IsDownloaded}"
                                                 Click="OnDeleteDownloadedEpisodeClicked"
-                                                Background="#E53935" Foreground="White"
+                                                Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}"
                                                 ToolTip.Tip="Eliminar episodio descargado"
                                                 Margin="5,0,0,0">
                                             <material:MaterialIcon Kind="TrashCan" Width="16" Height="16" />

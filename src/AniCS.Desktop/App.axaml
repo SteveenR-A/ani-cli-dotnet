@@ -12,6 +12,15 @@
         <SolidColorBrush x:Key="AppPrimaryForegroundColor">#000000</SolidColorBrush>
         <SolidColorBrush x:Key="AppTextColor">#B3B3B3</SolidColorBrush>
         <SolidColorBrush x:Key="AppTitleColor">#FFFFFF</SolidColorBrush>
+        <SolidColorBrush x:Key="AppSuccessColor">#4CAF50</SolidColorBrush>
+        <SolidColorBrush x:Key="AppSuccessForegroundColor">#FFFFFF</SolidColorBrush>
+        <SolidColorBrush x:Key="AppDangerColor">#E53935</SolidColorBrush>
+        <SolidColorBrush x:Key="AppDangerForegroundColor">#FFFFFF</SolidColorBrush>
+        <SolidColorBrush x:Key="AppWarningColor">#FFB300</SolidColorBrush>
+        <SolidColorBrush x:Key="AppWarningForegroundColor">#000000</SolidColorBrush>
+        <SolidColorBrush x:Key="AppStatusCompletedColor">#4CAF50</SolidColorBrush>
+        <SolidColorBrush x:Key="AppStatusInProgressColor">#FFB74D</SolidColorBrush>
+        <SolidColorBrush x:Key="AppStatusUnwatchedColor">#9E9E9E</SolidColorBrush>
     </Application.Resources>
 
     <Application.Styles>

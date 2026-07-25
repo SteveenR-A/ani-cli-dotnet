@@ -154,7 +154,7 @@ public class MundoDonghuaExtractor : BaseExtractor
                 text = Regex.Replace(text, @"\s+", " ");
 
                 if (text.StartsWith("Tipo:", StringComparison.OrdinalIgnoreCase)) result.Type = text.Substring(5).Trim();
-                else if (text.StartsWith("Estudio:", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Studios:", StringComparison.OrdinalIgnoreCase)) result.Studios = text.Substring(text.IndexOf(':') + 1).Trim();
+                else if (text.StartsWith("Estudio:", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Estudios:", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Studios:", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Studio:", StringComparison.OrdinalIgnoreCase)) result.Studios = text.Substring(text.IndexOf(':') + 1).Trim();
                 else if (text.StartsWith("Estado:", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Emisión:", StringComparison.OrdinalIgnoreCase) || text.StartsWith("Emision:", StringComparison.OrdinalIgnoreCase)) result.Status = text.Substring(text.IndexOf(':') + 1).Trim();
                 else if (text.StartsWith("Episodios:", StringComparison.OrdinalIgnoreCase)) result.TotalEpisodes = text.Substring(text.IndexOf(':') + 1).Trim();
             }

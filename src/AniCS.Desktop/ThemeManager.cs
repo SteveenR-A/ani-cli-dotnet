@@ -18,7 +18,13 @@ namespace AniCS.Desktop
                 { "AppTitleColor", "#FFFFFF" },
                 { "AppStatusCompletedColor", "#4CAF50" },
                 { "AppStatusInProgressColor", "#FFB74D" },
-                { "AppStatusUnwatchedColor", "#888888" }
+                { "AppStatusUnwatchedColor", "#9E9E9E" },
+                { "AppSuccessColor", "#4CAF50" },
+                { "AppSuccessForegroundColor", "#FFFFFF" },
+                { "AppDangerColor", "#E53935" },
+                { "AppDangerForegroundColor", "#FFFFFF" },
+                { "AppWarningColor", "#FFB300" },
+                { "AppWarningForegroundColor", "#000000" }
             },
             ["Light"] = new()
             {
@@ -26,11 +32,17 @@ namespace AniCS.Desktop
                 { "AppSurfaceColor", "#F3F4F6" },
                 { "AppPrimaryColor", "#005FB8" }, // Blue
                 { "AppPrimaryForegroundColor", "#FFFFFF" },
-                { "AppTextColor", "#000000" },
+                { "AppTextColor", "#1F2937" },
                 { "AppTitleColor", "#111827" },
                 { "AppStatusCompletedColor", "#2E7D32" },
                 { "AppStatusInProgressColor", "#EF6C00" },
-                { "AppStatusUnwatchedColor", "#757575" }
+                { "AppStatusUnwatchedColor", "#757575" },
+                { "AppSuccessColor", "#2E7D32" },
+                { "AppSuccessForegroundColor", "#FFFFFF" },
+                { "AppDangerColor", "#D32F2F" },
+                { "AppDangerForegroundColor", "#FFFFFF" },
+                { "AppWarningColor", "#ED6C02" },
+                { "AppWarningForegroundColor", "#FFFFFF" }
             },
             ["Dracula"] = new()
             {
@@ -42,7 +54,13 @@ namespace AniCS.Desktop
                 { "AppTitleColor", "#BD93F9" }, // Purple
                 { "AppStatusCompletedColor", "#50FA7B" },
                 { "AppStatusInProgressColor", "#FFB86C" },
-                { "AppStatusUnwatchedColor", "#6272A4" }
+                { "AppStatusUnwatchedColor", "#8BE9FD" },
+                { "AppSuccessColor", "#50FA7B" },
+                { "AppSuccessForegroundColor", "#282A36" },
+                { "AppDangerColor", "#FF5555" },
+                { "AppDangerForegroundColor", "#F8F8F2" },
+                { "AppWarningColor", "#FFB86C" },
+                { "AppWarningForegroundColor", "#282A36" }
             },
             ["TokyoNight"] = new()
             {
@@ -54,7 +72,13 @@ namespace AniCS.Desktop
                 { "AppTitleColor", "#BB9AF7" }, // Purple/Violet
                 { "AppStatusCompletedColor", "#9ECE6A" },
                 { "AppStatusInProgressColor", "#E0AF68" },
-                { "AppStatusUnwatchedColor", "#565F89" }
+                { "AppStatusUnwatchedColor", "#7AA2F7" },
+                { "AppSuccessColor", "#9ECE6A" },
+                { "AppSuccessForegroundColor", "#1A1B26" },
+                { "AppDangerColor", "#F7768E" },
+                { "AppDangerForegroundColor", "#1A1B26" },
+                { "AppWarningColor", "#E0AF68" },
+                { "AppWarningForegroundColor", "#1A1B26" }
             },
             ["Cyberpunk"] = new()
             {
@@ -66,7 +90,13 @@ namespace AniCS.Desktop
                 { "AppTitleColor", "#FF003C" }, // Red neon
                 { "AppStatusCompletedColor", "#00FF66" },
                 { "AppStatusInProgressColor", "#FFD700" },
-                { "AppStatusUnwatchedColor", "#707080" }
+                { "AppStatusUnwatchedColor", "#808090" },
+                { "AppSuccessColor", "#00FF66" },
+                { "AppSuccessForegroundColor", "#000000" },
+                { "AppDangerColor", "#FF0055" },
+                { "AppDangerForegroundColor", "#FFFFFF" },
+                { "AppWarningColor", "#FFD700" },
+                { "AppWarningForegroundColor", "#000000" }
             },
             ["Catppuccin"] = new()
             {
@@ -78,7 +108,13 @@ namespace AniCS.Desktop
                 { "AppTitleColor", "#F5C2E7" }, // Pink
                 { "AppStatusCompletedColor", "#A6E3A1" }, // Green
                 { "AppStatusInProgressColor", "#F9E2AF" }, // Yellow
-                { "AppStatusUnwatchedColor", "#6C7086" }  // Overlay0
+                { "AppStatusUnwatchedColor", "#89DCEB" }, // Sky
+                { "AppSuccessColor", "#A6E3A1" },
+                { "AppSuccessForegroundColor", "#11111B" },
+                { "AppDangerColor", "#F38BA8" },
+                { "AppDangerForegroundColor", "#11111B" },
+                { "AppWarningColor", "#F9E2AF" },
+                { "AppWarningForegroundColor", "#11111B" }
             }
         };
 

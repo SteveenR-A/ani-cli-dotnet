@@ -48,13 +48,13 @@
                                                     <ProgressBar Value="{Binding Progress}" Maximum="100" Height="4" Margin="0,5,10,0"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-                                                    <Button Click="OnPauseResumeActiveDownloadClicked" Tag="{Binding}" Background="#FFB300" Foreground="White">
+                                                    <Button Click="OnPauseResumeActiveDownloadClicked" Tag="{Binding}" Background="{DynamicResource AppWarningColor}" Foreground="{DynamicResource AppWarningForegroundColor}">
                                                         <StackPanel Orientation="Horizontal" Spacing="5">
                                                             <material:MaterialIcon Kind="{Binding PauseResumeIcon}" Width="16" Height="16" />
                                                             <TextBlock Text="{Binding PauseResumeText}" VerticalAlignment="Center" />
                                                         </StackPanel>
                                                     </Button>
-                                                    <Button Click="OnCancelActiveDownloadClicked" Tag="{Binding}" Background="#E53935" Foreground="White">
+                                                    <Button Click="OnCancelActiveDownloadClicked" Tag="{Binding}" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}">
                                                         <StackPanel Orientation="Horizontal" Spacing="5">
                                                             <material:MaterialIcon Kind="Close" Width="16" Height="16" />
                                                             <TextBlock Text="Cancelar" VerticalAlignment="Center" />
@@ -106,8 +106,8 @@
                                             </Border>
                                             <SelectableTextBlock Grid.Column="1" Text="{Binding Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" Margin="15,0" VerticalAlignment="Center" />
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                                <Button Content="Ver Online" Click="OnGoToAnimeClicked" Tag="{Binding}" Background="#1E88E5" Foreground="White" />
-                                                <Button Click="OnDeleteAnimeClicked" Tag="{Binding}" Background="#E53935" Foreground="White">
+                                                <Button Content="Ver Online" Click="OnGoToAnimeClicked" Tag="{Binding}" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" />
+                                                <Button Click="OnDeleteAnimeClicked" Tag="{Binding}" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}">
                                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                                         <material:MaterialIcon Kind="Delete" Width="16" Height="16" />
                                                         <TextBlock Text="Eliminar Anime" VerticalAlignment="Center" />
@@ -136,13 +136,13 @@
                                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
                                                                     <SelectableTextBlock Text="{Binding EpisodeTitle}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource AppTitleColor}"/>
                                                                 </StackPanel>
-                                                                <Button Grid.Column="2" Click="OnPlayEpisodeClicked" Tag="{Binding}" Margin="0,0,8,0" Background="#43A047" Foreground="White" ToolTip.Tip="Reproducir Opening/Trailer">
+                                                                <Button Grid.Column="2" Click="OnPlayEpisodeClicked" Tag="{Binding}" Margin="0,0,8,0" Background="{DynamicResource AppSuccessColor}" Foreground="{DynamicResource AppSuccessForegroundColor}" ToolTip.Tip="Reproducir Opening/Trailer">
                                                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                                                         <material:MaterialIcon Kind="Play" Width="16" Height="16" />
                                                                         <TextBlock Text="Reproducir" VerticalAlignment="Center" />
                                                                     </StackPanel>
                                                                 </Button>
-                                                                <Button Grid.Column="3" Click="OnDeleteEpisodeClicked" Tag="{Binding}" Background="#E53935" Foreground="White" ToolTip.Tip="Eliminar Opening/Trailer">
+                                                                <Button Grid.Column="3" Click="OnDeleteEpisodeClicked" Tag="{Binding}" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}" ToolTip.Tip="Eliminar Opening/Trailer">
                                                                     <material:MaterialIcon Kind="Delete" Width="16" Height="16" />
                                                                 </Button>
                                                             </Grid>
@@ -180,7 +180,7 @@
                                                             </StackPanel>
                                                             
                                                             <!-- Botón reproducir episodio -->
-                                                            <Button Grid.Column="2" Click="OnPlayEpisodeClicked" Tag="{Binding}" Margin="0,0,8,0" Background="#43A047" Foreground="White" ToolTip.Tip="Reproducir capítulo">
+                                                            <Button Grid.Column="2" Click="OnPlayEpisodeClicked" Tag="{Binding}" Margin="0,0,8,0" Background="{DynamicResource AppSuccessColor}" Foreground="{DynamicResource AppSuccessForegroundColor}" ToolTip.Tip="Reproducir capítulo">
                                                                 <StackPanel Orientation="Horizontal" Spacing="5">
                                                                     <material:MaterialIcon Kind="Play" Width="16" Height="16" />
                                                                     <TextBlock Text="Reproducir" VerticalAlignment="Center" />
@@ -188,7 +188,7 @@
                                                             </Button>
 
                                                             <!-- Botón eliminar episodio -->
-                                                            <Button Grid.Column="3" Click="OnDeleteEpisodeClicked" Tag="{Binding}" Background="#E53935" Foreground="White" ToolTip.Tip="Eliminar capítulo">
+                                                            <Button Grid.Column="3" Click="OnDeleteEpisodeClicked" Tag="{Binding}" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}" ToolTip.Tip="Eliminar capítulo">
                                                                 <material:MaterialIcon Kind="Delete" Width="16" Height="16" />
                                                             </Button>
                                                         </Grid>
