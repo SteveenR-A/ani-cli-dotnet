@@ -16,7 +16,6 @@ public static class DataCache
     }
     
     private static readonly ConcurrentDictionary<string, object> _ramCache = new();
-    private static readonly ConcurrentDictionary<string, byte[]> _imageSessionCache = new();
 
     static DataCache()
     {
@@ -59,12 +58,6 @@ public static class DataCache
     {
         if (string.IsNullOrEmpty(url)) return [];
 
-        var sessionKey = url;
-        if (_imageSessionCache.TryGetValue(sessionKey, out var sessionBytes))
-        {
-            return sessionBytes;
-        }
-
         var filePath = GetImageCachePath(url, category);
 
         if (File.Exists(filePath))
@@ -73,7 +66,6 @@ public static class DataCache
             {
                 var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
                 File.SetLastAccessTimeUtc(filePath, DateTime.UtcNow);
-                _imageSessionCache[sessionKey] = bytes;
                 return bytes;
             }
             catch { /* Corrupted file or locked */ }
@@ -90,7 +82,6 @@ public static class DataCache
                 Directory.CreateDirectory(dir);
             }
             await File.WriteAllBytesAsync(targetPath, bytes, cancellationToken);
-            _imageSessionCache[sessionKey] = bytes;
             return bytes;
         }
         catch
@@ -134,12 +125,13 @@ public static class DataCache
     }
 
     /// <summary>
-    /// Clears the RAM cache, forcing all next queries to hit the web.
+    /// Clears the RAM cache, forcing all next queries to hit the web and running garbage collection.
     /// </summary>
     public static void ClearRamCache()
     {
         _ramCache.Clear();
-        _imageSessionCache.Clear();
+        GC.Collect(2, GCCollectionMode.Forced, true, true);
+        GC.WaitForPendingFinalizers();
     }
 
     /// <summary>

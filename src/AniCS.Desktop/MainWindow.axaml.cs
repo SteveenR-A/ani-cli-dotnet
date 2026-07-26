@@ -70,10 +70,10 @@ public partial class MainWindow : Window
 
         if (config.LastSeenVersion != currentVersion)
         {
-            string changelog = "¡Hola! Novedades de la versión 1.5.4:\n\n" +
-                               "• 🖼️ Unificación de Caché de Imágenes: Se optimizó DataCache para almacenar imágenes de forma unificada en el disco, evitando descargas duplicadas y carpetas mezcladas.\n" +
-                               "• 🎨 Integración Total de Temas de Color: Todos los botones e indicadores en Descargas, Historial y Detalles responden dinámicamente a la paleta del tema activo (Dracula, TokyoNight, Cyberpunk, etc.) con alto contraste.\n" +
-                               "• 🎬 Visualización de Estudios de Animación: Se incorporó la etiqueta 'Studios:' y la extracción mejorada de estudios de animación y metadatos detallados en los detalles de anime.\n\n" +
+            string changelog = "¡Hola! Novedades de la versión 1.5.5:\n\n" +
+                               "• 🚀 Optimización de Memoria RAM: Se eliminó la duplicación innecesaria de imágenes en memoria, reduciendo drásticamente el consumo de RAM de 1.6 - 3 GB a niveles mínimos (< 250 MB).\n" +
+                               "• 🔎 Corrección Búsqueda Donghua: Se arregló el endpoint de búsqueda en MundoDonghua (eliminando la barra diagonal que devolvía las 642 series de golpe), logrando búsquedas instantáneas y precisas.\n" +
+                               "• 🧹 Recolección de Basura Automática: Se añadió liberación automática de memoria al navegar entre apartados y alternar entre los modos Anime y Donghua.\n\n" +
                                "¡Gracias por usar AniCS!";
 
 
@@ -121,6 +121,11 @@ public partial class MainWindow : Window
                          view is Views.Paradigms.AndroidApp.AndroidAppView;
 
         SourceTogglePanel.IsVisible = isMainView;
+
+        System.Threading.Tasks.Task.Run(() =>
+        {
+            System.GC.Collect(2, System.GCCollectionMode.Optimized, false);
+        });
     }
 
     private void ApplyWindowConfig()

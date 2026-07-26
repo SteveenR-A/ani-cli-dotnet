@@ -107,6 +107,7 @@ public class HomeViewModel : ViewModelBase
             {
                 AniCS.ConfigManager.Current.ContentType = "Anime";
             }
+            DataCache.ClearRamCache();
             OnPropertyChanged();
             _ = LoadDataAsync();
         }
