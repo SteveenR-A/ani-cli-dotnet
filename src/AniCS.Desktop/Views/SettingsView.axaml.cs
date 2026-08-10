@@ -38,6 +38,7 @@ public partial class SettingsView : UserControl
         RefreshParadigmList(config);
 
         UseSpatialHudToggle.IsChecked = config.UseSpatialHud;
+        CustomJkAnimeUrlInput.Text = config.CustomJkAnimeBaseUrl;
 
 
 
@@ -92,10 +93,15 @@ public partial class SettingsView : UserControl
         }
 
         config.UseSpatialHud = UseSpatialHudToggle.IsChecked == true;
+        if (CustomJkAnimeUrlInput != null)
+        {
+            config.CustomJkAnimeBaseUrl = CustomJkAnimeUrlInput.Text?.Trim() ?? "https://jkanime.net";
+        }
 
 
 
         ConfigManager.Save(config);
+        DataCache.ClearRamCache();
 
         StatusMessage.Text = "¡Configuración guardada exitosamente!";
         StatusMessage.IsVisible = true;

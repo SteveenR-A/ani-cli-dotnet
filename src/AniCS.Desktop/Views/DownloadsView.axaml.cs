@@ -24,12 +24,29 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
         DownloadManager.DownloadsChanged += OnDownloadsChanged;
+        DesktopPlayer.OnPlaybackProgressChanged += OnPlaybackProgressChanged;
         LoadData();
     }
     
     private void OnUnloaded(object? sender, RoutedEventArgs e)
     {
         DownloadManager.DownloadsChanged -= OnDownloadsChanged;
+        DesktopPlayer.OnPlaybackProgressChanged -= OnPlaybackProgressChanged;
+    }
+
+    private void OnPlaybackProgressChanged(string mediaUrl, double pos, double dur, bool isCompleted)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_currentAnime != null && _currentEpisode != null)
+            {
+                if (mediaUrl.Equals(_currentEpisode.FilePath, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var status = isCompleted ? EpisodeWatchStatus.Completed : EpisodeWatchStatus.InProgress;
+                    DownloadManager.UpdateEpisodeStatus(_currentAnime.Url, _currentEpisode.EpisodeNumber, status);
+                }
+            }
+        });
     }
 
     private void OnDownloadsChanged(object? sender, System.EventArgs e)

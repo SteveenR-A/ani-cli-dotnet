@@ -17,6 +17,7 @@ public static class DesktopPlayer
 {
     private static readonly List<Process> _activeProcesses = new();
     public static event Action<string>? OnPlayerError;
+    public static event Action<string, double, double, bool>? OnPlaybackProgressChanged;
 
     static DesktopPlayer()
     {
@@ -193,6 +194,10 @@ public static class DesktopPlayer
             args.Add($"--http-header-fields={string.Join(",", headerList)}");
         }
 
+        var pipeName = "anics_mpv_" + Guid.NewGuid().ToString("N");
+        args.Add("--save-position-on-quit");
+        args.Add($"--input-ipc-server=\\\\.\\pipe\\{pipeName}");
+
         args.Add($"--title={title}");
         args.Add(url);
 
@@ -228,11 +233,94 @@ public static class DesktopPlayer
             };
             lock (_activeProcesses) _activeProcesses.Add(p);
             p.Start();
+
+            _ = System.Threading.Tasks.Task.Run(() => MonitorMpvIpcAsync(p, url, pipeName));
         }
         catch (Exception ex)
         {
             throw new Exception($"Error al iniciar el reproductor: {ex.Message}", ex);
         }
+    }
+
+    private static async System.Threading.Tasks.Task MonitorMpvIpcAsync(Process p, string mediaUrl, string pipeName)
+    {
+        await System.Threading.Tasks.Task.Delay(1500);
+        double lastPosition = 0;
+        double lastDuration = 0;
+        bool isCompleted = false;
+
+        while (!p.HasExited)
+        {
+            try
+            {
+                using var pipe = new System.IO.Pipes.NamedPipeClientStream(".", pipeName, System.IO.Pipes.PipeDirection.InOut);
+                await pipe.ConnectAsync(1000);
+
+                using var writer = new StreamWriter(pipe, System.Text.Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
+                using var reader = new StreamReader(pipe, System.Text.Encoding.UTF8, leaveOpen: true);
+
+                await writer.WriteLineAsync("{\"command\": [\"get_property\", \"time-pos\"]}");
+                var posResp = await reader.ReadLineAsync();
+
+                await writer.WriteLineAsync("{\"command\": [\"get_property\", \"duration\"]}");
+                var durResp = await reader.ReadLineAsync();
+
+                double pos = ParseMpvNumberResponse(posResp);
+                double dur = ParseMpvNumberResponse(durResp);
+
+                if (pos > 0) lastPosition = pos;
+                if (dur > 0) lastDuration = dur;
+
+                if (lastDuration > 0)
+                {
+                    isCompleted = (lastPosition / lastDuration >= 0.88) || (lastDuration - lastPosition <= 90);
+                }
+
+                if (lastPosition > 0)
+                {
+                    OnPlaybackProgressChanged?.Invoke(mediaUrl, lastPosition, lastDuration, isCompleted);
+                    try
+                    {
+                        var history = new AniCS.History.WatchHistory();
+                        history.UpdateProgress(mediaUrl, lastPosition, lastDuration, isCompleted);
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+
+            await System.Threading.Tasks.Task.Delay(2500);
+        }
+
+        if (lastPosition > 0)
+        {
+            if (lastDuration > 0)
+            {
+                isCompleted = (lastPosition / lastDuration >= 0.88) || (lastDuration - lastPosition <= 90);
+            }
+            OnPlaybackProgressChanged?.Invoke(mediaUrl, lastPosition, lastDuration, isCompleted);
+            try
+            {
+                var history = new AniCS.History.WatchHistory();
+                history.UpdateProgress(mediaUrl, lastPosition, lastDuration, isCompleted);
+            }
+            catch { }
+        }
+    }
+
+    private static double ParseMpvNumberResponse(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return 0;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == System.Text.Json.JsonValueKind.Number)
+            {
+                return dataEl.GetDouble();
+            }
+        }
+        catch { }
+        return 0;
     }
 
     public static void OpenInBrowser(string url)

@@ -20,4 +20,16 @@ public static class ExtractorFactory
         _jkExtractor ??= new JKAnimeExtractor(_httpClient);
         return _jkExtractor;
     }
+
+    public static IAnimeExtractor GetExtractorForUrl(string url)
+    {
+        if (!string.IsNullOrEmpty(url) && (url.Contains("mundodonghua.com") || url.Contains("/donghua/")))
+        {
+            _donghuaExtractor ??= new MundoDonghuaExtractor(_httpClient);
+            return _donghuaExtractor;
+        }
+
+        _jkExtractor ??= new JKAnimeExtractor(_httpClient);
+        return _jkExtractor;
+    }
 }

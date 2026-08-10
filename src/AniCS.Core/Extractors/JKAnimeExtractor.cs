@@ -18,7 +18,24 @@ namespace AniCS.Extractors;
 /// </summary>
 public class JKAnimeExtractor : BaseExtractor
 {
-    private const string BaseUrl = "https://jkanime.net";
+    private string BaseUrl
+    {
+        get
+        {
+            var custom = ConfigManager.Current.CustomJkAnimeBaseUrl;
+            if (!string.IsNullOrWhiteSpace(custom))
+            {
+                custom = custom.Trim().TrimEnd('/');
+                if (!custom.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                    !custom.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    custom = "https://" + custom;
+                }
+                return custom;
+            }
+            return "https://jkanime.net";
+        }
+    }
 
     // Cookie container so we can reuse session cookies for AJAX calls
     private readonly CookieContainer _cookies;
@@ -28,7 +45,21 @@ public class JKAnimeExtractor : BaseExtractor
         _cookies = new CookieContainer();
     }
 
-    public override string Domain => "jkanime.net";
+    public override string Domain
+    {
+        get
+        {
+            try
+            {
+                var uri = new Uri(BaseUrl);
+                return uri.Host;
+            }
+            catch
+            {
+                return "jkanime.net";
+            }
+        }
+    }
 
     // ── Search ────────────────────────────────────────────────────
     public override async Task<List<AnimeResult>> SearchAsync(string query)
@@ -57,7 +88,7 @@ public class JKAnimeExtractor : BaseExtractor
             results.Add(new AnimeResult
             {
                 Title = title,
-                Url = href,
+                Url = NormalizeUrl(href),
                 ThumbnailUrl = picNode?.GetAttributeValue("data-setbg", "") ?? ""
             });
         }
@@ -224,12 +255,34 @@ public class JKAnimeExtractor : BaseExtractor
             {
                 result.OpeningUrl = $"https://www.youtube-nocookie.com/embed/{ytId}";
             }
-
         }
 
         return result;
     }
 
+    public string NormalizeUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+        url = url.Trim();
+
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(url);
+                var baseUri = new Uri(BaseUrl);
+                return new Uri(baseUri, uri.PathAndQuery).ToString();
+            }
+            catch
+            {
+                return url;
+            }
+        }
+
+        if (!url.StartsWith("/")) url = "/" + url;
+        return $"{BaseUrl}{url}";
+    }
 
     // ── Top Animes ─────────────────────────────────────────────────
     public override async Task<List<AnimeResult>> GetTopAnimesAsync(string topType, string yearFilter, int page = 1)
@@ -270,7 +323,7 @@ public class JKAnimeExtractor : BaseExtractor
                 results.Add(new AnimeResult
                 {
                     Title = title,
-                    Url = href,
+                    Url = NormalizeUrl(href),
                     ThumbnailUrl = picNode?.GetAttributeValue("src", "") ?? "",
                     Rank = rank++,
                     Votes = votes
@@ -304,7 +357,7 @@ public class JKAnimeExtractor : BaseExtractor
             results.Add(new AnimeResult
             {
                 Title = WebUtility.HtmlDecode(titleNode.InnerText.Trim()),
-                Url = href,
+                Url = NormalizeUrl(href),
                 ThumbnailUrl = imgNode?.GetAttributeValue("src", "") ?? ""
             });
         }
@@ -338,7 +391,7 @@ public class JKAnimeExtractor : BaseExtractor
             {
                 Title = WebUtility.HtmlDecode(titleNode.InnerText.Trim()),
                 EpisodeNumber = epBadge?.InnerText.Replace("Ep ", "").Trim() ?? "",
-                Url = href,
+                Url = NormalizeUrl(href),
                 ThumbnailUrl = imgNode?.GetAttributeValue("src", "") ?? ""
             });
         }
@@ -383,7 +436,7 @@ public class JKAnimeExtractor : BaseExtractor
                 {
                     Day = day,
                     Title = WebUtility.HtmlDecode(title),
-                    Url = href,
+                    Url = NormalizeUrl(href),
                     ThumbnailUrl = img?.GetAttributeValue("src", "") ?? ""
                 });
             }
@@ -572,7 +625,7 @@ public class JKAnimeExtractor : BaseExtractor
     public override async Task<string> ResolveVideoUrlAsync(string url)
     {
         // Internal JKAnime servers (Desu, Magi)
-        if (url.Contains("jkanime.net/jkplayer"))
+        if (url.Contains("/jkplayer"))
         {
             var playerHtml = await DownloadWebpageAsync(url, BaseUrl);
             if (string.IsNullOrEmpty(playerHtml)) return string.Empty;
@@ -701,15 +754,50 @@ public class JKAnimeExtractor : BaseExtractor
         catch { return (string.Empty, string.Empty); }
     }
 
-    private static string ExtractSlug(string url)
+    private string ExtractSlug(string url)
     {
-        var m = Regex.Match(url, @"jkanime\.net/([^/]+)/?");
-        return m.Success ? m.Groups[1].Value : string.Empty;
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+        url = url.Trim().TrimEnd('/');
+
+        string path = url;
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(url);
+                path = uri.AbsolutePath;
+            }
+            catch { }
+        }
+
+        path = Regex.Replace(path, @"^/(?:v|ajax|episodes)/", "/", RegexOptions.IgnoreCase);
+        var segs = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segs.Length == 0) return string.Empty;
+
+        var reserved = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "top", "estrenos", "horario", "buscar", "directorio", "ajax", "v", "jkplayer", "ver", "donghua"
+        };
+
+        foreach (var seg in segs)
+        {
+            if (!reserved.Contains(seg) && !int.TryParse(seg, out _))
+            {
+                return seg;
+            }
+        }
+
+        return segs[0];
     }
 
     public override string NormalizeSeriesUrl(string url)
     {
-        var m = Regex.Match(url, @"(https://jkanime\.net/[^/]+/)");
-        return m.Success ? m.Groups[1].Value : url;
+        var slug = ExtractSlug(url);
+        if (!string.IsNullOrEmpty(slug))
+        {
+            return $"{BaseUrl}/{slug}/";
+        }
+        return NormalizeUrl(url);
     }
 }

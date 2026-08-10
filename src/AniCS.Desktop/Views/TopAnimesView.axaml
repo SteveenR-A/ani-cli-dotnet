@@ -13,6 +13,16 @@
             <ComboBox Grid.Column="2" Name="TopTypeComboBox" Width="180" SelectedIndex="0" SelectionChanged="OnFilterChanged">
                 <ComboBoxItem Content="Top General" Tag=""/>
             </ComboBox>
+
+            <Button Grid.Column="3" Name="RefreshTopBtn" 
+                    Background="Transparent" 
+                    Foreground="{DynamicResource AppPrimaryColor}" 
+                    Click="OnRefreshClicked" 
+                    Margin="10,0,0,0"
+                    ToolTip.Tip="Recargar Top Animes"
+                    VerticalAlignment="Center">
+                <material:MaterialIcon Kind="Refresh" Width="22" Height="22" />
+            </Button>
         </Grid>
         
         <!-- Content -->

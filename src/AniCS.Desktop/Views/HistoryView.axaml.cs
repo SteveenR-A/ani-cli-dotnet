@@ -52,10 +52,13 @@ public partial class HistoryView : UserControl
         {
             if (TopLevel.GetTopLevel(this) is MainWindow mainWindow)
             {
+                var extractor = AniCS.Extractors.ExtractorFactory.GetExtractor();
+                var normalizedUrl = extractor.NormalizeSeriesUrl(entry.AnimeUrl);
+
                 mainWindow.NavigateToAnimeDetails(new AnimeResult
                 {
                     Title = entry.AnimeTitle,
-                    Url = entry.AnimeUrl,
+                    Url = normalizedUrl,
                     ThumbnailUrl = entry.AnimeThumbnailUrl
                 });
             }

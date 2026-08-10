@@ -16,6 +16,9 @@ public class AppConfig
 
     // Extractor domain/name, e.g. "jkanime.net" or "animeav1.com"
     public string DefaultExtractor { get; set; } = "jkanime.net";
+
+    // URL Base o Fuente personalizada para scraping de JKAnime (ej. https://jkanime.net o espejo)
+    public string CustomJkAnimeBaseUrl { get; set; } = "https://jkanime.net";
     
     // List of User-Agents to rotate automatically to avoid bot detection
     public System.Collections.Generic.List<string> UserAgents { get; set; } = new()

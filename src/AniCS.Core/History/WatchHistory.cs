@@ -11,6 +11,9 @@ public class WatchEntry
     public string LastEpisodeNumber { get; set; } = string.Empty;
     public string LastEpisodeUrl { get; set; } = string.Empty;
     public DateTime WatchedAt { get; set; } = DateTime.Now;
+    public double LastPositionSeconds { get; set; } = 0;
+    public double TotalDurationSeconds { get; set; } = 0;
+    public bool IsCompleted { get; set; } = false;
 }
 
 [JsonSerializable(typeof(List<WatchEntry>))]
@@ -60,7 +63,7 @@ public class WatchHistory
         catch { }
     }
 
-    public void Record(string title, string animeUrl, string thumbnailUrl, string episodeNumber, string episodeUrl)
+    public void Record(string title, string animeUrl, string thumbnailUrl, string episodeNumber, string episodeUrl, double lastPositionSeconds = 0, double totalDurationSeconds = 0, bool isCompleted = false)
     {
         var existing = _entries.FirstOrDefault(e =>
             e.AnimeUrl.Equals(animeUrl, StringComparison.OrdinalIgnoreCase));
@@ -71,6 +74,9 @@ public class WatchHistory
             existing.LastEpisodeNumber = episodeNumber;
             existing.LastEpisodeUrl = episodeUrl;
             existing.WatchedAt = DateTime.Now;
+            if (lastPositionSeconds > 0) existing.LastPositionSeconds = lastPositionSeconds;
+            if (totalDurationSeconds > 0) existing.TotalDurationSeconds = totalDurationSeconds;
+            if (isCompleted) existing.IsCompleted = true;
         }
         else
         {
@@ -81,7 +87,10 @@ public class WatchHistory
                 AnimeThumbnailUrl = thumbnailUrl,
                 LastEpisodeNumber = episodeNumber,
                 LastEpisodeUrl = episodeUrl,
-                WatchedAt = DateTime.Now
+                WatchedAt = DateTime.Now,
+                LastPositionSeconds = lastPositionSeconds,
+                TotalDurationSeconds = totalDurationSeconds,
+                IsCompleted = isCompleted
             });
         }
 
@@ -90,6 +99,22 @@ public class WatchHistory
             _entries = _entries.Take(50).ToList();
 
         Save();
+    }
+
+    public void UpdateProgress(string episodeUrl, double position, double duration, bool isCompleted)
+    {
+        var existing = _entries.FirstOrDefault(e =>
+            e.LastEpisodeUrl.Equals(episodeUrl, StringComparison.OrdinalIgnoreCase) ||
+            e.AnimeUrl.Equals(episodeUrl, StringComparison.OrdinalIgnoreCase));
+
+        if (existing != null)
+        {
+            existing.LastPositionSeconds = position;
+            existing.TotalDurationSeconds = duration;
+            if (isCompleted) existing.IsCompleted = true;
+            existing.WatchedAt = DateTime.Now;
+            Save();
+        }
     }
 
     public IReadOnlyList<WatchEntry> GetAll() => _entries.AsReadOnly();

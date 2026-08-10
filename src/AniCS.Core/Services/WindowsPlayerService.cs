@@ -137,7 +137,8 @@ public class WindowsPlayerService : IPlayerService
             "--cache-pause-wait=1"
         };
 
-        bool isJkAnime = referer != null && referer.Contains("jkanime.net", StringComparison.OrdinalIgnoreCase);
+        var customJkDomain = AniCS.ConfigManager.Current.CustomJkAnimeBaseUrl;
+        bool isJkAnime = referer != null && (referer.Contains("jkanime", StringComparison.OrdinalIgnoreCase) || (!string.IsNullOrEmpty(customJkDomain) && referer.Contains(customJkDomain, StringComparison.OrdinalIgnoreCase)));
         bool isMediafire = referer != null && referer.Contains("mediafire.com", StringComparison.OrdinalIgnoreCase);
 
         if (isJkAnime || isMediafire)
@@ -150,7 +151,7 @@ public class WindowsPlayerService : IPlayerService
             args.Add("--network-timeout=15");
             args.Add("--demuxer-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_on_http_error=4xx,reconnect_delay_max=10");
 
-            string origin = isJkAnime ? "https://jkanime.net" : "https://www.mediafire.com";
+            string origin = isJkAnime ? (string.IsNullOrWhiteSpace(customJkDomain) ? "https://jkanime.net" : customJkDomain) : "https://www.mediafire.com";
             if (!string.IsNullOrEmpty(referer))
             {
                 args.Add($"--http-header-fields=Referer: {referer}");

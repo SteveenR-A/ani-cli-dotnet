@@ -29,6 +29,12 @@ public partial class TopAnimesView : UserControl
         }
     }
 
+    private void OnRefreshClicked(object? sender, RoutedEventArgs e)
+    {
+        DataCache.ClearRamCache();
+        LoadTopAnimes();
+    }
+
     private async void LoadTopAnimes()
     {
         StatusText.IsVisible = true;

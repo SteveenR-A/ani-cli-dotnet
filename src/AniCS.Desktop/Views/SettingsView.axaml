@@ -59,6 +59,12 @@
                 <ToggleSwitch Name="UseSpatialHudToggle" OffContent="Desactivado" OnContent="Activado" />
             </StackPanel>
 
+            <StackPanel Spacing="5">
+                <TextBlock Text="Fuente / URL Base de JKAnime" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                <TextBlock Text="Dominio principal o espejo para realizar las búsquedas y el scraping de JKAnime (ej. https://jkanime.net)." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                <TextBox Name="CustomJkAnimeUrlInput" PlaceholderText="https://jkanime.net" />
+            </StackPanel>
+
 
 
             <Button Content="Guardar Cambios" 

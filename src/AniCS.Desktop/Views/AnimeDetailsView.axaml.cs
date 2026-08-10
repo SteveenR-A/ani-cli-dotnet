@@ -44,7 +44,7 @@ public partial class AnimeDetailsView : UserControl
     private async void OnLoaded(object? sender, RoutedEventArgs e)
     {
         AniCS.Desktop.Services.DownloadManager.DownloadsChanged += OnDownloadsChanged;
-        var extractor = ExtractorFactory.GetExtractor();
+        var extractor = ExtractorFactory.GetExtractorForUrl(_anime.Url);
 
         try
         {
@@ -286,7 +286,7 @@ public partial class AnimeDetailsView : UserControl
 
         try
         {
-            var extractor = ExtractorFactory.GetExtractor();
+            var extractor = ExtractorFactory.GetExtractorForUrl(_anime.Url);
             var servers = await extractor.GetVideoServersAsync(vm.Url);
 
             if (servers.Count == 0)
@@ -425,7 +425,7 @@ public partial class AnimeDetailsView : UserControl
 
         try
         {
-            var extractor = ExtractorFactory.GetExtractor();
+            var extractor = ExtractorFactory.GetExtractorForUrl(_anime.Url);
             var servers = await extractor.GetVideoServersAsync(vm.Url);
 
             if (servers.Count == 0)
