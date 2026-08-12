@@ -12,6 +12,8 @@
     <Version>1.6.0</Version>
     <!-- Required for ExoPlayer via NativeControlHost -->
     <AndroidLinkMode>SdkOnly</AndroidLinkMode>
+    <!-- Allow referencing AniCS.Desktop (which has OutputType WinExe) -->
+    <ValidateExecutableReferences>false</ValidateExecutableReferences>
   </PropertyGroup>
 
   <ItemGroup>
