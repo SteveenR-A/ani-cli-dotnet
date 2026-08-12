@@ -44,7 +44,7 @@
       We reference it but the Android entry point overrides the platform-specific parts
       (player backend, update service, etc.).
     -->
-    <ProjectReference Include="..\AniCS.Desktop\AniCS.Desktop.csproj" />
+    <ProjectReference Include="..\AniCS.Desktop\AniCS.Desktop.csproj" AdditionalProperties="OutputType=Library" />
   </ItemGroup>
 
   <ItemGroup>
