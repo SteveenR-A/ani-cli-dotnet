@@ -14,7 +14,8 @@ public static class AppInfo
 
     /// <summary>Local fallback notes, shown when the GitHub release has no body.</summary>
     public static string LatestChangelog { get; set; } =
-        "¡Hola! Novedades de la versión 1.6.0:\n\n" +
+        "¡Hola! Novedades de la versión 1.6.1:\n\n" +
+        "• 🛠️ Corrección en compilación Android: Se resolvieron problemas de compatibilidad con las directivas de Avalonia 12.0 y el espacio de nombres de AndroidX.\n" +
         "• 🔄 Auto-Recover en Reproductor: Reconexión y reanudación automática transparente si el stream HLS o enlace de servidor se interrumpe mid-playback.\n" +
         "• 📱 Soporte e Interfaz Móvil Android: UI rediseñada con carruseles, barra de búsqueda en vivo, estado vacío de historial y Bottom Navigation Bar.\n" +
         "• ⚙️ Barra Sticky en Ajustes: El botón 'Guardar Cambios' permanece fijo abajo en pantalla sin importar el desplazamiento de la página.\n" +

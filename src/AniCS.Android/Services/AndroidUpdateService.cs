@@ -8,7 +8,7 @@ using Android.App;
 using Android.Content;
 using Android.OS;
 using Android.Widget;
-using androidx.core.content;
+using AndroidX.Core.Content;
 using Java.IO;
 
 namespace AniCS.Android.Services;
