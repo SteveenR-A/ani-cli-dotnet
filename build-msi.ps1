@@ -7,6 +7,22 @@ Write-Host "1. Compilando AniCS.Desktop (Release - win-x64)..." -ForegroundColor
 dotnet clean src\AniCS.Desktop\AniCS.Desktop.csproj -c Release
 dotnet publish src\AniCS.Desktop\AniCS.Desktop.csproj -c Release -r win-x64
 
+Write-Host "`n1.5. Compilando AniCS.Android (APK)..." -ForegroundColor Yellow
+dotnet clean src\AniCS.Android\AniCS.Android.csproj -c Release
+dotnet publish src\AniCS.Android\AniCS.Android.csproj -c Release -p:AndroidPackageFormat=apk
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "    (-) Copiando APK a la carpeta Installer..." -ForegroundColor Cyan
+    $apkPath = Get-ChildItem -Path "src\AniCS.Android\bin\Release\net10.0-android" -Filter "*-Signed.apk" -Recurse | Select-Object -First 1
+    if (-not $apkPath) {
+        $apkPath = Get-ChildItem -Path "src\AniCS.Android\bin\Release\net10.0-android" -Filter "*.apk" -Recurse | Select-Object -First 1
+    }
+    if ($apkPath) {
+        Copy-Item -Path $apkPath.FullName -Destination "Installer\AniCS-Android.apk" -Force
+        Write-Host "    (-) APK guardada en Installer\AniCS-Android.apk" -ForegroundColor Green
+    }
+}
+
 Write-Host "`n1b. Generando componentes dinámicos de empaquetado (AppComponents.g.wxs)..." -ForegroundColor Yellow
 
 $publishDir = (Get-Item "src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish").FullName

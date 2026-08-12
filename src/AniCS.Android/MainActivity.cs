@@ -20,5 +20,6 @@ namespace AniCS.Android;
         global::Android.Content.PM.ConfigChanges.UiMode |
         global::Android.Content.PM.ConfigChanges.Keyboard |
         global::Android.Content.PM.ConfigChanges.KeyboardHidden)]
-public class MainActivity : AvaloniaMainActivity
+public class MainActivity : AvaloniaMainActivity<App>
+{
 }
