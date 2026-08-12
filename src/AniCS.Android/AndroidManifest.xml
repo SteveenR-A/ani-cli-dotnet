@@ -14,6 +14,7 @@
 
     <application
         android:label="AniCS"
+        android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.AppCompat.NoActionBar"
         android:supportsRtl="true">
 

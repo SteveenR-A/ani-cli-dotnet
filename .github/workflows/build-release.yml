@@ -98,9 +98,19 @@ jobs:
             
             echo "APK_PATH=./AniCS-${{ github.ref_name }}-signed.apk" >> $GITHUB_ENV
           else
-            echo "No KEYSTORE_BASE64 secret found; using unsigned APK..."
-            cp "$APK" ./AniCS-${{ github.ref_name }}-unsigned.apk
-            echo "APK_PATH=./AniCS-${{ github.ref_name }}-unsigned.apk" >> $GITHUB_ENV
+            echo "No KEYSTORE_BASE64 secret found; generating temporary debug keystore..."
+            keytool -genkey -v -keystore temp.keystore -alias anics -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=AniCS, OU=AniCS, O=AniCS, L=Unknown, S=Unknown, C=Unknown"
+            
+            BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+            $BUILD_TOOLS_DIR/apksigner sign \
+              --ks temp.keystore \
+              --ks-pass pass:password \
+              --ks-key-alias anics \
+              --key-pass pass:password \
+              --out ./AniCS-${{ github.ref_name }}-signed.apk \
+              "$APK"
+            
+            echo "APK_PATH=./AniCS-${{ github.ref_name }}-signed.apk" >> $GITHUB_ENV
           fi
 
       - name: Upload APK artifact
