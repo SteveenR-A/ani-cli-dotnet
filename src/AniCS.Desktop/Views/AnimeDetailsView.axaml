@@ -7,6 +7,7 @@
              xmlns:views="clr-namespace:AniCS.Desktop.Views"
              xmlns:local="clr-namespace:AniCS.Desktop"
              xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:player="clr-namespace:AniCS.Player.Controls;assembly=AniCS.Player"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
              x:Class="AniCS.Desktop.Views.AnimeDetailsView"
              x:DataType="models:AnimeResult">
@@ -23,8 +24,12 @@
                 <TextBlock Text="Volver" VerticalAlignment="Center" FontSize="16" />
             </StackPanel>
         </Button>
-        
-        <ScrollViewer Grid.Row="1">
+
+        <!-- Row 1: video embebido (si backend = LibVLC) + contenido normal -->
+        <Grid Grid.Row="1" RowDefinitions="Auto, *">
+
+            <!-- Contenido original (ScrollViewer) -->
+            <ScrollViewer Grid.Row="1">
             <StackPanel>
                 <!-- Header: Left (Cover + Sidebar Info), Right (Title, Opening Player Card, Synopsis) -->
                 <Grid ColumnDefinitions="220, *" Margin="0,0,0,20">
@@ -177,8 +182,9 @@
                                             HorizontalContentAlignment="Left"
                                             Click="OnEpisodeClicked">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <TextBlock Text="{Binding WatchStatusIcon}" ToolTip.Tip="{Binding WatchStatusTip}" FontSize="13" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding EpisodeNumber}" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Width="40"/>
-                                            <SelectableTextBlock Text="{Binding Title}" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Title}" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Button>
                                     <Grid Grid.Column="1" ColumnDefinitions="*, Auto, Auto" IsVisible="{Binding IsDownloadButtonVisible}">
@@ -216,5 +222,7 @@
 
             </StackPanel>
         </ScrollViewer>
+
+        </Grid><!-- fin Grid Row=1 -->
     </Grid>
 </UserControl>

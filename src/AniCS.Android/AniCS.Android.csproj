@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationId>com.anics.android</ApplicationId>
+    <ApplicationVersion>2</ApplicationVersion>
+    <ApplicationDisplayVersion>1.6.0</ApplicationDisplayVersion>
+    <Version>1.6.0</Version>
+    <!-- Required for ExoPlayer via NativeControlHost -->
+    <AndroidLinkMode>SdkOnly</AndroidLinkMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Avalonia Android backend -->
+    <PackageReference Include="Avalonia" Version="12.0.5" />
+    <PackageReference Include="Avalonia.Android" Version="12.0.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.5" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.5" />
+    <PackageReference Include="Material.Icons.Avalonia" Version="3.0.2" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+
+    <!--
+      LibVLC for Android — native media processing (audio/HLS parsing).
+      Note: LibVLCSharp.Avalonia does NOT have a VideoView for Android.
+      Video rendering uses ExoPlayer via NativeControlHost instead.
+    -->
+    <PackageReference Include="LibVLCSharp" Version="3.10.1" />
+    <PackageReference Include="VideoLAN.LibVLC.Android" Version="3.0.21" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared library projects -->
+    <ProjectReference Include="..\AniCS.Core\AniCS.Core.csproj" />
+    <ProjectReference Include="..\AniCS.Resolver\AniCS.Resolver.csproj" />
+    <!--
+      AniCS.Desktop contains the shared views/controls/viewmodels.
+      We reference it but the Android entry point overrides the platform-specific parts
+      (player backend, update service, etc.).
+    -->
+    <ProjectReference Include="..\AniCS.Desktop\AniCS.Desktop.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AndroidManifest Include="AndroidManifest.xml" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Sin dependencia de Avalonia ni LibVLC por ahora -->
+    <!-- Los paquetes para el resolvedor nativo (HLS) se agregan en Fase 2 -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AniCS.Core\AniCS.Core.csproj" />
+  </ItemGroup>
+
+</Project>

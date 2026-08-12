@@ -1,13 +1,15 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
-  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.5.5" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" Scope="perMachine">
+  <Package Name="AniCS" Manufacturer="SteveenR-A" Version="1.6.0" UpgradeCode="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" Scope="perMachine">
 
-    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="Ya tienes instalada una versiÃƒÂ³n mÃƒÂ¡s reciente de AniCS." />
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="Ya tienes instalada una versión más reciente de AniCS." />
     <MediaTemplate EmbedCab="yes" />
     <Icon Id="AppIcon" SourceFile="src\AniCS.Desktop\Assets\Incono\favicon.ico" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
     <Feature Id="Main">
       <ComponentGroupRef Id="AppComponents" />
+      <ComponentGroupRef Id="ExternalComponents" />
+      <ComponentGroupRef Id="EnvComponents" />
       <ComponentGroupRef Id="ShortcutsComponents" />
     </Feature>
   </Package>
@@ -21,148 +23,8 @@
     <StandardDirectory Id="DesktopFolder" />
   </Fragment>
   <Fragment>
-    <ComponentGroup Id="AppComponents" Directory="INSTALLFOLDER">
-      <Component Id="cmpcf4a7e3c06c946918c64136e42a7de06" Guid="*">
-        <File Id="filecf4a7e3c06c946918c64136e42a7de06" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\AniCS.Core.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp899faf6e19644d8db7d869e877b178fe" Guid="*">
-        <File Id="file899faf6e19644d8db7d869e877b178fe" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\AniCS.Core.pdb" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp5743836e773c4cf1a7f25607b64cdae9" Guid="*">
-        <File Id="file5743836e773c4cf1a7f25607b64cdae9" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\AniCS.Desktop.deps.json" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp01b7319ab2c146f8b6dc3ebe91ef96cc" Guid="*">
-        <File Id="file01b7319ab2c146f8b6dc3ebe91ef96cc" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\AniCS.Desktop.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpb9b9c4a49d2644008b4ebf094585e22d" Guid="*">
-        <File Id="AniCSEXE" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\AniCS.Desktop.exe" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp7e2a5926eaf448a493e393c06c8e5eab" Guid="*">
-        <File Id="file7e2a5926eaf448a493e393c06c8e5eab" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\AniCS.Desktop.pdb" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp76de5adf761c4e0cb2a64bdc8b3093c6" Guid="*">
-        <File Id="file76de5adf761c4e0cb2a64bdc8b3093c6" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\AniCS.Desktop.runtimeconfig.json" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp205e544a7bfa45caae81ce03ba4e760d" Guid="*">
-        <File Id="file205e544a7bfa45caae81ce03ba4e760d" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Base.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp8fc92562cea74396a78f9a8f18379fcf" Guid="*">
-        <File Id="file8fc92562cea74396a78f9a8f18379fcf" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Controls.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp424dd3cf2cb64d479940bcd54432c5f4" Guid="*">
-        <File Id="file424dd3cf2cb64d479940bcd54432c5f4" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.DesignerSupport.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp449a574a3062480895e4c8aedd3d1cea" Guid="*">
-        <File Id="file449a574a3062480895e4c8aedd3d1cea" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Desktop.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe34bbc13cd704aaaadc85aeaea2ce1de" Guid="*">
-        <File Id="filee34bbc13cd704aaaadc85aeaea2ce1de" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Dialogs.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpb5663b743bea4d15bd4bc210c2c6e6e1" Guid="*">
-        <File Id="fileb5663b743bea4d15bd4bc210c2c6e6e1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp210bece2ee4743368468b2679746527a" Guid="*">
-        <File Id="file210bece2ee4743368468b2679746527a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Fonts.Inter.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4a926d4710224f50baf70f2ffc56b8d1" Guid="*">
-        <File Id="file4a926d4710224f50baf70f2ffc56b8d1" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.FreeDesktop.AtSpi.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpbbe435811b9940178135a551f854e2d5" Guid="*">
-        <File Id="filebbe435811b9940178135a551f854e2d5" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.FreeDesktop.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp9e839413f1f2452aa16d24a55c59ec39" Guid="*">
-        <File Id="file9e839413f1f2452aa16d24a55c59ec39" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.HarfBuzz.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe5f64f96952045888a3d299338318e1c" Guid="*">
-        <File Id="filee5f64f96952045888a3d299338318e1c" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Markup.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp82d3f7883c9a4795970feee71e6f6442" Guid="*">
-        <File Id="file82d3f7883c9a4795970feee71e6f6442" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Markup.Xaml.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp7aa8e1a856b84379863fdfdb5f365bbf" Guid="*">
-        <File Id="file7aa8e1a856b84379863fdfdb5f365bbf" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Metal.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp092a08cfd5494899a2580da59f3e846f" Guid="*">
-        <File Id="file092a08cfd5494899a2580da59f3e846f" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.MicroCom.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp6c1d495fff0d4ab1a5aa2448557f3370" Guid="*">
-        <File Id="file6c1d495fff0d4ab1a5aa2448557f3370" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Native.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp7367167e87064961b329da1996f965f8" Guid="*">
-        <File Id="file7367167e87064961b329da1996f965f8" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.OpenGL.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp630c6ae6037148d4bb992402f24f485a" Guid="*">
-        <File Id="file630c6ae6037148d4bb992402f24f485a" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Remote.Protocol.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpb9324fdfe0cb45a6a6fd59551d28a50e" Guid="*">
-        <File Id="fileb9324fdfe0cb45a6a6fd59551d28a50e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Skia.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp217c7c342be14870a1afc36164e069a9" Guid="*">
-        <File Id="file217c7c342be14870a1afc36164e069a9" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Themes.Fluent.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpbd4af5b7b7744997ac674e5b948ed310" Guid="*">
-        <File Id="filebd4af5b7b7744997ac674e5b948ed310" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Vulkan.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp65daa024dd1342d997e8eba4b8764ef6" Guid="*">
-        <File Id="file65daa024dd1342d997e8eba4b8764ef6" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Win32.Automation.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp7f58665e1832492182f9d43ecd6714e0" Guid="*">
-        <File Id="file7f58665e1832492182f9d43ecd6714e0" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.Win32.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp224089d99ba6418484215aac2b8942cf" Guid="*">
-        <File Id="file224089d99ba6418484215aac2b8942cf" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Avalonia.X11.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpb7c74299efe247729f2cbef631e37e86" Guid="*">
-        <File Id="fileb7c74299efe247729f2cbef631e37e86" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\av_libglesv2.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp3ff18c03bfc546a68c521ef03893e3c3" Guid="*">
-        <File Id="file3ff18c03bfc546a68c521ef03893e3c3" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\HarfBuzzSharp.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp7ffd9c71655b4d6297e699552a3256ae" Guid="*">
-        <File Id="file7ffd9c71655b4d6297e699552a3256ae" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\HtmlAgilityPack.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp8595dd761bfb45a18c2dc6b97b75bec9" Guid="*">
-        <File Id="file8595dd761bfb45a18c2dc6b97b75bec9" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\libHarfBuzzSharp.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpd58024d38c76411d88e7802e2ac4d15f" Guid="*">
-        <File Id="filed58024d38c76411d88e7802e2ac4d15f" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\libHarfBuzzSharp.pdb" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp7b89a434d38d4e53a1128ba8d99673ff" Guid="*">
-        <File Id="file7b89a434d38d4e53a1128ba8d99673ff" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\libSkiaSharp.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpe5a59e42f7654a968d00f226447d04e5" Guid="*">
-        <File Id="filee5a59e42f7654a968d00f226447d04e5" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\libSkiaSharp.pdb" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpbe1eee0e2d6842afae6edb68093458e3" Guid="*">
-        <File Id="filebe1eee0e2d6842afae6edb68093458e3" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\MicroCom.Runtime.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp4ae7b1e56abb4c879ea6d4ec4d94551f" Guid="*">
-        <File Id="file4ae7b1e56abb4c879ea6d4ec4d94551f" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.Extensions.Primitives.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmp90a30b8366a1454b8e04fc43d48a1cfa" Guid="*">
-        <File Id="file90a30b8366a1454b8e04fc43d48a1cfa" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.Net.Http.Headers.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpac6f233f51864c3c9629742a18928208" Guid="*">
-        <File Id="fileac6f233f51864c3c9629742a18928208" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\SkiaSharp.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpf988fc046bae4b0ba02c6f22a8dd1c2e" Guid="*">
-        <File Id="filef988fc046bae4b0ba02c6f22a8dd1c2e" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Tmds.DBus.Protocol.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpCommunityToolkitMvvm" Guid="*">
-        <File Id="fileCommunityToolkitMvvm" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\CommunityToolkit.Mvvm.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpMaterialIconsAvalonia" Guid="*">
-        <File Id="fileMaterialIconsAvalonia" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Material.Icons.Avalonia.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpMaterialIcons" Guid="*">
-        <File Id="fileMaterialIcons" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Material.Icons.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpMicrosoftExtensionsDependencyInjectionAbstractions" Guid="*">
-        <File Id="fileMicrosoftExtensionsDependencyInjectionAbstractions" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.Extensions.DependencyInjection.Abstractions.dll" KeyPath="yes" />
-      </Component>
-      <Component Id="cmpMicrosoftExtensionsDependencyInjection" Guid="*">
-        <File Id="fileMicrosoftExtensionsDependencyInjection" Source="src\AniCS.Desktop\bin\Release\net10.0\win-x64\publish\Microsoft.Extensions.DependencyInjection.dll" KeyPath="yes" />
-      </Component>
+    <ComponentGroup Id="ExternalComponents" Directory="INSTALLFOLDER">
+      <?if $(var.BundleExternals) = "1" ?>
       <Component Id="YTDLPEXE" Guid="*">
         <File Id="YTDLPEXE" Source="InstallerDependencies\yt-dlp.exe" KeyPath="yes" />
       </Component>
@@ -172,6 +34,9 @@
       <Component Id="MPVD3D" Guid="*">
         <File Id="MPVD3D" Source="InstallerDependencies\d3dcompiler_43.dll" KeyPath="yes" />
       </Component>
+      <?endif?>
+    </ComponentGroup>
+    <ComponentGroup Id="EnvComponents" Directory="INSTALLFOLDER">
       <Component Id="PathEnv" Guid="6a7b8c9d-1e2f-4a3b-5c6d-7e8f9a0b1c2d">
         <RegistryValue Root="HKCU" Key="Software\SteveenR-A\AniCS" Name="path_installed" Type="integer" Value="1" KeyPath="yes" />
         <Environment Id="UpdatePath" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
@@ -179,8 +44,8 @@
     </ComponentGroup>
     <ComponentGroup Id="ShortcutsComponents" Directory="ApplicationProgramsFolder">
       <Component Id="ApplicationShortcut" Guid="7b8a9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d">
-        <Shortcut Id="ApplicationStartMenuShortcut" Name="AniCS" Description="AplicaciÃƒÂ³n AniCS" Target="[#AniCSEXE]" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
-        <Shortcut Id="ApplicationDesktopShortcut" Directory="DesktopFolder" Name="AniCS" Description="AplicaciÃƒÂ³n AniCS" Target="[#AniCSEXE]" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        <Shortcut Id="ApplicationStartMenuShortcut" Name="AniCS" Description="Aplicación AniCS" Target="[#AniCSEXE]" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        <Shortcut Id="ApplicationDesktopShortcut" Directory="DesktopFolder" Name="AniCS" Description="Aplicación AniCS" Target="[#AniCSEXE]" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
         <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
         <RegistryValue Root="HKCU" Key="Software\SteveenR-A\AniCS" Name="installed" Type="integer" Value="1" KeyPath="yes" />
       </Component>

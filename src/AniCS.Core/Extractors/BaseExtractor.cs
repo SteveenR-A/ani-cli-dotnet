@@ -88,15 +88,26 @@ public abstract class BaseExtractor : IAnimeExtractor
         return match.Success ? match.Groups[1].Value : fallback;
     }
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime Time, HtmlDocument Doc)> _docCache = new();
+
     /// <summary>
-    /// Loads an HTML document from a URL.
+    /// Loads an HTML document from a URL with automatic 30-second caching.
     /// </summary>
     protected async Task<HtmlDocument?> GetDocumentAsync(string url, string? referer = null)
     {
+        if (_docCache.TryGetValue(url, out var entry) && (DateTime.Now - entry.Time).TotalSeconds < 30)
+        {
+            return entry.Doc;
+        }
+
         var html = await DownloadWebpageAsync(url, referer);
         if (string.IsNullOrEmpty(html)) return null;
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
+
+        _docCache[url] = (DateTime.Now, doc);
+        if (_docCache.Count > 50) _docCache.Clear();
+
         return doc;
     }
 

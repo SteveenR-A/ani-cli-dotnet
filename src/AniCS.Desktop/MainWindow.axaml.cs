@@ -1,12 +1,14 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using AniCS.Desktop.Views;
+using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
 
 namespace AniCS.Desktop;
 
 public partial class MainWindow : Window
 {
-    private ViewModels.HomeViewModel _sharedHomeViewModel = new ViewModels.HomeViewModel();
+    private readonly ViewModels.HomeViewModel _sharedHomeViewModel;
     private HomeView _homeView = new HomeView();
     private SearchView _searchView = new SearchView();
 
@@ -18,7 +20,13 @@ public partial class MainWindow : Window
     private UserControl? _previousView;
 
     public MainWindow()
+        : this(App.Services?.GetService<ViewModels.HomeViewModel>() ?? new ViewModels.HomeViewModel())
     {
+    }
+
+    public MainWindow(ViewModels.HomeViewModel homeViewModel)
+    {
+        _sharedHomeViewModel = homeViewModel;
         InitializeComponent();
         TopNavigationBar.DataContext = _sharedHomeViewModel;
 
@@ -57,30 +65,41 @@ public partial class MainWindow : Window
         LoadHomeParadigm();
     }
 
-    protected override void OnOpened(System.EventArgs e)
+    protected override async void OnOpened(System.EventArgs e)
     {
         base.OnOpened(e);
-        CheckForUpdates();
+        try
+        {
+            await CheckForUpdatesAsync();
+        }
+        catch { }
     }
 
-    private void CheckForUpdates()
+    private async Task CheckForUpdatesAsync()
     {
         var config = ConfigManager.Current;
-        var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+        var currentVersion = AppInfo.CurrentVersion;
 
+        // 1) Changelog local: se muestra una vez tras cada actualización del binario.
         if (config.LastSeenVersion != currentVersion)
         {
-            string changelog = "¡Hola! Novedades de la versión 1.5.5:\n\n" +
-                               "• 🚀 Optimización de Memoria RAM: Se eliminó la duplicación innecesaria de imágenes en memoria, reduciendo drásticamente el consumo de RAM de 1.6 - 3 GB a niveles mínimos (< 250 MB).\n" +
-                               "• 🔎 Corrección Búsqueda Donghua: Se arregló el endpoint de búsqueda en MundoDonghua (eliminando la barra diagonal que devolvía las 642 series de golpe), logrando búsquedas instantáneas y precisas.\n" +
-                               "• 🧹 Recolección de Basura Automática: Se añadió liberación automática de memoria al navegar entre apartados y alternar entre los modos Anime y Donghua.\n\n" +
-                               "¡Gracias por usar AniCS!";
-
-
-            var changelogWindow = new Controls.ChangelogWindow(currentVersion, changelog);
-            changelogWindow.ShowDialog(this);
+            var changelogWindow = new Controls.ChangelogWindow(currentVersion, AppInfo.LatestChangelog);
+            await changelogWindow.ShowDialog(this);
 
             config.LastSeenVersion = currentVersion;
+            ConfigManager.Save(config);
+        }
+
+        // 2) Chequeo contra GitHub: avisa una sola vez por release cuando hay novedad.
+        var updater = App.Services.GetRequiredService<Services.AppUpdateService>();
+        var release = await updater.FetchLatestReleaseAsync();
+        if (updater.IsNewerAvailable(release, out _) && release != null && config.LastSeenReleaseVersion != release.TagName)
+        {
+            var notes = string.IsNullOrWhiteSpace(release.Body) ? AppInfo.LatestChangelog : release.Body;
+            var updateWindow = new Controls.ChangelogWindow(release.TagName, notes);
+            await updateWindow.ShowDialog(this);
+
+            config.LastSeenReleaseVersion = release.TagName;
             ConfigManager.Save(config);
         }
     }
@@ -121,11 +140,6 @@ public partial class MainWindow : Window
                          view is Views.Paradigms.AndroidApp.AndroidAppView;
 
         SourceTogglePanel.IsVisible = isMainView;
-
-        System.Threading.Tasks.Task.Run(() =>
-        {
-            System.GC.Collect(2, System.GCCollectionMode.Optimized, false);
-        });
     }
 
     private void ApplyWindowConfig()
@@ -163,11 +177,21 @@ public partial class MainWindow : Window
 
     public void NavigateToAnimeDetails(AniCS.Models.AnimeResult anime)
     {
-        _previousView = MainContent.Content as UserControl;
-        var detailsView = new AnimeDetailsView(anime);
-        SetMainContent(detailsView);
-        PageTitleText.Text = anime.Title;
+        try
+        {
+            _previousView = MainContent.Content as UserControl;
+            var detailsView = new AnimeDetailsView(anime);
+            SetMainContent(detailsView);
+            PageTitleText.Text = anime.Title;
+        }
+        catch (System.Exception ex)
+        {
+            AniCS.AppLogger.Error("NavigateToAnimeDetails", ex);
+            PageTitleText.Text = "Crash interceptado. Revisa %LocalAppData%/AniCS/logs";
+        }
     }
+
+
 
     public void NavigateToSeeMore(string title, System.Collections.Generic.IEnumerable<AniCS.Models.AnimeResult> items)
     {
@@ -175,6 +199,31 @@ public partial class MainWindow : Window
         var seeMoreView = new SeeMoreView(title, items);
         SetMainContent(seeMoreView);
         PageTitleText.Text = title;
+    }
+
+    /// <summary>
+    /// Generic navigation helper used by the mobile BottomNavigationBar.
+    /// </summary>
+    public void NavigateTo(string viewName)
+    {
+        switch (viewName)
+        {
+            case "Home":
+                OnHomeClicked(null, new RoutedEventArgs());
+                break;
+            case "Search":
+                OnSearchClicked(null, new RoutedEventArgs());
+                break;
+            case "Downloads":
+                OnDownloadsClicked(null, new RoutedEventArgs());
+                break;
+            case "History":
+                OnHistoryClicked(null, new RoutedEventArgs());
+                break;
+            case "Settings":
+                OnSettingsClicked(null, new RoutedEventArgs());
+                break;
+        }
     }
 
     public void GoBack()

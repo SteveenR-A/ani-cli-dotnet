@@ -1,0 +1,297 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+             xmlns:material="using:Material.Icons.Avalonia"
+             x:Class="AniCS.Player.Controls.VideoPlayerControl"
+             Background="#000000"
+             PointerMoved="OnRootPointerMoved"
+             Focusable="True">
+
+    <UserControl.Styles>
+        <!-- Botón estilo player: sin fondo, icono blanco, hover con fondo sutil -->
+        <Style Selector="Button.PlayerBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#DDDDDD"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="Button.PlayerBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#33FFFFFF"/>
+        </Style>
+        <Style Selector="Button.PlayerBtn:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#55FFFFFF"/>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Fondo negro puro donde renderiza el video -->
+    <Grid>
+
+        <!-- ① Superficie de video (LibVLC renderiza aquí) -->
+        <vlc:VideoView x:Name="VideoViewControl"
+                       HorizontalAlignment="Stretch"
+                       VerticalAlignment="Stretch"/>
+
+        <!-- ② Capa de click sobre el video (play/pause) -->
+        <Popup x:Name="OverlayPopup"
+               IsOpen="True"
+               PlacementTarget="{Binding ElementName=VideoViewControl}"
+               Placement="Center"
+               WindowManagerAddShadowHint="False">
+            <Grid x:Name="PopupRoot"
+                  Width="{Binding ElementName=VideoViewControl, Path=Bounds.Width}"
+                  Height="{Binding ElementName=VideoViewControl, Path=Bounds.Height}"
+                  PointerMoved="OnRootPointerMoved">
+
+                <Panel x:Name="ClickLayer"
+               Background="Transparent"
+               PointerPressed="OnVideoAreaPressed"/>
+
+        <!-- ③ OSD central — feedback visual de acciones -->
+        <Border x:Name="OsdPanel"
+                IsVisible="False"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Background="#BB000000" CornerRadius="14" Padding="28,14">
+            <TextBlock x:Name="OsdText"
+                       Foreground="White" FontSize="26" FontWeight="SemiBold"
+                       FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                       HorizontalAlignment="Center"/>
+        </Border>
+
+        <!-- ④ Overlay de CARGA -->
+        <Border x:Name="LoadingOverlay" Background="#F0000000" IsVisible="True">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                <TextBlock Text="Cargando..."
+                           FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                           FontSize="20" Foreground="White" FontWeight="Normal"
+                           HorizontalAlignment="Center"/>
+                <TextBlock x:Name="LoadingSubtext"
+                           Text="Conectando al servidor..."
+                           FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                           FontSize="13" Foreground="#888888"
+                           HorizontalAlignment="Center"/>
+                <!-- Barra de buffer animada -->
+                <Border Background="#22FFFFFF" CornerRadius="3" Height="4" Width="260">
+                    <Border x:Name="BufferBar"
+                            Background="#E040FB"
+                            CornerRadius="3"
+                            HorizontalAlignment="Left"
+                            Width="0"/>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ⑤ Overlay de ERROR -->
+        <Border x:Name="ErrorOverlay" Background="#F0000000" IsVisible="False">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                <TextBlock Text="Error al reproducir"
+                           FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                           FontSize="18" Foreground="#FF5555" FontWeight="SemiBold"
+                           HorizontalAlignment="Center"/>
+                <TextBlock x:Name="ErrorText"
+                           FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                           FontSize="13" Foreground="#AAAAAA"
+                           HorizontalAlignment="Center" TextWrapping="Wrap"
+                           MaxWidth="420"/>
+                <Button Classes="PlayerBtn" Content="← Volver"
+                        HorizontalAlignment="Center"
+                        Margin="0,8,0,0"
+                        Click="OnBackClicked"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ⑥ Controles con auto-hide (overlay completo superior + inferior) -->
+        <Grid x:Name="ControlsOverlay" RowDefinitions="Auto, *, Auto">
+
+            <!-- Gradiente superior + barra de título -->
+            <Border Grid.Row="0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#CC000000" Offset="0"/>
+                        <GradientStop Color="#00000000" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid ColumnDefinitions="Auto, *, Auto" Margin="14,10,14,16">
+                    <!-- ← Volver -->
+                    <Button Grid.Column="0" Classes="PlayerBtn"
+                            Click="OnBackClicked"
+                            ToolTip.Tip="Volver al anime (Esc)">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="←" FontSize="16" VerticalAlignment="Center"/>
+                            <TextBlock Text="Volver"
+                                       FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                                       FontSize="13" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Título del episodio -->
+                    <TextBlock x:Name="TitleLabel" Grid.Column="1"
+                               Text=""
+                               FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                               FontSize="13" FontWeight="SemiBold"
+                               Foreground="White" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               HorizontalAlignment="Center"
+                               Margin="12,0"/>
+                    <!-- Spacer derecho -->
+                    <Panel Grid.Column="2" Width="80"/>
+                </Grid>
+            </Border>
+
+            <!-- Área central vacía (click para play/pause, ya manejado por ClickLayer) -->
+            <Panel Grid.Row="1"/>
+
+            <!-- Gradiente inferior + controles -->
+            <Border Grid.Row="2">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#00000000" Offset="0"/>
+                        <GradientStop Color="#CC000000" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <StackPanel Spacing="0" Margin="14,16,14,10">
+
+                    <!-- Barra de progreso + buffer -->
+                    <Grid Margin="0,0,0,8">
+                        <!-- Buffer visual detrás del slider -->
+                        <Border x:Name="BufferProgressBg"
+                                Background="#22FFFFFF" CornerRadius="3" Height="4"
+                                VerticalAlignment="Center" Margin="0,0,0,0">
+                            <Border x:Name="BufferProgressFill"
+                                    Background="#5522DD88"
+                                    CornerRadius="3"
+                                    HorizontalAlignment="Left"
+                                    Width="0"/>
+                        </Border>
+                        <!-- Slider de progreso sobre el buffer -->
+                        <Slider x:Name="ProgressSlider"
+                                Minimum="0" Maximum="1" Value="0"
+                                VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Fila de botones de control -->
+                    <Grid ColumnDefinitions="*, Auto">
+
+                        <!-- LADO IZQUIERDO: Play + Skip + Volumen + Tiempo -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                    Spacing="2" VerticalAlignment="Center">
+
+                            <!-- ▶ / ⏸ Play/Pause -->
+                            <Button x:Name="PlayPauseBtn" Classes="PlayerBtn"
+                                    Padding="8,6"
+                                    Click="OnPlayPauseClicked"
+                                    ToolTip.Tip="Pausar / Continuar (Espacio)">
+                                <material:MaterialIcon x:Name="PlayPauseIcon" Kind="Pause" Width="20" Height="20" Foreground="#DDDDDD"/>
+                            </Button>
+
+                            <!-- ⏪10 Retroceder -->
+                            <Button Classes="PlayerBtn" Padding="6,6"
+                                    Click="OnRewindClicked"
+                                    ToolTip.Tip="Retroceder 10 segundos (←)">
+                                <material:MaterialIcon Kind="Rewind10" Width="22" Height="22" Foreground="#DDDDDD"/>
+                            </Button>
+
+                            <!-- ⏩10 Adelantar -->
+                            <Button Classes="PlayerBtn" Padding="6,6"
+                                    Click="OnForwardClicked"
+                                    ToolTip.Tip="Adelantar 10 segundos (→)">
+                                <material:MaterialIcon Kind="FastForward10" Width="22" Height="22" Foreground="#DDDDDD"/>
+                            </Button>
+
+                            <!-- Separador -->
+                            <Border Width="1" Background="#44FFFFFF" Margin="4,4" VerticalAlignment="Stretch"/>
+
+                            <!-- 🔊 Mute + Slider de Volumen -->
+                            <Button x:Name="MuteBtn" Classes="PlayerBtn" Padding="6,6"
+                                    Click="OnMuteClicked"
+                                    ToolTip.Tip="Silenciar (M)">
+                                <material:MaterialIcon x:Name="MuteIcon" Kind="VolumeHigh" Width="18" Height="18" Foreground="#DDDDDD"/>
+                            </Button>
+                            <Slider x:Name="VolumeSlider"
+                                    Minimum="0" Maximum="200" Value="100"
+                                    Width="76" VerticalAlignment="Center"
+                                    ValueChanged="OnVolumeChanged"
+                                    ToolTip.Tip="Volumen (0–200%)"/>
+
+                            <!-- Separador -->
+                            <Border Width="1" Background="#44FFFFFF" Margin="8,4" VerticalAlignment="Stretch"/>
+
+                            <!-- Tiempo: 0:03 / 23:40 -->
+                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center" Margin="4,0">
+                                <TextBlock x:Name="TimeLabel"
+                                           Text="0:00"
+                                           FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                                           Foreground="White" FontSize="12"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="/"
+                                           FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                                           Foreground="#555555" FontSize="12"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock x:Name="DurationLabel"
+                                           Text="0:00"
+                                           FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                                           Foreground="#888888" FontSize="12"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                        <!-- LADO DERECHO: Velocidad + Info + Buffer + Fullscreen -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                    Spacing="4" VerticalAlignment="Center">
+
+                            <!-- Selector de velocidad -->
+                            <ComboBox x:Name="SpeedCombo"
+                                      Width="68" FontSize="12"
+                                      FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                                      SelectionChanged="OnSpeedChanged"
+                                      ToolTip.Tip="Velocidad de reproducción"
+                                      VerticalAlignment="Center"/>
+
+                            <!-- Badge HLS/Calidad -->
+                            <Border Background="#22FFFFFF" CornerRadius="4" Padding="7,3"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding #QualityBadge.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                    ToolTip.Tip="Formato de streaming">
+                                <TextBlock x:Name="QualityBadge" Text=""
+                                           FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                                           Foreground="#AAAAAA" FontSize="11" FontWeight="SemiBold"/>
+                            </Border>
+
+                            <!-- Indicador de buffer -->
+                            <Border Background="#22FFFFFF" CornerRadius="4" Padding="7,3"
+                                    VerticalAlignment="Center"
+                                    ToolTip.Tip="Caché de red">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Ellipse Width="6" Height="6" Fill="#22DD88"
+                                             VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="NetworkCacheLabel"
+                                               Text="5s"
+                                               FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                                               Foreground="#888888" FontSize="11"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ⛶ Pantalla completa -->
+                            <Button x:Name="FullscreenBtn" Classes="PlayerBtn" Padding="8,6"
+                                    Click="OnFullscreenClicked"
+                                    ToolTip.Tip="Pantalla completa (F)">
+                                <material:MaterialIcon x:Name="FullscreenIcon" Kind="Fullscreen" Width="20" Height="20" Foreground="#DDDDDD"/>
+                            </Button>
+
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+        </Grid>
+
+        <!-- Nombre técnico oculto para uso interno (sin mostrar en UI) -->
+        <TextBlock x:Name="InfoLabel" IsVisible="False"/>
+
+            </Grid>
+        </Popup>
+    </Grid>
+</UserControl>

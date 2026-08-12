@@ -7,8 +7,18 @@ namespace AniCS;
 
 public static class ConfigManager
 {
-    private static readonly string ConfigPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AniCS", "config.json");
-    
+    /// <summary>
+    /// Base directory for all AniCS data (config, cache, logs, history).
+    /// Defaults to %LocalAppData%/AniCS on Windows.
+    /// Set this once at startup from the platform entry-point before any other
+    /// AniCS code runs — e.g. in Android's MainActivity.OnCreate().
+    /// </summary>
+    public static string BaseDataPath { get; set; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AniCS");
+
+    // ConfigPath is computed on each call so it respects BaseDataPath set by Android at startup.
+    private static string ConfigPath => Path.Combine(BaseDataPath, "config.json");
+
     public static AppConfig Current { get; private set; }
 
     static ConfigManager()

@@ -27,7 +27,6 @@ public static class CoreServiceCollectionExtensions
 
         // Extractors
         services.AddTransient<IAnimeExtractor, JKAnimeExtractor>();
-        services.AddTransient<IAnimeExtractor, AnimeAV1Extractor>();
         services.AddTransient<IAnimeExtractor, MundoDonghuaExtractor>();
 
         // Player Service

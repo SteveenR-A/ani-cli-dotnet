@@ -1,8 +1,25 @@
 namespace AniCS.Models;
 
+/// <summary>
+/// Motor de reproducción a utilizar.
+/// Auto: usa LibVLC embebido si está disponible, sino mpv.exe.
+/// Native: fuerza LibVLC embebido (AniCS.Player).
+/// Mpv: fuerza mpv.exe externo (comportamiento clásico).
+/// </summary>
+public enum PlayerBackendMode { Auto, Native, Mpv }
+
+/// <summary>
+/// Motor de resolución y descarga de videos.
+/// Auto: usa el nativo si está disponible, sino yt-dlp.exe.
+/// Native: fuerza el resolvedor nativo (AniCS.Resolver).
+/// YtDlp: fuerza yt-dlp.exe externo (comportamiento clásico).
+/// </summary>
+public enum ResolverBackendMode { Auto, Native, YtDlp }
+
 public class AppConfig
 {
     public string LastSeenVersion { get; set; } = "";
+    public string LastSeenReleaseVersion { get; set; } = "";
     public int MaxImageCacheCount { get; set; } = 100;
     
     // Can be Auto, Mpv, Vlc
@@ -64,6 +81,13 @@ public class AppConfig
 
     // Use Spatial HUD for episode selection
     public bool UseSpatialHud { get; set; } = false;
+
+    // ── Motor de Reproducción y Descarga ────────────────────────────────────
+    /// <summary>Motor de reproducción: Auto (detecta), Native (LibVLC), Mpv (externo).</summary>
+    public PlayerBackendMode PlayerBackend { get; set; } = PlayerBackendMode.Auto;
+
+    /// <summary>Motor de resolución/descarga: Auto (detecta), Native (HLS propio), YtDlp (externo).</summary>
+    public ResolverBackendMode ResolverBackend { get; set; } = ResolverBackendMode.Auto;
 }
 
 [System.Text.Json.Serialization.JsonSerializable(typeof(AppConfig))]

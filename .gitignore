@@ -474,6 +474,7 @@ $RECYCLE.BIN/
 *.msp
 *.wixpdb
 .wix/
+Installer/AppComponents.g.wxs
 
 # Windows shortcuts
 *.lnk
@@ -693,3 +694,9 @@ InstallerDependencies/
 tests/
 # Si quieres subir los scripts de prueba a GitHub, elimina "tests/" y deja solo:
 # tests/*.html
+
+# Android keystore — NEVER commit these
+anics-release.keystore
+anics-release.keystore.b64.txt
+
+TestScraper/

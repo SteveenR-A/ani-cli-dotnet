@@ -1,24 +1,11 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AniCS.Desktop.ViewModels;
 
-public class ViewModelBase : INotifyPropertyChanged
+/// <summary>
+/// Base for all view models. Thin wrapper over CommunityToolkit.Mvvm's
+/// ObservableObject so the rest of the code keeps using SetProperty/OnPropertyChanged.
+/// </summary>
+public class ViewModelBase : ObservableObject
 {
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
-
-    protected bool SetProperty<T>(ref T backingStore, T value, [CallerMemberName] string? propertyName = null)
-    {
-        if (System.Collections.Generic.EqualityComparer<T>.Default.Equals(backingStore, value))
-            return false;
-
-        backingStore = value;
-        OnPropertyChanged(propertyName);
-        return true;
-    }
 }

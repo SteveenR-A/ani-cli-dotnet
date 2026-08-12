@@ -2,87 +2,163 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="700"
              x:Class="AniCS.Desktop.Views.SettingsView">
-    <ScrollViewer>
-        <StackPanel Margin="20" Spacing="20" MaxWidth="600" HorizontalAlignment="Left">
-            
-            <TextBlock Text="Configuración" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,0,0,10"/>
 
-            <StackPanel Spacing="5">
-                <TextBlock Text="Límite de imágenes en caché" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                <TextBlock Text="Número máximo de portadas que se mantendrán en el disco." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
-                <NumericUpDown Name="CacheLimitInput" Minimum="0" Maximum="1000" FormatString="0" />
+    <!-- Grid de dos filas: la primera crece/scrollea, la segunda (barra) es fija -->
+    <Grid RowDefinitions="*, Auto">
+
+        <!-- ── Contenido scrolleable ─────────────────────────────────── -->
+        <ScrollViewer Grid.Row="0">
+            <StackPanel Margin="24,24,24,8" Spacing="16" MaxWidth="640" HorizontalAlignment="Left">
+
+                <TextBlock Text="Configuración" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,0,0,4"/>
+
+                <!-- ── Reproductor y Descarga ─────────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="16"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                    <StackPanel Spacing="14">
+
+                        <TextBlock Text="Motor de Reproducción" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="16"/>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource AppSubtextColor}"
+                                   Text="Auto: usa el reproductor nativo (LibVLC embebido) si está disponible, sino mpv.exe.&#x0a;Nativo (LibVLC): reproductor integrado en la ventana de AniCS, sin mpv externo.&#x0a;mpv externo: comportamiento clásico con mpv.exe."/>
+                        <ComboBox Name="PlayerBackendComboBox" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="Auto (detecta automáticamente)"    Tag="Auto"/>
+                            <ComboBoxItem Content="Nativo — LibVLC embebido [Nuevo]"  Tag="Native"/>
+                            <ComboBoxItem Content="Externo — mpv.exe (Clásico)"       Tag="Mpv"/>
+                        </ComboBox>
+
+                        <Separator Background="{DynamicResource AppSubtextColor}" Opacity="0.3"/>
+
+                        <TextBlock Text="Motor de Descarga y Resolución de Links" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="16"/>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource AppSubtextColor}"
+                                   Text="Auto: usa el resolvedor nativo si está disponible, sino yt-dlp.exe.&#x0a;Nativo (HLS): resolvedor propio de AniCS, sin yt-dlp externo.&#x0a;yt-dlp externo: comportamiento clásico con yt-dlp.exe."/>
+                        <ComboBox Name="ResolverBackendComboBox" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="Auto (detecta automáticamente)"       Tag="Auto"/>
+                            <ComboBoxItem Content="Nativo — Resolvedor HLS [Nuevo]"      Tag="Native"/>
+                            <ComboBoxItem Content="Externo — yt-dlp.exe (Clásico)"       Tag="YtDlp"/>
+                        </ComboBox>
+
+                        <Separator Background="{DynamicResource AppSubtextColor}" Opacity="0.3"/>
+
+                        <TextBlock Text="Reproductor Predeterminado (Clásico)" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="16"/>
+                        <ComboBox Name="PlayerComboBox" SelectedIndex="0" HorizontalAlignment="Stretch">
+                            <ComboBoxItem>Auto</ComboBoxItem>
+                            <ComboBoxItem>Mpv</ComboBoxItem>
+                            <ComboBoxItem>Vlc</ComboBoxItem>
+                        </ComboBox>
+
+                        <TextBlock Text="Ruta personalizada del reproductor (Opcional)" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                        <TextBlock Text="Si tu reproductor no está en las variables de entorno, pon aquí la ruta al .exe" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                        <TextBox Name="CustomPlayerPathInput" PlaceholderText="C:\Ruta\A\mpv.exe" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Apariencia ─────────────────────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="16"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                    <StackPanel Spacing="14">
+
+                        <TextBlock Text="Apariencia" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="16"/>
+
+                        <TextBlock Text="Tema Visual" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                        <ComboBox Name="ThemeComboBox" HorizontalAlignment="Stretch" SelectionChanged="OnThemeSelectionChanged">
+                            <ComboBoxItem Content="Default (Oscuro)" Tag="Dark"/>
+                            <ComboBoxItem Content="Claro" Tag="Light"/>
+                            <ComboBoxItem Content="Dracula" Tag="Dracula"/>
+                            <ComboBoxItem Content="Tokyo Night" Tag="TokyoNight"/>
+                            <ComboBoxItem Content="Cyberpunk" Tag="Cyberpunk"/>
+                            <ComboBoxItem Content="Catppuccin" Tag="Catppuccin"/>
+                        </ComboBox>
+
+                        <TextBlock Text="Paradigma de Interfaz" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                        <TextBlock Text="El estilo y layout general de la aplicación. (Requiere reiniciar para aplicar los experimentales)" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                        <ComboBox Name="ParadigmComboBox" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="Lista (Por Defecto)" Tag="Normal"/>
+                            <ComboBoxItem Content="TUI Avanzada (ASCII)" Tag="ASCII"/>
+                            <ComboBoxItem Content="App Móvil (Carruseles)" Tag="AndroidApp"/>
+                        </ComboBox>
+
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="HUD Espacial (Experimental)" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center"/>
+                            <ToggleSwitch Name="UseSpatialHudToggle" OffContent="Desactivado" OnContent="Activado" />
+                        </StackPanel>
+                        <TextBlock Text="Muestra un menú radial al seleccionar episodios en lugar de botones clásicos." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Fuentes de Contenido ───────────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="16"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="Fuentes de Contenido" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="16"/>
+
+                        <TextBlock Text="Fuente / URL Base de JKAnime" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                        <TextBlock Text="Dominio principal o espejo para realizar las búsquedas y el scraping de JKAnime (ej. https://jkanime.net)." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                        <TextBox Name="CustomJkAnimeUrlInput" PlaceholderText="https://jkanime.net" />
+
+                        <TextBlock Text="Límite de imágenes en caché" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                        <TextBlock Text="Número máximo de portadas que se mantendrán en el disco." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                        <NumericUpDown Name="CacheLimitInput" Minimum="0" Maximum="1000" FormatString="0" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Actualizaciones ────────────────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="16"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Actualizaciones" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="16"/>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource AppSubtextColor}"
+                                   Text="Revisa automáticamente las Release de GitHub y descarga el instalador MSI de la última versión."/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Button Name="CheckForUpdatesBtn" Content="Buscar actualizaciones" Padding="14,8" Click="OnCheckForUpdatesClicked"/>
+                            <Button Name="DownloadUpdateBtn" Content="Instalar actualización" Padding="14,8" IsVisible="False" Click="OnDownloadUpdateClicked"/>
+                        </StackPanel>
+
+                        <TextBlock Name="UpdateStatusText" Text="Listo." FontSize="12" Foreground="{DynamicResource AppSubtextColor}" TextWrapping="Wrap"/>
+                        <ProgressBar Name="UpdateProgress" Height="6" IsVisible="False" Maximum="100" />
+                        <TextBlock Name="UpdateProgressText" Text="" FontSize="12" Foreground="{DynamicResource AppSubtextColor}" IsVisible="False"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Acerca de ──────────────────────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="16"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1"
+                        Margin="0,0,0,8">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Acerca de AniCS" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="16"/>
+                        <StackPanel Orientation="Horizontal" Spacing="15">
+                            <TextBlock Name="AppVersionText" Text="Versión: Desconocida" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource AppSubtextColor}"/>
+                            <Button Content="Ver Notas de Parche" Cursor="Hand" Click="OnViewChangelogClicked"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
             </StackPanel>
+        </ScrollViewer>
 
-            <StackPanel Spacing="5">
-                <TextBlock Text="Reproductor Predeterminado" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                <TextBlock Text="El reproductor a lanzar (Mpv, Vlc, o Auto para detectar)." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
-                <ComboBox Name="PlayerComboBox" SelectedIndex="0" HorizontalAlignment="Stretch">
-                    <ComboBoxItem>Auto</ComboBoxItem>
-                    <ComboBoxItem>Mpv</ComboBoxItem>
-                    <ComboBoxItem>Vlc</ComboBoxItem>
-                </ComboBox>
-            </StackPanel>
+        <!-- ── Barra inferior sticky ─────────────────────────────────── -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource AppSurfaceColor}"
+                BorderBrush="{DynamicResource AppSubtextColor}"
+                BorderThickness="0,1,0,0"
+                Padding="24,10">
+            <Grid ColumnDefinitions="*, Auto">
+                <!-- Mensaje de estado tras guardar (izquierda) -->
+                <TextBlock Name="StatusMessage"
+                           Grid.Column="0"
+                           Foreground="#4CAF50"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           IsVisible="False"/>
+                <!-- Botón guardar (derecha) -->
+                <Button Grid.Column="1"
+                        Content="Guardar Cambios"
+                        Padding="20,10"
+                        Click="OnSaveClicked"/>
+            </Grid>
+        </Border>
 
-            <StackPanel Spacing="5">
-                <TextBlock Text="Ruta personalizada del reproductor (Opcional)" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                <TextBlock Text="Si tu reproductor no está en las variables de entorno, pon aquí la ruta al .exe" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
-                <TextBox Name="CustomPlayerPathInput" PlaceholderText="C:\Ruta\A\mpv.exe" />
-            </StackPanel>
-
-            <StackPanel Spacing="5">
-                <TextBlock Text="Tema Visual" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                <ComboBox Name="ThemeComboBox" HorizontalAlignment="Stretch" SelectionChanged="OnThemeSelectionChanged">
-                    <ComboBoxItem Content="Default (Oscuro)" Tag="Dark"/>
-                    <ComboBoxItem Content="Claro" Tag="Light"/>
-                    <ComboBoxItem Content="Dracula" Tag="Dracula"/>
-                    <ComboBoxItem Content="Tokyo Night" Tag="TokyoNight"/>
-                    <ComboBoxItem Content="Cyberpunk" Tag="Cyberpunk"/>
-                    <ComboBoxItem Content="Catppuccin" Tag="Catppuccin"/>
-                </ComboBox>
-            </StackPanel>
-
-            <StackPanel Spacing="5">
-                <TextBlock Text="Paradigma de Interfaz" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                <TextBlock Text="El estilo y layout general de la aplicación. (Requiere reiniciar para aplicar los experimentales)" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
-                <ComboBox Name="ParadigmComboBox" HorizontalAlignment="Stretch">
-                    <ComboBoxItem Content="Lista (Por Defecto)" Tag="Normal"/>
-                    <ComboBoxItem Content="TUI Avanzada (ASCII)" Tag="ASCII"/>
-                    <ComboBoxItem Content="App Móvil (Carruseles)" Tag="AndroidApp"/>
-                </ComboBox>
-            </StackPanel>
-
-            <StackPanel Spacing="5">
-                <TextBlock Text="HUD Espacial (Experimental)" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                <TextBlock Text="Muestra un menú radial al seleccionar episodios en lugar de botones clásicos." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
-                <ToggleSwitch Name="UseSpatialHudToggle" OffContent="Desactivado" OnContent="Activado" />
-            </StackPanel>
-
-            <StackPanel Spacing="5">
-                <TextBlock Text="Fuente / URL Base de JKAnime" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                <TextBlock Text="Dominio principal o espejo para realizar las búsquedas y el scraping de JKAnime (ej. https://jkanime.net)." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
-                <TextBox Name="CustomJkAnimeUrlInput" PlaceholderText="https://jkanime.net" />
-            </StackPanel>
-
-
-
-            <Button Content="Guardar Cambios" 
-                    Padding="20,10"
-                    Margin="0,20,0,0"
-                    HorizontalAlignment="Left"
-                    Click="OnSaveClicked"/>
-            
-            <TextBlock Name="StatusMessage" Foreground="#4CAF50" FontWeight="Bold" IsVisible="False"/>
-
-            <StackPanel Margin="0,30,0,0">
-                <Separator Background="#44444460" Margin="0,0,0,10"/>
-                <TextBlock Text="Acerca de AniCS" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                <StackPanel Orientation="Horizontal" Spacing="15" Margin="0,5,0,0">
-                    <TextBlock Name="AppVersionText" Text="Versión: Desconocida" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource AppSubtextColor}"/>
-                    <Button Content="Ver Notas de Parche" Cursor="Hand" Click="OnViewChangelogClicked"/>
-                </StackPanel>
-            </StackPanel>
-        </StackPanel>
-    </ScrollViewer>
+    </Grid>
 </UserControl>

@@ -26,9 +26,10 @@ internal partial class WatchHistoryContext : JsonSerializerContext
 /// </summary>
 public class WatchHistory
 {
-    private static readonly string HistoryDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "anics");
-    private static readonly string HistoryFile = Path.Combine(HistoryDir, "history.json");
+    // Computed properties so they respect BaseDataPath set at startup by each platform.
+    private static string HistoryDir => Path.Combine(ConfigManager.BaseDataPath, "history");
+    private static string HistoryFile => Path.Combine(HistoryDir, "history.json");
+
 
     private List<WatchEntry> _entries = [];
 

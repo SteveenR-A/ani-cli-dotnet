@@ -465,7 +465,7 @@ public static class DownloadManager
         if (anime != null)
         {
             var ep = anime.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
-            if (ep != null)
+            if (ep != null && ep.Status != status)
             {
                 ep.Status = status;
                 Save();

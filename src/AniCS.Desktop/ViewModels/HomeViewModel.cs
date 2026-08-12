@@ -4,25 +4,9 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using AniCS.Extractors;
 using AniCS.Models;
-using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
 
 namespace AniCS.Desktop.ViewModels;
-
-// A simple ICommand implementation to bind buttons if needed, though we can still use code-behind clicks if preferred.
-public class RelayCommand : ICommand
-{
-    private readonly Action _execute;
-    private readonly Func<bool>? _canExecute;
-    public RelayCommand(Action execute, Func<bool>? canExecute = null)
-    {
-        _execute = execute;
-        _canExecute = canExecute;
-    }
-    public event EventHandler? CanExecuteChanged;
-    public bool CanExecute(object? parameter) => _canExecute == null || _canExecute();
-    public void Execute(object? parameter) => _execute();
-    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-}
 
 public class HomeViewModel : ViewModelBase
 {
@@ -80,7 +64,7 @@ public class HomeViewModel : ViewModelBase
         {
             if (SetProperty(ref _isReloading, value))
             {
-                ReloadCommand?.RaiseCanExecuteChanged();
+                ReloadCommand?.NotifyCanExecuteChanged();
             }
         }
     }
@@ -107,6 +91,7 @@ public class HomeViewModel : ViewModelBase
             {
                 AniCS.ConfigManager.Current.ContentType = "Anime";
             }
+            AniCS.ConfigManager.Save(AniCS.ConfigManager.Current);
             DataCache.ClearRamCache();
             OnPropertyChanged();
             _ = LoadDataAsync();

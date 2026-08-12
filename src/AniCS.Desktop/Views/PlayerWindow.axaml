@@ -1,0 +1,11 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:player="clr-namespace:AniCS.Player.Controls;assembly=AniCS.Player"
+        x:Class="AniCS.Desktop.Views.PlayerWindow"
+        Title="Reproductor - AniCS"
+        Icon="avares://AniCS.Desktop/Assets/Incono/favicon.ico"
+        Width="1000" Height="600"
+        WindowStartupLocation="CenterOwner"
+        Background="#000000">
+    <player:VideoPlayerControl x:Name="EmbeddedVideoPlayer" />
+</Window>

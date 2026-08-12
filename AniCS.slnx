@@ -3,5 +3,8 @@
     <Project Path="src/AniCS.CLI/AniCS.CLI.csproj" />
     <Project Path="src/AniCS.Core/AniCS.Core.csproj" />
     <Project Path="src/AniCS.Desktop/AniCS.Desktop.csproj" />
+    <Project Path="src/AniCS.Player/AniCS.Player.csproj" />
+    <Project Path="src/AniCS.Resolver/AniCS.Resolver.csproj" />
+    <Project Path="src/AniCS.Android/AniCS.Android.csproj" />
   </Folder>
 </Solution>

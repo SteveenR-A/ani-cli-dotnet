@@ -6,7 +6,9 @@ namespace AniCS;
 
 public static class DataCache
 {
-    private static readonly string CacheDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AniCS", "Cache", "Images");
+    // CacheDir is computed on first access so it respects BaseDataPath set by Android/platform startup.
+    private static string CacheDir => Path.Combine(ConfigManager.BaseDataPath, "Cache", "Images");
+
     
     // RAM Cache for API Data with TTL
     private class CacheEntry<T>
@@ -17,13 +19,7 @@ public static class DataCache
     
     private static readonly ConcurrentDictionary<string, object> _ramCache = new();
 
-    static DataCache()
-    {
-        if (!Directory.Exists(CacheDir))
-        {
-            Directory.CreateDirectory(CacheDir);
-        }
-    }
+
 
     public static string GetImageCachePath(string url, string category = "")
     {
@@ -125,13 +121,11 @@ public static class DataCache
     }
 
     /// <summary>
-    /// Clears the RAM cache, forcing all next queries to hit the web and running garbage collection.
+    /// Clears the RAM cache, forcing all next queries to hit the web.
     /// </summary>
     public static void ClearRamCache()
     {
         _ramCache.Clear();
-        GC.Collect(2, GCCollectionMode.Forced, true, true);
-        GC.WaitForPendingFinalizers();
     }
 
     /// <summary>

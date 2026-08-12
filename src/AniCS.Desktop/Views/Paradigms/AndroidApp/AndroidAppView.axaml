@@ -6,94 +6,254 @@
              xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="AniCS.Desktop.Views.Paradigms.AndroidApp.AndroidAppView"
              x:DataType="vm:HomeViewModel">
-    
-    <Grid RowDefinitions="Auto, *">
-        <!-- Header con botón recargar -->
-        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="20,20,20,10">
-            <TextBlock Grid.Column="0" Text="Inicio (App Móvil)" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
-            <Button Grid.Column="1" Command="{Binding ReloadCommand}" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" ToolTip.Tip="Recargar">
-                <material:MaterialIcon Kind="Refresh" Width="28" Height="28" />
-            </Button>
+
+    <!-- Root: contenido scrolleable arriba + bottom nav fija abajo -->
+    <Grid RowDefinitions="*, Auto">
+
+        <!-- ── Área de contenido ─────────────────────────────────────── -->
+        <Grid Grid.Row="0" RowDefinitions="Auto, Auto, *">
+
+            <!-- Header: título + reload -->
+            <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="20,20,20,10">
+                <TextBlock Grid.Column="0"
+                           Text="AniCS"
+                           FontSize="26" FontWeight="Bold"
+                           Foreground="{DynamicResource AppPrimaryColor}"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="1"
+                        Command="{Binding ReloadCommand}"
+                        Background="Transparent"
+                        Foreground="{DynamicResource AppTitleColor}"
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Recargar">
+                    <material:MaterialIcon Kind="Refresh" Width="26" Height="26"/>
+                </Button>
+            </Grid>
+
+            <!-- SearchBar -->
+            <Border Grid.Row="1"
+                    Background="{DynamicResource AppSurfaceColor}"
+                    CornerRadius="24"
+                    Padding="14,0"
+                    Margin="20,0,20,14"
+                    Height="44">
+                <Grid ColumnDefinitions="Auto, *">
+                    <material:MaterialIcon Grid.Column="0"
+                                          Kind="Magnify"
+                                          Width="20" Height="20"
+                                          Foreground="{DynamicResource AppSubtextColor}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,8,0"/>
+                    <TextBox Grid.Column="1"
+                             Name="SearchBox"
+                             PlaceholderText="Buscar anime..."
+                             Background="Transparent"
+                             BorderThickness="0"
+                             VerticalAlignment="Center"
+                             FontSize="14"
+                             TextChanged="OnSearchTextChanged"/>
+                </Grid>
+            </Border>
+
+            <!-- Carruseles -->
+            <ScrollViewer Grid.Row="2" Margin="0,0,0,0">
+                <StackPanel Spacing="28" Margin="0,0,0,16">
+
+                    <!-- Estado de carga global -->
+                    <TextBlock Text="{Binding StatusText}"
+                               FontSize="16"
+                               Foreground="{DynamicResource AppSubtextColor}"
+                               HorizontalAlignment="Center"
+                               Margin="0,8,0,0"
+                               IsVisible="{Binding IsStatusVisible}"/>
+
+                    <!-- Carrusel 1: Emisión Reciente -->
+                    <StackPanel>
+                        <Grid ColumnDefinitions="*, Auto" Margin="20,0,20,10">
+                            <TextBlock Grid.Column="0"
+                                       Text="Emisión Reciente"
+                                       FontSize="18" FontWeight="Bold"
+                                       Foreground="{DynamicResource AppTitleColor}"/>
+                            <Button Grid.Column="1"
+                                    Content="Ver más"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource AppPrimaryColor}"
+                                    Click="OnSeeMoreLatestClicked"
+                                    Cursor="Hand"/>
+                        </Grid>
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      Margin="20,0,0,0">
+                            <ItemsControl Name="LatestItemsControl" ItemsSource="{Binding LatestList}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="12"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AnimeResult">
+                                        <controls:AnimeCardControl/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    <!-- Carrusel 2: Estrenos / Destacados -->
+                    <StackPanel>
+                        <Grid ColumnDefinitions="*, Auto" Margin="20,0,20,10">
+                            <TextBlock Grid.Column="0"
+                                       Text="Estrenos / Destacados"
+                                       FontSize="18" FontWeight="Bold"
+                                       Foreground="{DynamicResource AppTitleColor}"/>
+                            <Button Grid.Column="1"
+                                    Content="Ver más"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource AppPrimaryColor}"
+                                    Click="OnSeeMorePremieresClicked"
+                                    Cursor="Hand"/>
+                        </Grid>
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      Margin="20,0,0,0">
+                            <ItemsControl Name="PremieresItemsControl" ItemsSource="{Binding PremieresList}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="12"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AnimeResult">
+                                        <controls:AnimeCardControl/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    <!-- Carrusel 3: Seguir Viendo (Historial) -->
+                    <StackPanel>
+                        <Grid ColumnDefinitions="*, Auto" Margin="20,0,20,10">
+                            <TextBlock Grid.Column="0"
+                                       Text="Seguir Viendo"
+                                       FontSize="18" FontWeight="Bold"
+                                       Foreground="{DynamicResource AppTitleColor}"/>
+                            <Button Grid.Column="1"
+                                    Content="Ver más"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource AppPrimaryColor}"
+                                    Click="OnSeeMoreHistoryClicked"
+                                    Cursor="Hand"/>
+                        </Grid>
+                        <!-- Estado vacío de historial -->
+                        <StackPanel Name="HistoryEmptyState"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,16,0,0"
+                                    Spacing="8"
+                                    IsVisible="False">
+                            <material:MaterialIcon Kind="PlayCircleOutline"
+                                                   Width="48" Height="48"
+                                                   Foreground="{DynamicResource AppSubtextColor}"
+                                                   HorizontalAlignment="Center"/>
+                            <TextBlock Text="Aún no has visto nada"
+                                       FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AppTitleColor}"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Los episodios que reproduzcas aparecerán aquí"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource AppSubtextColor}"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <ScrollViewer Name="HistoryScrollViewer"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      Margin="20,0,0,0">
+                            <ItemsControl ItemsSource="{Binding HistoryList}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="12"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AnimeResult">
+                                        <controls:AnimeCardControl/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
-        
-        <!-- Contenido desplazable -->
-        <ScrollViewer Grid.Row="1" Margin="20,0,0,0">
-            <StackPanel Spacing="30" Margin="0,0,0,40">
-                
-                <!-- Status de Carga Global (Opcional, ya que cargan independiente) -->
-                <TextBlock Text="{Binding StatusText}" 
-                           FontSize="18" 
-                           Foreground="{DynamicResource AppSubtextColor}" 
-                           HorizontalAlignment="Center" 
-                           IsVisible="{Binding IsStatusVisible}"/>
-                           
-                <!-- Carrusel 1: Últimos Episodios (Emisión) -->
-                <StackPanel>
-                    <Grid ColumnDefinitions="*, Auto" Margin="0,0,20,10">
-                        <TextBlock Grid.Column="0" Text="Emisión Reciente" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                        <Button Grid.Column="1" Content="Ver más" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" Click="OnSeeMoreLatestClicked" Cursor="Hand"/>
-                    </Grid>
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                        <ItemsControl ItemsSource="{Binding LatestList}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="models:AnimeResult">
-                                    <controls:AnimeCardControl />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </StackPanel>
 
-                <!-- Carrusel 2: Estrenos / Populares -->
-                <StackPanel>
-                    <Grid ColumnDefinitions="*, Auto" Margin="0,0,20,10">
-                        <TextBlock Grid.Column="0" Text="Estrenos / Destacados" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                        <Button Grid.Column="1" Content="Ver más" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" Click="OnSeeMorePremieresClicked" Cursor="Hand"/>
-                    </Grid>
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                        <ItemsControl ItemsSource="{Binding PremieresList}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="models:AnimeResult">
-                                    <controls:AnimeCardControl />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </StackPanel>
+        <!-- ── Bottom Navigation Bar ─────────────────────────────────── -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource AppSurfaceColor}"
+                BorderBrush="{DynamicResource AppSubtextColor}"
+                BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*, *, *" Height="60">
 
-                <!-- Carrusel 3: Historial -->
-                <StackPanel>
-                    <Grid ColumnDefinitions="*, Auto" Margin="0,0,20,10">
-                        <TextBlock Grid.Column="0" Text="Seguir Viendo" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
-                        <Button Grid.Column="1" Content="Ver más" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" Click="OnSeeMoreHistoryClicked" Cursor="Hand"/>
-                    </Grid>
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                        <ItemsControl ItemsSource="{Binding HistoryList}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="models:AnimeResult">
-                                    <controls:AnimeCardControl />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </StackPanel>
+                <!-- Tab: Inicio -->
+                <Button Grid.Column="0"
+                        Name="BtnNavHome"
+                        Background="Transparent"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Click="OnNavHomeClicked">
+                    <StackPanel Spacing="2" HorizontalAlignment="Center">
+                        <material:MaterialIcon Name="NavHomeIcon"
+                                              Kind="Home"
+                                              Width="24" Height="24"
+                                              Foreground="{DynamicResource AppPrimaryColor}"
+                                              HorizontalAlignment="Center"/>
+                        <TextBlock Text="Inicio" FontSize="10"
+                                   Foreground="{DynamicResource AppPrimaryColor}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
-            </StackPanel>
-        </ScrollViewer>
+                <!-- Tab: Buscar -->
+                <Button Grid.Column="1"
+                        Name="BtnNavSearch"
+                        Background="Transparent"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Click="OnNavSearchClicked">
+                    <StackPanel Spacing="2" HorizontalAlignment="Center">
+                        <material:MaterialIcon Kind="Magnify"
+                                              Width="24" Height="24"
+                                              Foreground="{DynamicResource AppSubtextColor}"
+                                              HorizontalAlignment="Center"/>
+                        <TextBlock Text="Buscar" FontSize="10"
+                                   Foreground="{DynamicResource AppSubtextColor}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Tab: Descargas -->
+                <Button Grid.Column="2"
+                        Name="BtnNavDownloads"
+                        Background="Transparent"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Click="OnNavDownloadsClicked">
+                    <StackPanel Spacing="2" HorizontalAlignment="Center">
+                        <material:MaterialIcon Kind="Download"
+                                              Width="24" Height="24"
+                                              Foreground="{DynamicResource AppSubtextColor}"
+                                              HorizontalAlignment="Center"/>
+                        <TextBlock Text="Descargas" FontSize="10"
+                                   Foreground="{DynamicResource AppSubtextColor}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+            </Grid>
+        </Border>
+
     </Grid>
 </UserControl>

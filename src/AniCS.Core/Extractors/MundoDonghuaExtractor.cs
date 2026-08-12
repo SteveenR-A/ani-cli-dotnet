@@ -341,7 +341,7 @@ public class MundoDonghuaExtractor : BaseExtractor
             try
             {
                 using var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, url);
-                request.Headers.UserAgent.ParseAdd(AniCS.ConfigManager.Current.RandomUserAgent);
+                request.Headers.TryAddWithoutValidation("User-Agent", AniCS.ConfigManager.Current.RandomUserAgent);
                 request.Headers.Referrer = new Uri("https://www.mundodonghua.com/");
                 request.Headers.Add("Origin", "https://www.mundodonghua.com");
 

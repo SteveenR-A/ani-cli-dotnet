@@ -2,21 +2,30 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using System;
 using System.Linq;
 using AniCS.Desktop.Services;
 using AniCS.Models;
 using System.ComponentModel;
+
+using AniCS.Player;
+using AniCS.Resolver;
 
 namespace AniCS.Desktop.Views;
 
 public partial class DownloadsView : UserControl, INotifyPropertyChanged
 {
     public bool HasActiveDownloads => DownloadManager.ActiveDownloads.Count > 0;
+    private readonly IPlayerBackend _playerBackend;
+    private readonly IResolverBackend _resolverBackend;
+    private readonly IResolverBackend _ytdlpFallback = ResolverFactory.Create(ResolverBackendMode.YtDlp);
 
     public DownloadsView()
     {
         InitializeComponent();
         DataContext = this;
+        _playerBackend = App.Services.GetService(typeof(IPlayerBackend)) as IPlayerBackend ?? new MpvBackend();
+        _resolverBackend = App.Services.GetService(typeof(IResolverBackend)) as IResolverBackend ?? new AniCS.Resolver.YtDlpResolverBackend();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -24,25 +33,26 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
         DownloadManager.DownloadsChanged += OnDownloadsChanged;
-        DesktopPlayer.OnPlaybackProgressChanged += OnPlaybackProgressChanged;
+        _playerBackend.SessionChanged += OnPlayerSessionChanged;
         LoadData();
     }
     
     private void OnUnloaded(object? sender, RoutedEventArgs e)
     {
         DownloadManager.DownloadsChanged -= OnDownloadsChanged;
-        DesktopPlayer.OnPlaybackProgressChanged -= OnPlaybackProgressChanged;
+        _playerBackend.SessionChanged -= OnPlayerSessionChanged;
     }
 
-    private void OnPlaybackProgressChanged(string mediaUrl, double pos, double dur, bool isCompleted)
+    private void OnPlayerSessionChanged(PlaySession session)
     {
         Dispatcher.UIThread.Post(() =>
         {
             if (_currentAnime != null && _currentEpisode != null)
             {
-                if (mediaUrl.Equals(_currentEpisode.FilePath, System.StringComparison.OrdinalIgnoreCase))
+                if (session.Url.Equals(_currentEpisode.FilePath, System.StringComparison.OrdinalIgnoreCase) ||
+                    session.Title.Contains(_currentEpisode.EpisodeTitle))
                 {
-                    var status = isCompleted ? EpisodeWatchStatus.Completed : EpisodeWatchStatus.InProgress;
+                    var status = session.IsCompleted ? EpisodeWatchStatus.Completed : EpisodeWatchStatus.InProgress;
                     DownloadManager.UpdateEpisodeStatus(_currentAnime.Url, _currentEpisode.EpisodeNumber, status);
                 }
             }
@@ -122,7 +132,7 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
                     {
                         var server = servers.Find(s => s.IsDirectPlaySupported) ?? servers[0];
                         var videoUrl = await extractor.ResolveVideoUrlAsync(server.Url);
-                        if (string.IsNullOrEmpty(videoUrl) && AniCS.Desktop.Services.YtDlpService.IsAvailable())
+                        if (string.IsNullOrEmpty(videoUrl) && _ytdlpFallback.IsAvailable)
                         {
                             videoUrl = server.Url;
                         }
@@ -133,36 +143,50 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
                             
                             _ = System.Threading.Tasks.Task.Run(async () =>
                             {
-                                var result = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
-                                    videoUrl, 
-                                    new AnimeResult { Title = active.AnimeTitle, Url = active.AnimeUrl, ThumbnailUrl = active.ThumbnailUrl }, 
-                                    new Episode { EpisodeNumber = active.EpisodeNumber, Title = active.EpisodeTitle, Url = active.EpisodeUrl }, 
-                                    defaultDir, 
-                                    server.Url, 
-                                    AniCS.ConfigManager.Current.PreferredQuality,
-                                    (progress, sizeInfo) => Dispatcher.UIThread.Post(() => {
-                                        active.Progress = progress;
-                                        if (!string.IsNullOrEmpty(sizeInfo)) active.SizeText = sizeInfo;
-                                    }), 
+                                var rawTitle = string.IsNullOrWhiteSpace(active.AnimeTitle) ? "Anime_Desconocido" : active.AnimeTitle;
+                                var safeTitle = string.Join("_", rawTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
+                                if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
+                                var episodeNumStr = string.IsNullOrWhiteSpace(active.EpisodeNumber) ? "Desconocido" : active.EpisodeNumber;
+                                
+                                var animeDir = System.IO.Path.Combine(defaultDir, safeTitle);
+                                System.IO.Directory.CreateDirectory(animeDir);
+                                var outputPath = System.IO.Path.Combine(animeDir, $"Episodio {episodeNumStr}.mp4");
 
+                                var progress = new System.Progress<AniCS.Resolver.DownloadProgress>(p => {
+                                    Dispatcher.UIThread.Post(() => {
+                                        active.Progress = p.Percent;
+                                        if (!string.IsNullOrEmpty(p.SizeInfo)) active.SizeText = p.SizeInfo;
+                                    });
+                                });
+
+                                var result = await _resolverBackend.DownloadAsync(
+                                    new AniCS.Resolver.ResolvedMedia(videoUrl, videoUrl, AniCS.Resolver.MediaType.Unknown, server.Url), 
+                                    outputPath,
+                                    progress,
                                     active.CancellationTokenSource.Token);
 
-                                if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && active.State == AniCS.Desktop.Services.DownloadState.Cancelled)
+                                // Convertir el resultado para mantener compatibilidad con el enumerador local en caso de que existiera
+                                var convertedResult = result.Code == AniCS.Resolver.DownloadResultCode.Success ? AniCS.Desktop.Services.DownloadResult.Success :
+                                                      result.Code == AniCS.Resolver.DownloadResultCode.Cancelled ? AniCS.Desktop.Services.DownloadResult.Cancelled :
+                                                      AniCS.Desktop.Services.DownloadResult.Error;
+
+                                if (convertedResult == AniCS.Desktop.Services.DownloadResult.Success && result.OutputPath != null)
                                 {
-                                    var rawTitle = string.IsNullOrWhiteSpace(active.AnimeTitle) ? "Anime_Desconocido" : active.AnimeTitle;
-                                    var safeTitle = string.Join("_", rawTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
-                                    if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
-                                    var episodeNumStr = string.IsNullOrWhiteSpace(active.EpisodeNumber) ? "Desconocido" : active.EpisodeNumber;
+                                    AniCS.Desktop.Services.DownloadManager.RecordDownload(active.AnimeTitle, active.AnimeUrl, active.ThumbnailUrl, active.EpisodeNumber, active.EpisodeTitle, result.OutputPath);
+                                }
+
+                                if (convertedResult == AniCS.Desktop.Services.DownloadResult.Cancelled && active.State == AniCS.Desktop.Services.DownloadState.Cancelled)
+                                {
                                     AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
                                 }
 
                                 await Dispatcher.UIThread.InvokeAsync(() =>
                                 {
-                                    if (active.State == AniCS.Desktop.Services.DownloadState.Downloading || result == AniCS.Desktop.Services.DownloadResult.Success || result == AniCS.Desktop.Services.DownloadResult.Error)
+                                    if (active.State == AniCS.Desktop.Services.DownloadState.Downloading || convertedResult == AniCS.Desktop.Services.DownloadResult.Success || convertedResult == AniCS.Desktop.Services.DownloadResult.Error)
                                     {
-                                        if (result == AniCS.Desktop.Services.DownloadResult.Success)
+                                        if (convertedResult == AniCS.Desktop.Services.DownloadResult.Success)
                                             active.State = AniCS.Desktop.Services.DownloadState.Completed;
-                                        else if (result == AniCS.Desktop.Services.DownloadResult.Error)
+                                        else if (convertedResult == AniCS.Desktop.Services.DownloadResult.Error)
                                             active.State = AniCS.Desktop.Services.DownloadState.Error;
 
                                         if (active.State == AniCS.Desktop.Services.DownloadState.Completed || active.State == AniCS.Desktop.Services.DownloadState.Error || active.State == AniCS.Desktop.Services.DownloadState.Cancelled)
@@ -245,7 +269,26 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
 
         UpdateQuickControlBar();
 
-        DesktopPlayer.Play(episode.FilePath, $"AniCS - {anime.Title} - {episode.EpisodeTitle}", null);
+        if (_playerBackend is LibVlcBackend && TopLevel.GetTopLevel(this) is Window ownerWindow)
+        {
+            // Para archivos locales el resolver simplemente devuelve la ruta fija;
+            // el auto-recover no aplica, pero el constructor lo requiere.
+            var filePath = episode.FilePath;
+            Func<System.Threading.Tasks.Task<string>> localResolver =
+                () => System.Threading.Tasks.Task.FromResult(filePath);
+
+            var playerWindow = new PlayerWindow(
+                _playerBackend,
+                localResolver,
+                $"AniCS - {anime.Title} - {episode.EpisodeTitle}",
+                "",
+                "Mejor");
+            playerWindow.Show(ownerWindow);
+        }
+        else
+        {
+            _ = _playerBackend.PlayAsync(episode.FilePath, $"AniCS - {anime.Title} - {episode.EpisodeTitle}");
+        }
     }
 
     private void UpdateQuickControlBar()

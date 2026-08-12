@@ -6,9 +6,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>1.5.5</Version>
-    <AssemblyVersion>1.5.5</AssemblyVersion>
-    <FileVersion>1.5.5</FileVersion>
+    <Version>1.6.0</Version>
+    <AssemblyVersion>1.6.0</AssemblyVersion>
+    <FileVersion>1.6.0</FileVersion>
 
   </PropertyGroup>
 
@@ -32,5 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AniCS.Core\AniCS.Core.csproj" />
+    <ProjectReference Include="..\AniCS.Player\AniCS.Player.csproj" />
+    <ProjectReference Include="..\AniCS.Resolver\AniCS.Resolver.csproj" />
   </ItemGroup>
 </Project>

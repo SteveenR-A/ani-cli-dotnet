@@ -1,15 +1,20 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using AniCS.Models;
+using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace AniCS.Desktop.Views;
 
 public partial class SettingsView : UserControl
 {
+    private readonly Services.AppUpdateService _updater;
+
     public SettingsView()
     {
         InitializeComponent();
+        _updater = App.Services?.GetService<Services.AppUpdateService>() ?? new Services.AppUpdateService();
         LoadConfig();
     }
 
@@ -17,7 +22,7 @@ public partial class SettingsView : UserControl
     {
         var config = ConfigManager.Current;
 
-        var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+        var currentVersion = AniCS.Desktop.AppInfo.CurrentVersion;
         if (AppVersionText != null)
         {
             AppVersionText.Text = $"Versión: {currentVersion}";
@@ -40,24 +45,48 @@ public partial class SettingsView : UserControl
         UseSpatialHudToggle.IsChecked = config.UseSpatialHud;
         CustomJkAnimeUrlInput.Text = config.CustomJkAnimeBaseUrl;
 
-
+        // Backends de reproducción y resolución
+        SelectComboByTag(PlayerBackendComboBox, config.PlayerBackend.ToString());
+        SelectComboByTag(ResolverBackendComboBox, config.ResolverBackend.ToString());
 
         StatusMessage.IsVisible = false;
+
+        ResetUpdateSection();
     }
 
-
+    private void ResetUpdateSection()
+    {
+        if (UpdateStatusText == null) return;
+        UpdateStatusText.Text = "Listo.";
+        UpdateProgress.IsVisible = false;
+        UpdateProgressText.IsVisible = false;
+        if (CheckForUpdatesBtn != null) CheckForUpdatesBtn.IsEnabled = true;
+        if (DownloadUpdateBtn != null)
+        {
+            DownloadUpdateBtn.IsVisible = false;
+            DownloadUpdateBtn.IsEnabled = true;
+        }
+    }
 
     private void RefreshParadigmList(AppConfig config)
     {
         if (ParadigmComboBox == null) return;
-        for (int i = 0; i < ParadigmComboBox.Items.Count; i++)
+        SelectComboByTag(ParadigmComboBox, config.UiParadigm);
+    }
+
+    /// <summary>Selecciona el item del ComboBox cuyo Tag coincide con el valor dado.</summary>
+    private static void SelectComboByTag(ComboBox? combo, string tag)
+    {
+        if (combo == null) return;
+        for (int i = 0; i < combo.Items.Count; i++)
         {
-            if (ParadigmComboBox.Items[i] is Avalonia.Controls.ComboBoxItem item && item.Tag?.ToString() == config.UiParadigm)
+            if (combo.Items[i] is ComboBoxItem item && item.Tag?.ToString() == tag)
             {
-                ParadigmComboBox.SelectedIndex = i;
-                break;
+                combo.SelectedIndex = i;
+                return;
             }
         }
+        if (combo.Items.Count > 0) combo.SelectedIndex = 0;
     }
 
     private void RefreshThemeList(AppConfig config)
@@ -94,11 +123,19 @@ public partial class SettingsView : UserControl
 
         config.UseSpatialHud = UseSpatialHudToggle.IsChecked == true;
         if (CustomJkAnimeUrlInput != null)
-        {
             config.CustomJkAnimeBaseUrl = CustomJkAnimeUrlInput.Text?.Trim() ?? "https://jkanime.net";
+
+        // Backends de reproducción y resolución
+        if (PlayerBackendComboBox?.SelectedItem is ComboBoxItem playerItem && playerItem.Tag is string playerTag)
+        {
+            if (System.Enum.TryParse<PlayerBackendMode>(playerTag, out var playerMode))
+                config.PlayerBackend = playerMode;
         }
-
-
+        if (ResolverBackendComboBox?.SelectedItem is ComboBoxItem resolverItem && resolverItem.Tag is string resolverTag)
+        {
+            if (System.Enum.TryParse<ResolverBackendMode>(resolverTag, out var resolverMode))
+                config.ResolverBackend = resolverMode;
+        }
 
         ConfigManager.Save(config);
         DataCache.ClearRamCache();
@@ -125,16 +162,97 @@ public partial class SettingsView : UserControl
         }
     }
 
+    private async void OnCheckForUpdatesClicked(object? sender, RoutedEventArgs e)
+    {
+        ResetUpdateSection();
+        UpdateStatusText.Text = "Consultando GitHub...";
+        CheckForUpdatesBtn.IsEnabled = false;
+
+        var release = await _updater.FetchLatestReleaseAsync();
+
+        if (release == null)
+        {
+            UpdateStatusText.Text = "No se pudo contactar con GitHub. Revisa tu conexión.";
+            CheckForUpdatesBtn.IsEnabled = true;
+            return;
+        }
+
+        if (_updater.IsNewerAvailable(release, out _))
+        {
+            var msi = _updater.FindMsi(release);
+            if (msi == null)
+            {
+                UpdateStatusText.Text = $"Nueva versión {release.TagName} disponible, pero no se encontró el instalador (.msi) en la Release.";
+                CheckForUpdatesBtn.IsEnabled = true;
+                return;
+            }
+
+            var notes = string.IsNullOrWhiteSpace(release.Body) ? AniCS.Desktop.AppInfo.LatestChangelog : release.Body;
+            var changelogWindow = new Controls.ChangelogWindow(release.TagName, notes);
+            var window = TopLevel.GetTopLevel(this) as Window;
+            if (window != null) await changelogWindow.ShowDialog(window);
+            else changelogWindow.Show();
+
+            UpdateStatusText.Text = $"Nueva versión {release.TagName} lista para instalar.";
+            DownloadUpdateBtn.IsVisible = true;
+        }
+        else
+        {
+            UpdateStatusText.Text = "Estás usando la última versión disponible. ¡Genial!";
+        }
+
+        CheckForUpdatesBtn.IsEnabled = true;
+    }
+
+    private async void OnDownloadUpdateClicked(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            CheckForUpdatesBtn.IsEnabled = false;
+            DownloadUpdateBtn.IsEnabled = false;
+            UpdateStatusText.Text = "Descargando instalador...";
+            UpdateProgress.IsVisible = true;
+            UpdateProgressText.IsVisible = true;
+            UpdateProgress.Value = 0;
+
+            var release = await _updater.FetchLatestReleaseAsync();
+            var msi = release == null ? null : _updater.FindMsi(release);
+            if (msi == null)
+            {
+                UpdateStatusText.Text = "No se encontró el instalador. Reintenta en un momento.";
+                ResetUpdateSection();
+                return;
+            }
+
+            var progress = new System.Progress<double>(p =>
+            {
+                UpdateProgress.Value = p;
+                UpdateProgressText.Text = $"Descargando... {p:F0}%";
+            });
+
+            var msiPath = await _updater.DownloadMsiAsync(msi, progress);
+            if (string.IsNullOrEmpty(msiPath))
+            {
+                UpdateStatusText.Text = "Falló la descarga del instalador.";
+                ResetUpdateSection();
+                return;
+            }
+
+            UpdateStatusText.Text = "Instalando actualización... La app se cerrará y se reabrirá automáticamente.";
+            UpdateProgress.IsVisible = false;
+            _updater.ApplyAndRelaunch(msiPath);
+        }
+        catch
+        {
+            UpdateStatusText.Text = "Ocurrió un error durante la actualización.";
+            ResetUpdateSection();
+        }
+    }
+
     private void OnViewChangelogClicked(object? sender, RoutedEventArgs e)
     {
-        var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
-        string changelog = "¡Hola! Novedades de la versión 1.5.5:\n\n" +
-                           "• 🚀 Optimización de Memoria RAM: Se eliminó la duplicación innecesaria de imágenes en memoria, reduciendo drásticamente el consumo de RAM de 1.6 - 3 GB a niveles mínimos (< 250 MB).\n" +
-                           "• 🔎 Corrección Búsqueda Donghua: Se arregló el endpoint de búsqueda en MundoDonghua (eliminando la barra diagonal que devolvía las 642 series de golpe), logrando búsquedas instantáneas y precisas.\n" +
-                           "• 🧹 Recolección de Basura Automática: Se añadió liberación automática de memoria al navegar entre apartados y alternar entre los modos Anime y Donghua.\n\n" +
-                           "¡Gracias por usar AniCS!";
-
-
+        var currentVersion = AniCS.Desktop.AppInfo.CurrentVersion;
+        string changelog = AniCS.Desktop.AppInfo.LatestChangelog;
         var window = TopLevel.GetTopLevel(this) as Window;
         var changelogWindow = new Controls.ChangelogWindow(currentVersion, changelog);
         if (window != null)

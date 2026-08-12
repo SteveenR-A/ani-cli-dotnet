@@ -15,6 +15,7 @@ namespace AniCS.Desktop
                 { "AppPrimaryColor", "#FFFFFF" },
                 { "AppPrimaryForegroundColor", "#000000" },
                 { "AppTextColor", "#B3B3B3" },
+                { "AppSubtextColor", "#8A8A8A" },
                 { "AppTitleColor", "#FFFFFF" },
                 { "AppStatusCompletedColor", "#4CAF50" },
                 { "AppStatusInProgressColor", "#FFB74D" },
@@ -33,6 +34,7 @@ namespace AniCS.Desktop
                 { "AppPrimaryColor", "#005FB8" }, // Blue
                 { "AppPrimaryForegroundColor", "#FFFFFF" },
                 { "AppTextColor", "#1F2937" },
+                { "AppSubtextColor", "#6B7280" },
                 { "AppTitleColor", "#111827" },
                 { "AppStatusCompletedColor", "#2E7D32" },
                 { "AppStatusInProgressColor", "#EF6C00" },
@@ -51,6 +53,7 @@ namespace AniCS.Desktop
                 { "AppPrimaryColor", "#FF79C6" }, // Pink
                 { "AppPrimaryForegroundColor", "#282A36" },
                 { "AppTextColor", "#F8F8F2" },
+                { "AppSubtextColor", "#6272A4" },
                 { "AppTitleColor", "#BD93F9" }, // Purple
                 { "AppStatusCompletedColor", "#50FA7B" },
                 { "AppStatusInProgressColor", "#FFB86C" },
@@ -69,6 +72,7 @@ namespace AniCS.Desktop
                 { "AppPrimaryColor", "#7DCFFF" }, // Cyan
                 { "AppPrimaryForegroundColor", "#1A1B26" },
                 { "AppTextColor", "#A9B1D6" },
+                { "AppSubtextColor", "#565F89" },
                 { "AppTitleColor", "#BB9AF7" }, // Purple/Violet
                 { "AppStatusCompletedColor", "#9ECE6A" },
                 { "AppStatusInProgressColor", "#E0AF68" },
@@ -87,6 +91,7 @@ namespace AniCS.Desktop
                 { "AppPrimaryColor", "#00FFFF" }, // Cyan neon
                 { "AppPrimaryForegroundColor", "#000000" },
                 { "AppTextColor", "#E0E0E0" },
+                { "AppSubtextColor", "#A0A0B0" },
                 { "AppTitleColor", "#FF003C" }, // Red neon
                 { "AppStatusCompletedColor", "#00FF66" },
                 { "AppStatusInProgressColor", "#FFD700" },
@@ -105,6 +110,7 @@ namespace AniCS.Desktop
                 { "AppPrimaryColor", "#CBA6F7" }, // Mauve
                 { "AppPrimaryForegroundColor", "#11111B" }, // Crust
                 { "AppTextColor", "#CDD6F4" }, // Text
+                { "AppSubtextColor", "#A6ADC8" },
                 { "AppTitleColor", "#F5C2E7" }, // Pink
                 { "AppStatusCompletedColor", "#A6E3A1" }, // Green
                 { "AppStatusInProgressColor", "#F9E2AF" }, // Yellow

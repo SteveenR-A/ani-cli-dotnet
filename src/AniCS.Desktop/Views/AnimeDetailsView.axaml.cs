@@ -8,6 +8,11 @@ using AniCS.Desktop.Converters;
 using AniCS.Desktop.Controls;
 using System;
 using System.Linq;
+using AniCS.Player;
+using AniCS.Player.Controls;
+using AniCS.Resolver;
+using AniCS.Desktop.Services;
+using System.Threading.Tasks;
 
 
 namespace AniCS.Desktop.Views;
@@ -16,11 +21,20 @@ public partial class AnimeDetailsView : UserControl
 {
     private AnimeResult _anime;
     private static readonly HttpClient _httpClient = new HttpClient();
+    // Backends de reproducción y resolución inyectados desde DI
+    private readonly IPlayerBackend   _playerBackend;
+    private readonly IResolverBackend _resolverBackend;
+    // Fallback forcing yt-dlp (reemplaza al antiguo YtDlpService.cs)
+    private readonly IResolverBackend _ytdlpFallback = ResolverFactory.Create(ResolverBackendMode.YtDlp);
+    // Episodio en reproducción actualmente (para actualizar estado)
+    private EpisodeViewModel? _nowPlayingVm;
 
     public AnimeDetailsView()
     {
         InitializeComponent();
         _anime = null!;
+        _playerBackend   = App.Services.GetService(typeof(IPlayerBackend))  as IPlayerBackend  ?? new MpvBackend();
+        _resolverBackend = App.Services.GetService(typeof(IResolverBackend)) as IResolverBackend ?? new YtDlpResolverBackend();
     }
 
     public AnimeDetailsView(AnimeResult anime)
@@ -29,9 +43,15 @@ public partial class AnimeDetailsView : UserControl
         _anime = anime;
         DataContext = anime;
         TitleText.Text = anime.Title;
+        _playerBackend   = App.Services.GetService(typeof(IPlayerBackend))  as IPlayerBackend  ?? new MpvBackend();
+        _resolverBackend = App.Services.GetService(typeof(IResolverBackend)) as IResolverBackend ?? new YtDlpResolverBackend();
 
         Loaded += OnLoaded;
     }
+
+    // ── Reproductor embebido ──────────────────────────────────────────────────
+
+    // ── Reproductor ──────────────────────────────────────────────────────────
 
     private void OnBackClicked(object? sender, RoutedEventArgs e)
     {
@@ -43,18 +63,30 @@ public partial class AnimeDetailsView : UserControl
 
     private async void OnLoaded(object? sender, RoutedEventArgs e)
     {
+
         AniCS.Desktop.Services.DownloadManager.DownloadsChanged += OnDownloadsChanged;
         var extractor = ExtractorFactory.GetExtractorForUrl(_anime.Url);
 
+        // ── Peticiones HTTP en PARALELO para velocidad instantánea ─────────
+        var detailsTask  = extractor.GetDetailsAsync(_anime.Url);
+        var episodesTask = extractor.GetEpisodesAsync(_anime.Url);
+
         try
         {
-            var details = await extractor.GetDetailsAsync(_anime.Url);
-            Dispatcher.UIThread.Invoke(() =>
+            await Task.WhenAll(detailsTask, episodesTask);
+        }
+        catch { }
+
+        // Aplicar información de detalles
+        try
+        {
+            var details = await detailsTask;
+            
+            Dispatcher.UIThread.Invoke(() => 
             {
-                // Conservar Title y Thumbnail si GetDetailsAsync no los trajo
                 if (string.IsNullOrWhiteSpace(details.Title)) details.Title = _anime.Title;
                 if (string.IsNullOrEmpty(details.ThumbnailUrl)) details.ThumbnailUrl = _anime.ThumbnailUrl;
-                
+
                 _anime = details;
                 DataContext = _anime;
 
@@ -63,7 +95,6 @@ public partial class AnimeDetailsView : UserControl
                     AniCS.Desktop.Converters.AsyncImageLoader.SetSourceUrl(CoverImage, _anime.ThumbnailUrl);
                 }
 
-                
                 SynopsisText.Text = string.IsNullOrEmpty(_anime.Synopsis) ? "Sinopsis no disponible." : _anime.Synopsis;
             });
         }
@@ -72,10 +103,11 @@ public partial class AnimeDetailsView : UserControl
             Dispatcher.UIThread.Invoke(() => SynopsisText.Text = "Error cargando detalles.");
         }
 
+        // Aplicar lista de episodios
         try
         {
-            var episodes = await extractor.GetEpisodesAsync(_anime.Url);
-            Dispatcher.UIThread.Invoke(() =>
+            var episodes = await episodesTask;
+            Dispatcher.UIThread.Invoke(() => 
             {
                 if (episodes.Count > 0)
                 {
@@ -100,25 +132,55 @@ public partial class AnimeDetailsView : UserControl
             Dispatcher.UIThread.Invoke(() => StatusText.Text = $"Error: {ex.Message}");
         }
 
-        AniCS.Desktop.Services.DesktopPlayer.OnPlayerError += OnPlayerErrorReceived;
         AniCS.Desktop.Services.DesktopPlayer.AudioStateChanged += OnAudioStateChanged;
+        // Seguimiento de progreso mediante el backend configurado
+        _playerBackend.SessionChanged += OnPlayerSessionChanged;
         OnAudioStateChanged();
         UpdateOpeningDownloadState();
     }
 
-    private void OnPlayerErrorReceived(string message)
+    /// <summary>
+    /// Recibe actualizaciones de progreso del backend activo (LibVLC o mpv).
+    /// Actualiza el estado del episodio en la UI y en el historial de descargas.
+    /// </summary>
+    private void OnPlayerSessionChanged(PlaySession session)
     {
-        Dispatcher.UIThread.InvokeAsync(() => {
-            StatusText.Text = message;
-            StatusText.IsVisible = true;
+        if (_nowPlayingVm == null) return;
+
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            // Actualizar estado visual del episodio en la lista
+            if (session.State == PlayerState.Playing || session.State == PlayerState.Buffering)
+            {
+                _nowPlayingVm.WatchStatus = EpisodeWatchStatus.InProgress;
+            }
+            else if (session.IsCompleted || session.State == PlayerState.Ended)
+            {
+                _nowPlayingVm.WatchStatus = EpisodeWatchStatus.Completed;
+                // Si había un descargado, actualizar su estado también
+                AniCS.Desktop.Services.DownloadManager.UpdateEpisodeStatus(
+                    _anime.Url, _nowPlayingVm.EpisodeNumber,
+                    EpisodeWatchStatus.Completed);
+            }
         });
+    }
+
+    /// <summary>
+    /// Falls back to an unconditional yt-dlp resolution (was YtDlpService.ResolveAsync).
+    /// Returns the direct URL, or string.Empty if yt-dlp could not resolve it.
+    /// </summary>
+    private async Task<string> ResolveWithYtDlpFallbackAsync(string url, string? referer)
+    {
+        if (_ytdlpFallback == null || !_ytdlpFallback.IsAvailable) return string.Empty;
+        var resolved = await _ytdlpFallback.ResolveAsync(url, new ResolveOptions { Referer = referer });
+        return resolved.Type != MediaType.Unknown ? resolved.DirectUrl : string.Empty;
     }
 
     private void OnUnloaded(object? sender, RoutedEventArgs e)
     {
         AniCS.Desktop.Services.DownloadManager.DownloadsChanged -= OnDownloadsChanged;
-        AniCS.Desktop.Services.DesktopPlayer.OnPlayerError -= OnPlayerErrorReceived;
         AniCS.Desktop.Services.DesktopPlayer.AudioStateChanged -= OnAudioStateChanged;
+        _playerBackend.SessionChanged -= OnPlayerSessionChanged;
     }
 
 
@@ -334,59 +396,96 @@ public partial class AnimeDetailsView : UserControl
                 return;
             }
 
-            StatusText.Text = $"Resolviendo video ({chosenServer.Name})... Por favor, espera.";
-            StatusText.IsVisible = true;
-
-            var videoUrl = await extractor.ResolveVideoUrlAsync(chosenServer.Url);
-
-            // Si el enlace obtenido no es un stream directo (.m3u8 / .mp4) y yt-dlp está disponible,
-            // resolvemos el video en segundo plano dentro de la app ANTES de abrir mpv para no mostrar una ventana negra vacía.
-            if (!string.IsNullOrEmpty(videoUrl) && !videoUrl.Contains(".m3u8") && !videoUrl.Contains(".mp4"))
+            // ── Encapsular toda la resolución en una lambda reutilizable ──────
+            // PlayerWindow la llamará una vez al inicio y de nuevo en cada auto-recover.
+            var serverUrl   = chosenServer.Url;
+            var quality     = chosenQuality;
+            Func<System.Threading.Tasks.Task<string>> urlResolver = async () =>
             {
-                if (AniCS.Desktop.Services.YtDlpService.IsAvailable())
+                var freshUrl = await extractor.ResolveVideoUrlAsync(serverUrl);
+
+                if (!string.IsNullOrEmpty(freshUrl) && !chosenServer.IsDirectPlaySupported
+                    && !freshUrl.Contains(".m3u8") && !freshUrl.Contains(".mp4"))
                 {
-                    StatusText.Text = $"Obteniendo enlace directo con yt-dlp ({chosenServer.Name})... Por favor, espera.";
-                    var resolved = await AniCS.Desktop.Services.YtDlpService.ResolveAsync(videoUrl, chosenServer.Url);
-                    if (!string.IsNullOrEmpty(resolved))
+                    var resolved = await _resolverBackend.ResolveAsync(freshUrl,
+                        new ResolveOptions { Referer = serverUrl });
+
+                    if (resolved.Type != MediaType.Unknown)
+                        freshUrl = resolved.DirectUrl;
+                    else if (_ytdlpFallback.IsAvailable)
                     {
-                        videoUrl = resolved;
+                        freshUrl = await ResolveWithYtDlpFallbackAsync(freshUrl, serverUrl);
+                        if (string.IsNullOrEmpty(freshUrl))
+                            freshUrl = await ResolveWithYtDlpFallbackAsync(vm.Url, _anime.Url);
                     }
                 }
-            }
-            else if (string.IsNullOrEmpty(videoUrl))
-            {
-                if (AniCS.Desktop.Services.YtDlpService.IsAvailable())
+                else if (string.IsNullOrEmpty(freshUrl))
                 {
-                    StatusText.Text = $"Extractor interno falló. Intentando con yt-dlp ({chosenServer.Name})...";
-                    videoUrl = await AniCS.Desktop.Services.YtDlpService.ResolveAsync(
-                        chosenServer.Url,
-                        referer: chosenServer.Url);
+                    var resolved = await _resolverBackend.ResolveAsync(serverUrl,
+                        new ResolveOptions { Referer = serverUrl });
+
+                    if (resolved.Type != MediaType.Unknown)
+                        freshUrl = resolved.DirectUrl;
+                    else if (_ytdlpFallback.IsAvailable)
+                    {
+                        freshUrl = await ResolveWithYtDlpFallbackAsync(serverUrl, serverUrl);
+                        if (string.IsNullOrEmpty(freshUrl))
+                            freshUrl = await ResolveWithYtDlpFallbackAsync(vm.Url, _anime.Url);
+                    }
                 }
-            }
+
+                return freshUrl ?? string.Empty;
+            };
+
+            // Obtener la URL inicial para validar que hay algo reproducible antes de abrir la ventana
+            StatusText.Text = $"Resolviendo video ({chosenServer.Name})... Por favor, espera.";
+            StatusText.IsVisible = true;
+            var videoUrl = await urlResolver();
 
             if (!string.IsNullOrEmpty(videoUrl))
             {
                 StatusText.Text = $"¡Abriendo reproductor para {vm.Title}!";
                 StatusText.IsVisible = true;
-                
+
                 // Guardar historial
                 var history = new AniCS.History.WatchHistory();
                 history.Record(_anime.Title, _anime.Url, _anime.ThumbnailUrl, vm.EpisodeNumber, videoUrl);
-                
-                AniCS.Desktop.Services.DesktopPlayer.Play(videoUrl, $"AniCS - {_anime.Title} - {vm.Title}", chosenServer.Url, chosenQuality);
 
-                // Ocultar el mensaje después de unos segundos si todo salió bien
-                await System.Threading.Tasks.Task.Delay(3000);
-                StatusText.IsVisible = false;
+                _nowPlayingVm = vm;
+
+                // Abrir la nueva ventana independiente del reproductor
+                if (_playerBackend is LibVlcBackend)
+                {
+                    StatusText.IsVisible = false;
+                    var playerWindow = new PlayerWindow(
+                        _playerBackend,
+                        urlResolver,
+                        $"{_anime.Title} — {vm.Title}",
+                        serverUrl,
+                        quality);
+                    playerWindow.Show(ownerWindow);
+                }
+                else
+                {
+                    // Reproducir con el reproductor externo (mpv)
+                    _ = _playerBackend.PlayAsync(videoUrl, $"{_anime.Title} — {vm.Title}", new PlayOptions
+                    {
+                        Referer = serverUrl,
+                        Quality = quality
+                    });
+
+                    // Con mpv (proceso externo), solo mostrar el mensaje unos segundos
+                    await System.Threading.Tasks.Task.Delay(3000);
+                    StatusText.IsVisible = false;
+                }
             }
             else
             {
-                bool ytdlpAvailable = AniCS.Desktop.Services.YtDlpService.IsAvailable();
-                StatusText.Text = ytdlpAvailable
-                    ? $"Error: No se pudo extraer el video de '{chosenServer.Name}' (interno + yt-dlp fallaron)."
-                    : $"Error: No se pudo extraer el video de '{chosenServer.Name}'. Instala yt-dlp para soporte de servidores externos.";
+                StatusText.Text = $"Error: No se pudo extraer el video de '{chosenServer.Name}'. " +
+                    $"Motor activo: {_resolverBackend.BackendName} / {_playerBackend.BackendName}.";
             }
         }
+
         catch (Exception ex)
         {
             StatusText.Text = $"Error: {ex.Message}";
@@ -481,15 +580,67 @@ public partial class AnimeDetailsView : UserControl
             StatusText.Text = $"Preparando descarga ({chosenServer.Name})... Por favor, espera.";
             StatusText.IsVisible = true;
 
+            string resolverMethod = _resolverBackend.BackendName;
             var videoUrl = await extractor.ResolveVideoUrlAsync(chosenServer.Url);
-            if (string.IsNullOrEmpty(videoUrl) && AniCS.Desktop.Services.YtDlpService.IsAvailable())
+            ResolvedMedia? resolvedMedia = null;
+
+            if (!string.IsNullOrEmpty(videoUrl) && !chosenServer.IsDirectPlaySupported && !videoUrl.Contains(".m3u8") && !videoUrl.Contains(".mp4"))
             {
-                videoUrl = chosenServer.Url;
+                StatusText.Text = $"Resolviendo enlace directo ({chosenServer.Name})...";
+                resolvedMedia = await _resolverBackend.ResolveAsync(videoUrl, new ResolveOptions { Referer = chosenServer.Url });
+                if (resolvedMedia.Type == MediaType.Unknown && _ytdlpFallback.IsAvailable)
+                {
+                    StatusText.Text = $"Obteniendo enlace con yt-dlp ({chosenServer.Name})...";
+                    videoUrl = await ResolveWithYtDlpFallbackAsync(videoUrl, chosenServer.Url);
+                    if (string.IsNullOrEmpty(videoUrl)) videoUrl = await ResolveWithYtDlpFallbackAsync(vm.Url, _anime.Url);
+                    
+                    if (!string.IsNullOrEmpty(videoUrl))
+                    {
+                        var type = videoUrl.Contains(".m3u8") || chosenServer.Name.Contains("HLS", StringComparison.OrdinalIgnoreCase) ? MediaType.Hls : MediaType.Mp4;
+                        resolvedMedia = new ResolvedMedia(videoUrl, videoUrl, type, chosenServer.Url);
+                    }
+                    else
+                    {
+                        resolvedMedia = null;
+                    }
+                }
+            }
+            else if (string.IsNullOrEmpty(videoUrl))
+            {
+                StatusText.Text = $"Extractor interno falló. Intentando resolver ({chosenServer.Name})...";
+                resolvedMedia = await _resolverBackend.ResolveAsync(chosenServer.Url, new ResolveOptions { Referer = chosenServer.Url });
+                if (resolvedMedia.Type == MediaType.Unknown && _ytdlpFallback.IsAvailable)
+                {
+                    StatusText.Text = $"Extractor interno falló. Intentando con yt-dlp ({chosenServer.Name})...";
+                    videoUrl = await ResolveWithYtDlpFallbackAsync(chosenServer.Url, chosenServer.Url);
+                    if (string.IsNullOrEmpty(videoUrl)) videoUrl = await ResolveWithYtDlpFallbackAsync(vm.Url, _anime.Url);
+                    
+                    if (!string.IsNullOrEmpty(videoUrl))
+                    {
+                        var type = videoUrl.Contains(".m3u8") || chosenServer.Name.Contains("HLS", StringComparison.OrdinalIgnoreCase) ? MediaType.Hls : MediaType.Mp4;
+                        resolvedMedia = new ResolvedMedia(videoUrl, videoUrl, type, chosenServer.Url);
+                    }
+                    else
+                    {
+                        resolvedMedia = null;
+                    }
+                }
+            }
+            else
+            {
+                // Es un enlace directo
+                var type = videoUrl.Contains(".m3u8") || chosenServer.Name.Contains("HLS", StringComparison.OrdinalIgnoreCase) ? MediaType.Hls : MediaType.Mp4;
+                resolvedMedia = new ResolvedMedia(videoUrl, videoUrl, type, chosenServer.Url);
             }
 
-            if (!string.IsNullOrEmpty(videoUrl))
+            if (resolvedMedia == null || resolvedMedia.Type == MediaType.Unknown)
             {
-                StatusText.Text = $"¡Descarga iniciada para {vm.Title}!";
+                resolverMethod = "yt-dlp fallback";
+            }
+
+            if (!string.IsNullOrEmpty(videoUrl) || (resolvedMedia != null && resolvedMedia.Type != MediaType.Unknown))
+            {
+                StatusText.Text = $"¡Descarga iniciada para {vm.Title} ({resolverMethod})!";
                 StatusText.IsVisible = true;
                 var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
 
@@ -510,14 +661,60 @@ public partial class AnimeDetailsView : UserControl
 
                 _ = System.Threading.Tasks.Task.Run(async () =>
                 {
-                    var result = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
-                        videoUrl, _anime, vm.Episode, defaultDir, chosenServer.Url, chosenQuality,
-                        (progress, sizeInfo) => Dispatcher.UIThread.Post(() => {
-                            activeDownload.Progress = progress;
-                            if (!string.IsNullOrEmpty(sizeInfo)) activeDownload.SizeText = sizeInfo;
-                        }),
+                    AniCS.Desktop.Services.DownloadResult result;
+                    if (resolvedMedia != null && resolvedMedia.Type != MediaType.Unknown)
+                    {
+                        var safeTitle = string.Join("_", animeTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
+                        if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
+                        var animeDir = System.IO.Path.Combine(defaultDir, safeTitle);
+                        if (!System.IO.Directory.Exists(animeDir)) System.IO.Directory.CreateDirectory(animeDir);
+                        var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
+                        var outputPath = System.IO.Path.Combine(animeDir, $"Episodio {episodeNumStr}.mp4");
+                        
+                        var progress = new Progress<DownloadProgress>(p => 
+                        {
+                            Dispatcher.UIThread.Post(() => {
+                                activeDownload.Progress = p.Percent;
+                                if (!string.IsNullOrEmpty(p.SizeInfo)) activeDownload.SizeText = p.SizeInfo;
+                            });
+                        });
+                        
+                        var resolverResult = await _resolverBackend.DownloadAsync(resolvedMedia, outputPath, progress, activeDownload.CancellationTokenSource.Token);
+                        result = resolverResult.Code switch
+                        {
+                            DownloadResultCode.Success => AniCS.Desktop.Services.DownloadResult.Success,
+                            DownloadResultCode.Cancelled => AniCS.Desktop.Services.DownloadResult.Cancelled,
+                            _ => AniCS.Desktop.Services.DownloadResult.Error
+                        };
+                    }
+                    else
+                    {
+                        var safeTitle = string.Join("_", animeTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
+                        if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
+                        var animeDir = System.IO.Path.Combine(defaultDir, safeTitle);
+                        if (!System.IO.Directory.Exists(animeDir)) System.IO.Directory.CreateDirectory(animeDir);
+                        var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
+                        var outputPath = System.IO.Path.Combine(animeDir, $"Episodio {episodeNumStr}.mp4");
 
-                        activeDownload.CancellationTokenSource.Token);
+                        var progress = new Progress<DownloadProgress>(p =>
+                        {
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                activeDownload.Progress = p.Percent;
+                                if (!string.IsNullOrEmpty(p.SizeInfo)) activeDownload.SizeText = p.SizeInfo;
+                            });
+                        });
+
+                        var fbResult = await _ytdlpFallback.DownloadAsync(
+                            new ResolvedMedia(videoUrl, videoUrl, MediaType.Unknown, chosenServer.Url),
+                            outputPath, progress, activeDownload.CancellationTokenSource.Token);
+                        result = fbResult.Code switch
+                        {
+                            DownloadResultCode.Success => AniCS.Desktop.Services.DownloadResult.Success,
+                            DownloadResultCode.Cancelled => AniCS.Desktop.Services.DownloadResult.Cancelled,
+                            _ => AniCS.Desktop.Services.DownloadResult.Error
+                        };
+                    }
 
                     if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
                     {
@@ -527,15 +724,21 @@ public partial class AnimeDetailsView : UserControl
                         AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
                     }
 
-
                     await Dispatcher.UIThread.InvokeAsync(() =>
                     {
                         if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Downloading || result == AniCS.Desktop.Services.DownloadResult.Success || result == AniCS.Desktop.Services.DownloadResult.Error)
                         {
                             if (result == AniCS.Desktop.Services.DownloadResult.Success)
+                            {
                                 activeDownload.State = AniCS.Desktop.Services.DownloadState.Completed;
+                                StatusText.Text = $"¡Descarga completada para {vm.Title}!";
+                            }
                             else if (result == AniCS.Desktop.Services.DownloadResult.Error)
+                            {
                                 activeDownload.State = AniCS.Desktop.Services.DownloadState.Error;
+                                StatusText.Text = $"Error al descargar {vm.Title}. Intenta con otro servidor.";
+                                StatusText.IsVisible = true;
+                            }
 
                             if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Completed || activeDownload.State == AniCS.Desktop.Services.DownloadState.Error || activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
                             {
@@ -664,25 +867,26 @@ public partial class AnimeDetailsView : UserControl
         AniCS.Desktop.Services.DownloadManager.AddActiveDownload(activeDownload);
         UpdateOpeningDownloadState();
 
-        var dummyEpisode = new Episode { EpisodeNumber = "Opening", Title = "Opening / Trailer", Url = _anime.OpeningUrl };
+        var outputPath = System.IO.Path.Combine(animeDir, "Episodio Opening.mp4");
         var cancellationToken = activeDownload.CancellationTokenSource.Token;
-        var result = await AniCS.Desktop.Services.DesktopPlayer.DownloadAsync(
-            _anime.OpeningUrl,
-            _anime,
-            dummyEpisode,
-            defaultDir,
-            null,
-            "Mejor",
-            (progress, sizeInfo) =>
+        var progress = new Progress<DownloadProgress>(p =>
+        {
+            Dispatcher.UIThread.InvokeAsync(() =>
             {
-                Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    activeDownload.Progress = progress;
-                    if (!string.IsNullOrEmpty(sizeInfo)) activeDownload.SizeText = sizeInfo;
-                    UpdateOpeningDownloadState();
-                });
-            },
-            cancellationToken);
+                activeDownload.Progress = p.Percent;
+                if (!string.IsNullOrEmpty(p.SizeInfo)) activeDownload.SizeText = p.SizeInfo;
+                UpdateOpeningDownloadState();
+            });
+        });
+        var fbResult = await _ytdlpFallback.DownloadAsync(
+            new ResolvedMedia(_anime.OpeningUrl, _anime.OpeningUrl, MediaType.Unknown),
+            outputPath, progress, cancellationToken);
+        var result = fbResult.Code switch
+        {
+            DownloadResultCode.Success => AniCS.Desktop.Services.DownloadResult.Success,
+            DownloadResultCode.Cancelled => AniCS.Desktop.Services.DownloadResult.Cancelled,
+            _ => AniCS.Desktop.Services.DownloadResult.Error
+        };
 
         if (result == AniCS.Desktop.Services.DownloadResult.Success)
         {
@@ -740,7 +944,35 @@ public class EpisodeViewModel : System.ComponentModel.INotifyPropertyChanged
     public string EpisodeNumber => Episode.EpisodeNumber;
     public string Title => Episode.Title;
     public string Url => Episode.Url;
-    
+
+    // ── Estado de visualización (Sin ver / En proceso / Finalizado) ──────────
+    private EpisodeWatchStatus _watchStatus = EpisodeWatchStatus.Unwatched;
+    public EpisodeWatchStatus WatchStatus
+    {
+        get => _watchStatus;
+        set
+        {
+            _watchStatus = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(WatchStatusIcon));
+            OnPropertyChanged(nameof(WatchStatusTip));
+        }
+    }
+
+    public string WatchStatusIcon => _watchStatus switch
+    {
+        EpisodeWatchStatus.InProgress => "▶",
+        EpisodeWatchStatus.Completed  => "✅",
+        _                             => "☐",
+    };
+
+    public string WatchStatusTip => _watchStatus switch
+    {
+        EpisodeWatchStatus.InProgress => "En proceso",
+        EpisodeWatchStatus.Completed  => "Finalizado",
+        _                             => "Sin ver",
+    };
+
     private string _downloadText = "Descargar";
     public string DownloadText
     {

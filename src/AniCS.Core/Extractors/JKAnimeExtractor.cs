@@ -182,8 +182,19 @@ public class JKAnimeExtractor : BaseExtractor
         if (titleNode != null) result.Title = WebUtility.HtmlDecode(titleNode.InnerText.Trim());
 
 
-        var imgNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime__details__pic')]");
-        if (imgNode != null) result.ThumbnailUrl = imgNode.GetAttributeValue("data-setbg", "");
+        var imgNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime__details__pic')]") ??
+                      doc.DocumentNode.SelectSingleNode("//div[contains(@class,'anime_pic')]//img");
+                      
+        if (imgNode != null) 
+        {
+            var bg = imgNode.GetAttributeValue("data-setbg", "");
+            result.ThumbnailUrl = !string.IsNullOrEmpty(bg) ? bg : imgNode.GetAttributeValue("src", "");
+        }
+        else
+        {
+            var ogImage = doc.DocumentNode.SelectSingleNode("//meta[@property='og:image']");
+            result.ThumbnailUrl = ogImage?.GetAttributeValue("content", "") ?? "";
+        }
 
         var synNode = doc.DocumentNode.SelectSingleNode("//p[@class='scroll']") ??
                       doc.DocumentNode.SelectSingleNode("//p[@rel='sinopsis']") ??
@@ -392,7 +403,7 @@ public class JKAnimeExtractor : BaseExtractor
                 Title = WebUtility.HtmlDecode(titleNode.InnerText.Trim()),
                 EpisodeNumber = epBadge?.InnerText.Replace("Ep ", "").Trim() ?? "",
                 Url = NormalizeUrl(href),
-                ThumbnailUrl = imgNode?.GetAttributeValue("src", "") ?? ""
+                ThumbnailUrl = imgNode?.GetAttributeValue("data-animepic", "") != "" ? imgNode?.GetAttributeValue("data-animepic", "") ?? "" : imgNode?.GetAttributeValue("src", "") ?? ""
             });
         }
 
@@ -625,13 +636,16 @@ public class JKAnimeExtractor : BaseExtractor
     public override async Task<string> ResolveVideoUrlAsync(string url)
     {
         // Internal JKAnime servers (Desu, Magi)
-        if (url.Contains("/jkplayer"))
+        if (url.Contains("/jkplayer") || url.Contains("um2.php") || url.Contains("um.php") || url.Contains("jk.php") || url.Contains("desu.php"))
         {
             var playerHtml = await DownloadWebpageAsync(url, BaseUrl);
             if (string.IsNullOrEmpty(playerHtml)) return string.Empty;
 
             var m3u8 = SearchRegex(@"(https://[^\s'""\\]+\.m3u8[^\s'""\\]*)", playerHtml);
-            return m3u8 ?? string.Empty;
+            if (!string.IsNullOrEmpty(m3u8)) return m3u8;
+
+            var mp4 = SearchRegex(@"(https://[^\s'""\\]+\.mp4[^\s'""\\]*)", playerHtml);
+            return mp4 ?? string.Empty;
         }
 
         // Custom Mediafire Resolver (yt-dlp does not support it natively)
