@@ -36,11 +36,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Shared library projects -->
-    <ProjectReference Include="..\AniCS.Core\AniCS.Core.csproj" />
-    <ProjectReference Include="..\AniCS.Resolver\AniCS.Resolver.csproj" />
     <!--
-      AniCS.Desktop contains the shared views/controls/viewmodels.
+      AniCS.Desktop contains the shared views/controls/viewmodels and transitively references Core/Resolver/Player.
       We reference it but the Android entry point overrides the platform-specific parts
       (player backend, update service, etc.).
     -->
