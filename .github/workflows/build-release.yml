@@ -89,14 +89,14 @@ jobs:
               --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
               --key-alias "${{ secrets.KEY_ALIAS }}" \
               --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
-              --out ./android-out/AniCS-v1.6.0-signed.apk \
+              --out ./android-out/AniCS-${{ github.ref_name }}-signed.apk \
               "$APK"
             
-            echo "APK_PATH=./android-out/AniCS-v1.6.0-signed.apk" >> $GITHUB_ENV
+            echo "APK_PATH=./android-out/AniCS-${{ github.ref_name }}-signed.apk" >> $GITHUB_ENV
           else
             echo "No KEYSTORE_BASE64 secret found; using unsigned APK..."
-            cp "$APK" ./android-out/AniCS-v1.6.0-unsigned.apk
-            echo "APK_PATH=./android-out/AniCS-v1.6.0-unsigned.apk" >> $GITHUB_ENV
+            cp "$APK" ./android-out/AniCS-${{ github.ref_name }}-unsigned.apk
+            echo "APK_PATH=./android-out/AniCS-${{ github.ref_name }}-unsigned.apk" >> $GITHUB_ENV
           fi
 
       - name: Upload APK artifact
@@ -132,7 +132,7 @@ jobs:
         run: |
           TAG="${{ github.ref_name }}"
           if [ "$TAG" = "main" ]; then
-            TAG="v1.6.0"
+            TAG="latest"
           fi
           gh release create "$TAG" ./release-assets/* \
             --title "AniCS $TAG" \
