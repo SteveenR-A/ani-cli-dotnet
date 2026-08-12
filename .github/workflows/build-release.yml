@@ -70,7 +70,9 @@ jobs:
         run: |
           dotnet publish src/AniCS.Android/AniCS.Android.csproj \
             -c Release \
-            -f net10.0-android
+            -f net10.0-android \
+            -m:1 \
+            -p:BuildInParallel=false
 
       # ── APK Signing (only runs when keystore secrets are set) ──────────
       - name: Process & Sign APK
