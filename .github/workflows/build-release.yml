@@ -70,14 +70,16 @@ jobs:
         run: |
           dotnet publish src/AniCS.Android/AniCS.Android.csproj \
             -c Release \
-            -f net10.0-android \
-            -o ./android-out
+            -f net10.0-android
 
       # ── APK Signing (only runs when keystore secrets are set) ──────────
       - name: Process & Sign APK
         run: |
-          # Find the generated APK
-          APK=$(find ./android-out -name "*.apk" | head -n 1)
+          # Find the generated APK in the bin directory
+          APK=$(find src/AniCS.Android/bin/Release/net10.0-android -name "*-Signed.apk" | head -n 1)
+          if [ -z "$APK" ]; then
+             APK=$(find src/AniCS.Android/bin/Release/net10.0-android -name "*.apk" | head -n 1)
+          fi
 
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "Signing APK with repository keystore secret..."
@@ -89,14 +91,14 @@ jobs:
               --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
               --key-alias "${{ secrets.KEY_ALIAS }}" \
               --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
-              --out ./android-out/AniCS-${{ github.ref_name }}-signed.apk \
+              --out ./AniCS-${{ github.ref_name }}-signed.apk \
               "$APK"
             
-            echo "APK_PATH=./android-out/AniCS-${{ github.ref_name }}-signed.apk" >> $GITHUB_ENV
+            echo "APK_PATH=./AniCS-${{ github.ref_name }}-signed.apk" >> $GITHUB_ENV
           else
             echo "No KEYSTORE_BASE64 secret found; using unsigned APK..."
-            cp "$APK" ./android-out/AniCS-${{ github.ref_name }}-unsigned.apk
-            echo "APK_PATH=./android-out/AniCS-${{ github.ref_name }}-unsigned.apk" >> $GITHUB_ENV
+            cp "$APK" ./AniCS-${{ github.ref_name }}-unsigned.apk
+            echo "APK_PATH=./AniCS-${{ github.ref_name }}-unsigned.apk" >> $GITHUB_ENV
           fi
 
       - name: Upload APK artifact
