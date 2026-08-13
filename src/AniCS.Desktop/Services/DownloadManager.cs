@@ -316,6 +316,113 @@ public static class DownloadManager
         if (changed)
             Save();
     }
+
+    /// <summary>
+    /// Escanea la carpeta base de descargas (<c>Videos\AniCS</c>) en busca de archivos
+    /// de episodios que existen físicamente en disco pero <b>no están registrados</b> en
+    /// <c>downloads.json</c>. Los importa automáticamente como entradas "huérfanas".
+    ///
+    /// Convención de naming asumida:
+    /// <c>Videos\AniCS\&lt;Título del anime&gt;\Episodio N.ext</c>
+    ///
+    /// Si el anime ya tiene una entrada registrada, solo se añaden los episodios faltantes;
+    /// nunca se sobreescriben datos existentes (URL, ThumbnailUrl, estado de visión).
+    /// </summary>
+    /// <returns>Número de episodios nuevos importados.</returns>
+    public static int ScanDiskDownloads()
+    {
+        var baseDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+
+        if (!Directory.Exists(baseDir)) return 0;
+
+        // Extensiones de video reconocidas
+        var videoExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { ".mp4", ".ts", ".mkv", ".avi", ".webm" };
+
+        // Patrón: "Episodio 6.mp4", "Episodio 10.ts", "Episodio 1.5.mp4", etc.
+        var episodePattern = new System.Text.RegularExpressions.Regex(
+            @"^Episodio\s+([\d]+(?:[.,][\d]+)?)\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        int added = 0;
+        bool changed = false;
+
+        foreach (var animeDir in Directory.EnumerateDirectories(baseDir))
+        {
+            // Restaurar el nombre del anime: los '_' de reemplazo no se pueden deshacer
+            // sin ambigüedad, así que usamos el nombre de carpeta tal cual.
+            var folderName = Path.GetFileName(animeDir);
+
+            // Buscar una entrada existente por nombre de carpeta (comparando el título
+            // con guiones o con el título original después de limpiar caracteres inválidos).
+            var existing = _downloads.FirstOrDefault(a =>
+            {
+                var safe = string.Join("_", a.Title.Split(Path.GetInvalidFileNameChars())).Trim();
+                return string.Equals(safe, folderName, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(a.Title, folderName, StringComparison.OrdinalIgnoreCase);
+            });
+
+            // Si no existe ninguna entrada, crearla con los datos mínimos disponibles.
+            // Url y ThumbnailUrl quedarán vacíos — el usuario podrá navegar al anime
+            // manualmente para completarlos.
+            bool isNew = existing == null;
+            var animeEntry = existing ?? new DownloadedAnime
+            {
+                Title       = folderName.Replace('_', ' ').Trim(),
+                Url         = string.Empty,
+                ThumbnailUrl = string.Empty
+            };
+
+            foreach (var file in Directory.EnumerateFiles(animeDir))
+            {
+                var ext = Path.GetExtension(file);
+                if (!videoExts.Contains(ext)) continue;
+
+                var fileNameNoExt = Path.GetFileNameWithoutExtension(file);
+                var match = episodePattern.Match(fileNameNoExt);
+                if (!match.Success) continue;
+
+                var epNumber = match.Groups[1].Value.Replace(',', '.');
+
+                // Comprobar si ya está registrado con cualquier ruta
+                bool alreadyRegistered = animeEntry.Episodes.Any(ep =>
+                    ep.EpisodeNumber == epNumber
+                    || string.Equals(ep.FilePath, file, StringComparison.OrdinalIgnoreCase));
+
+                if (!alreadyRegistered)
+                {
+                    animeEntry.Episodes.Add(new DownloadedEpisode
+                    {
+                        EpisodeNumber = epNumber,
+                        EpisodeTitle  = $"Episodio {epNumber}",
+                        FilePath      = file,
+                        DownloadedAt  = File.GetLastWriteTime(file)
+                    });
+                    added++;
+                    changed = true;
+                }
+            }
+
+            if (isNew && animeEntry.Episodes.Count > 0)
+            {
+                SortEpisodes(animeEntry);
+                _downloads.Insert(0, animeEntry);
+            }
+            else if (!isNew && changed)
+            {
+                SortEpisodes(animeEntry);
+            }
+        }
+
+        if (changed)
+        {
+            Save();
+            DownloadsChanged?.Invoke(null, EventArgs.Empty);
+        }
+
+        return added;
+    }
     
     public static ActiveDownload? GetActiveDownload(string animeUrl, string episodeNumber)
     {

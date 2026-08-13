@@ -818,10 +818,17 @@ public partial class AnimeDetailsView : UserControl
                         var resolverResult = await _resolverBackend.DownloadAsync(resolvedMedia, outputPath, progress, activeDownload.CancellationTokenSource.Token);
                         result = resolverResult.Code switch
                         {
-                            DownloadResultCode.Success => AniCS.Desktop.Services.DownloadResult.Success,
+                            DownloadResultCode.Success   => AniCS.Desktop.Services.DownloadResult.Success,
                             DownloadResultCode.Cancelled => AniCS.Desktop.Services.DownloadResult.Cancelled,
-                            _ => AniCS.Desktop.Services.DownloadResult.Error
+                            _                            => AniCS.Desktop.Services.DownloadResult.Error
                         };
+                        // Guardar el path real devuelto por el backend (puede ser .ts para HLS)
+                        if (result == AniCS.Desktop.Services.DownloadResult.Success && resolverResult.OutputPath != null)
+                        {
+                            AniCS.Desktop.Services.DownloadManager.RecordDownload(
+                                animeTitle, _anime.Url, _anime.ThumbnailUrl,
+                                vm.EpisodeNumber, vm.Title, resolverResult.OutputPath);
+                        }
                     }
                     else
                     {
@@ -846,10 +853,17 @@ public partial class AnimeDetailsView : UserControl
                             outputPath, progress, activeDownload.CancellationTokenSource.Token);
                         result = fbResult.Code switch
                         {
-                            DownloadResultCode.Success => AniCS.Desktop.Services.DownloadResult.Success,
+                            DownloadResultCode.Success   => AniCS.Desktop.Services.DownloadResult.Success,
                             DownloadResultCode.Cancelled => AniCS.Desktop.Services.DownloadResult.Cancelled,
-                            _ => AniCS.Desktop.Services.DownloadResult.Error
+                            _                            => AniCS.Desktop.Services.DownloadResult.Error
                         };
+                        // Registrar también la descarga por fallback yt-dlp
+                        if (result == AniCS.Desktop.Services.DownloadResult.Success && fbResult.OutputPath != null)
+                        {
+                            AniCS.Desktop.Services.DownloadManager.RecordDownload(
+                                animeTitle, _anime.Url, _anime.ThumbnailUrl,
+                                vm.EpisodeNumber, vm.Title, fbResult.OutputPath);
+                        }
                     }
 
                     if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)

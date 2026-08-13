@@ -67,7 +67,27 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
 
     private void OnReloadClicked(object? sender, RoutedEventArgs e)
     {
+        // 1. Escanear el disco en busca de archivos huérfanos (no registrados)
+        int found = DownloadManager.ScanDiskDownloads();
+
+        // 2. Recargar la UI (ScanDiskDownloads ya llama DownloadsChanged si hay cambios,
+        //    pero llamamos LoadData igualmente para refrescar aunque no haya nada nuevo)
         LoadData();
+
+        // 3. Mostrar feedback breve
+        StatusText.IsVisible = true;
+        StatusText.Text = found > 0
+            ? $"Escáner completado: {found} episodio(s) importado(s) del disco."
+            : "Escáner completado: sin episodios nuevos para importar.";
+
+        // Ocultar el mensaje tras 4 segundos si hay descargas visibles
+        var downloads = DownloadManager.GetAll();
+        if (downloads.Count > 0)
+        {
+            Avalonia.Threading.DispatcherTimer.RunOnce(
+                () => { StatusText.IsVisible = false; },
+                TimeSpan.FromSeconds(4));
+        }
     }
 
     private void LoadData()

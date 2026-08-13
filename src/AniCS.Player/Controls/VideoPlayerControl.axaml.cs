@@ -29,8 +29,9 @@ public partial class VideoPlayerControl : UserControl
     private int  _lastVolume = 100;
 
     // ── Timers ────────────────────────────────────────────────────────────────
-    private DispatcherTimer? _osdTimer;   // Oculta el OSD tras 1.5s
-    private DispatcherTimer? _controlsTimer; // Oculta los controles principales
+    private DispatcherTimer? _osdTimer;        // Oculta el OSD tras 1.5s
+    private DispatcherTimer? _controlsTimer;   // Oculta los controles principales
+    private DispatcherTimer? _volumeSaveTimer; // Debounce: guarda config en disco 400ms después del último cambio
 
     // ── Velocidades disponibles ───────────────────────────────────────────────
     private static readonly List<(string Label, float Rate)> Speeds = new()
@@ -70,6 +71,21 @@ public partial class VideoPlayerControl : UserControl
 
         _controlsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _controlsTimer.Tick += (_, _) => HideControls();
+
+        // Debounce: escribe la config de volumen en disco solo cuando el usuario
+        // deja de mover el slider durante 400 ms (evita bloquear el hilo UI).
+        _volumeSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+        _volumeSaveTimer.Tick += (_, _) =>
+        {
+            _volumeSaveTimer.Stop();
+            int vol = (int)VolumeSlider.Value;
+            try
+            {
+                ConfigManager.Current.Volume = vol;
+                ConfigManager.Save(ConfigManager.Current);
+            }
+            catch { }
+        };
     }
 
     private void InitSpeedCombo()
@@ -89,15 +105,27 @@ public partial class VideoPlayerControl : UserControl
         _backend.SessionChanged += OnSessionChanged;
         _backend.ErrorOccurred  += OnPlayerError;
         VideoViewControl.MediaPlayer = backend.MediaPlayer;
-        
-        // Sincronizar volumen inicial con la configuración global
-        int globalVol = ConfigManager.Current.Volume;
-        if (globalVol < 0 || globalVol > 200) globalVol = 100;
 
-        _backend.Volume    = globalVol;
-        VolumeSlider.Value = globalVol;
-        _lastVolume        = globalVol;
-        if (VolumeLabel != null) VolumeLabel.Text = $"{globalVol}%";
+        // Sincronizar volumen: combinar el volumen del sistema LibVLC con la config guardada
+        int startVol = SyncSystemVolume();
+        _backend.Volume    = startVol;
+        VolumeSlider.Value = startVol;
+        _lastVolume        = startVol;
+        if (VolumeLabel != null) VolumeLabel.Text = $"{startVol}%";
+    }
+
+    /// <summary>
+    /// Devuelve el volumen inicial que debe aplicarse al arrancar el reproductor.
+    /// LibVLC no expone el mezclador de audio del sistema operativo — su propiedad
+    /// <c>MediaPlayer.Volume</c> devuelve siempre 100 hasta que se le asigna un Media
+    /// y empieza a reproducir, por lo que leerla aquí no aporta información real.
+    /// La única fuente de verdad persistente es <see cref="ConfigManager.Current.Volume"/>,
+    /// que se actualiza cada vez que el usuario mueve el slider (con debounce).
+    /// </summary>
+    private static int SyncSystemVolume()
+    {
+        int vol = ConfigManager.Current.Volume;
+        return Math.Clamp(vol is < 0 or > 200 ? 100 : vol, 0, 200);
     }
 
     public void Detach()
@@ -286,12 +314,12 @@ public partial class VideoPlayerControl : UserControl
         if (_isPlaying)
         {
             await _backend.PauseAsync();
-            ShowOsd("⏸ Pausado");
+            ShowOsd("Pausado");
         }
         else
         {
             await _backend.ResumeAsync();
-            ShowOsd("▶ Reproduciendo");
+            ShowOsd("Reproduciendo");
         }
     }
 
@@ -300,7 +328,7 @@ public partial class VideoPlayerControl : UserControl
         if (_backend == null) return;
         double target = Math.Max(0, _backend.Position - 10);
         await _backend.SeekAsync(target);
-        ShowOsd("⏪ −10s");
+        ShowOsd("-10s");
     }
 
     private async void OnForwardClicked(object? sender, RoutedEventArgs e)
@@ -309,7 +337,7 @@ public partial class VideoPlayerControl : UserControl
         double dur    = _backend.Duration;
         double target = dur > 0 ? Math.Min(dur - 1, _backend.Position + 10) : _backend.Position + 10;
         await _backend.SeekAsync(target);
-        ShowOsd("⏩ +10s");
+        ShowOsd("+10s");
     }
 
     /// <summary>
@@ -355,29 +383,29 @@ public partial class VideoPlayerControl : UserControl
         }
         _backend.IsMuted  = _isMuted;
         MuteIcon.Kind     = _isMuted ? MaterialIconKind.VolumeOff : MaterialIconKind.VolumeHigh;
-        ShowOsd(_isMuted ? "🔇 Silenciado" : "🔊 Con sonido");
+        ShowOsd(_isMuted ? "Silenciado" : "Con sonido");
     }
 
     private void OnVolumeChanged(object? sender, RangeBaseValueChangedEventArgs e)
     {
         int pct = (int)e.NewValue;
+
+        // Aplicar el volumen al backend inmediatamente (sin I/O de disco)
         if (_backend != null)
             _backend.Volume = pct;
 
-        // Guardar volumen global sincronizado
-        try
-        {
-            ConfigManager.Current.Volume = pct;
-            ConfigManager.Save(ConfigManager.Current);
-        }
-        catch { }
-
+        // Actualizar UI
         if (VolumeLabel != null)
             VolumeLabel.Text = $"{pct}%";
 
         if (pct > 0) _lastVolume = pct;
         if (!_isMuted)
             MuteIcon.Kind = pct == 0 ? MaterialIconKind.VolumeOff : (pct < 50 ? MaterialIconKind.VolumeMedium : MaterialIconKind.VolumeHigh);
+
+        // Debounce: reiniciar el timer — el Save al disco ocurre 400ms después
+        // del último movimiento del slider, no en cada tick.
+        _volumeSaveTimer?.Stop();
+        _volumeSaveTimer?.Start();
     }
 
     private void OnSpeedChanged(object? sender, SelectionChangedEventArgs e)
@@ -426,7 +454,7 @@ public partial class VideoPlayerControl : UserControl
         double dur    = _backend.Duration;
         double target = ProgressSlider.Value * (dur > 0 ? dur : 1);
         await _backend.SeekAsync(target);
-        ShowOsd($"⏩ {FormatTime(target)}");
+        ShowOsd(FormatTime(target));
     }
 
     // ──────────────────────────────────────────────────────────────────────────

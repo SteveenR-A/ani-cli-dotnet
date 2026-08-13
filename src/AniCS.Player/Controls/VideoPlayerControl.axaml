@@ -94,10 +94,17 @@
                            FontSize="13" Foreground="#AAAAAA"
                            HorizontalAlignment="Center" TextWrapping="Wrap"
                            MaxWidth="420"/>
-                <Button Classes="PlayerBtn" Content="← Volver"
+                <Button Classes="PlayerBtn"
                         HorizontalAlignment="Center"
                         Margin="0,8,0,0"
-                        Click="OnBackClicked"/>
+                        Click="OnBackClicked">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <material:MaterialIcon Kind="ArrowLeft" Width="16" Height="16" VerticalAlignment="Center" Foreground="#DDDDDD"/>
+                        <TextBlock Text="Volver"
+                                   FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                                   FontSize="13" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Border>
 
@@ -118,7 +125,7 @@
                             Click="OnBackClicked"
                             ToolTip.Tip="Volver al anime (Esc)">
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <TextBlock Text="←" FontSize="16" VerticalAlignment="Center"/>
+                            <material:MaterialIcon Kind="ArrowLeft" Width="18" Height="18" VerticalAlignment="Center" Foreground="#DDDDDD"/>
                             <TextBlock Text="Volver"
                                        FontFamily="Segoe UI, Inter, Roboto, sans-serif"
                                        FontSize="13" VerticalAlignment="Center"/>
