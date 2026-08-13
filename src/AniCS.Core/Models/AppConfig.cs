@@ -22,6 +22,9 @@ public class AppConfig
     public string LastSeenReleaseVersion { get; set; } = "";
     public int MaxImageCacheCount { get; set; } = 100;
     
+    // Master Global Volume (0-200)
+    public int Volume { get; set; } = 100;
+    
     // Can be Auto, Mpv, Vlc
     public string DefaultPlayer { get; set; } = "Auto";
     

@@ -1,0 +1,125 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:converters="clr-namespace:AniCS.Desktop.Converters;assembly=AniCS.Desktop"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:views="clr-namespace:AniCS.Desktop.Views;assembly=AniCS.Desktop"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="740"
+             x:Class="AniCS.Android.Views.MobileAnimeDetailsView"
+             x:DataType="models:AnimeResult">
+
+    <UserControl.Resources>
+        <converters:AsyncImageLoader x:Key="AsyncImageLoader"/>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto, *" Margin="12,10">
+        <!-- Back Header Bar -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,10">
+            <Button Grid.Column="0" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" BorderThickness="0" Padding="8" Click="OnBackClicked">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <material:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" />
+                    <TextBlock Text="Volver" VerticalAlignment="Center" FontSize="16" FontWeight="Bold" />
+                </StackPanel>
+            </Button>
+            <TextBlock Grid.Column="1" Name="HeaderTitleText" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="10,0,0,0"/>
+        </Grid>
+
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="14">
+                <!-- Cover + Basic Metadata Header -->
+                <Grid ColumnDefinitions="110, *" Margin="0,4">
+                    <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="110" Height="155" VerticalAlignment="Top">
+                        <Image Name="CoverImage"
+                               converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}"
+                               Stretch="UniformToFill" />
+                    </Border>
+                    
+                    <StackPanel Grid.Column="1" Spacing="6" Margin="12,0,0,0">
+                        <SelectableTextBlock Name="TitleText" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" />
+
+                        <WrapPanel Orientation="Horizontal">
+                            <Border IsVisible="{Binding Type, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Background="{DynamicResource AppSurfaceColor}" CornerRadius="6" Padding="6,2" Margin="0,0,4,4">
+                                <TextBlock Text="{Binding Type}" FontSize="11" Foreground="{DynamicResource AppPrimaryColor}" FontWeight="Bold"/>
+                            </Border>
+                            <Border IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Background="{DynamicResource AppSurfaceColor}" CornerRadius="6" Padding="6,2" Margin="0,0,4,4">
+                                <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource AppTitleColor}"/>
+                            </Border>
+                            <Border IsVisible="{Binding TotalEpisodes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Background="{DynamicResource AppSurfaceColor}" CornerRadius="6" Padding="6,2" Margin="0,0,4,4">
+                                <TextBlock Text="{Binding TotalEpisodes, StringFormat='{}Ep: {0}'}" FontSize="11" Foreground="{DynamicResource AppTitleColor}"/>
+                            </Border>
+                        </WrapPanel>
+
+                        <!-- Genres Badges -->
+                        <ItemsControl IsVisible="{Binding !!Genres.Count}" ItemsSource="{Binding Genres}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource AppSurfaceColor}" BorderThickness="1" BorderBrush="{DynamicResource AppPrimaryColor}" CornerRadius="10" Padding="6,2" Margin="0,0,4,4">
+                                        <TextBlock Text="{Binding}" Foreground="{DynamicResource AppPrimaryColor}" FontSize="10" FontWeight="SemiBold" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Synopsis Card -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="SINOPSIS" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" />
+                        <SelectableTextBlock Name="SynopsisText" FontSize="13" Foreground="{DynamicResource AppTextColor}" TextWrapping="Wrap" Text="Cargando sinopsis..." LineHeight="18" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Status / Error Banner -->
+                <StackPanel Name="StatusContainer" HorizontalAlignment="Center" Spacing="8">
+                    <TextBlock Name="StatusText" Text="Cargando información..." FontSize="14" Foreground="{DynamicResource AppTextColor}" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                    <Button Name="RetryBtn" IsVisible="False" Click="OnRetryClicked" HorizontalAlignment="Center" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="12,6" CornerRadius="6">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <material:MaterialIcon Kind="Refresh" Width="16" Height="16" />
+                            <TextBlock Text="Reintentar" FontWeight="Bold" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Episode List -->
+                <ItemsControl Name="EpisodesList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="views:EpisodeViewModel">
+                            <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,6">
+                                <Button Grid.Column="0" Background="{DynamicResource AppSurfaceColor}" 
+                                        CornerRadius="6,0,0,6" 
+                                        Padding="12,12" 
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Click="OnEpisodeClicked">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding WatchStatusIcon}" FontSize="13" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding EpisodeNumber}" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Width="36" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Title}" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="1" Background="{DynamicResource AppSurfaceColor}" 
+                                        CornerRadius="0,6,6,0" 
+                                        Padding="12,12" 
+                                        IsEnabled="{Binding CanDownload}"
+                                        Click="OnDownloadEpisodeClicked">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <material:MaterialIcon Kind="{Binding DownloadIcon}" Width="16" Height="16" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

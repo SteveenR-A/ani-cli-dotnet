@@ -22,9 +22,9 @@
             Click="OnBlockClicked">
         
         <Grid ColumnDefinitions="Auto, *">
-            <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="220" VerticalAlignment="Top">
+            <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="120" Height="170" VerticalAlignment="Top">
                 <Grid>
-                    <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="Uniform" />
+                    <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
                     <!-- Badge de Type (Donghua, OVA, Pelicula) -->
                     <Border Background="{Binding Type, Converter={StaticResource BadgeColorConverter}}" 
                             CornerRadius="4" 

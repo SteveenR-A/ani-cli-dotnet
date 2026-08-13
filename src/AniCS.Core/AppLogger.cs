@@ -36,6 +36,26 @@ public static class AppLogger
     {
         try
         {
+            // Output to Console / Logcat for real-time ADB debugging
+            System.Console.Error.WriteLine($"[AniCS] [{level}] [{source}] {content}");
+
+            if (OperatingSystem.IsAndroid())
+            {
+                try
+                {
+                    var logType = Type.GetType("Android.Util.Log, Mono.Android");
+                    if (logType != null)
+                    {
+                        var method = level == "ERROR"
+                            ? logType.GetMethod("Error", new[] { typeof(string), typeof(string) })
+                            : logType.GetMethod("Info", new[] { typeof(string), typeof(string) });
+
+                        method?.Invoke(null, new object[] { $"AniCS:{source}", content });
+                    }
+                }
+                catch { }
+            }
+
             Directory.CreateDirectory(LogDir);
             var filePath = Path.Combine(LogDir, $"Log-{DateTime.Now:yyyyMMdd}.txt");
             var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] [{source}]{Environment.NewLine}{content}{Environment.NewLine}";

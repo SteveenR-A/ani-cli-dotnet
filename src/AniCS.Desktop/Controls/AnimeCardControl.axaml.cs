@@ -13,12 +13,9 @@ public partial class AnimeCardControl : UserControl
 
     private void OnCardClicked(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is AnimeResult anime && TopLevel.GetTopLevel(this) is Window window)
+        if (DataContext is AnimeResult anime)
         {
-            if (window is MainWindow mainWindow)
-            {
-                mainWindow.NavigateToAnimeDetails(anime);
-            }
+            Services.NavigationHelper.NavigateToAnimeDetails(this, anime);
         }
     }
 }

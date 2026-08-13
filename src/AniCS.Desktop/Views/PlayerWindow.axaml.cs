@@ -55,18 +55,25 @@ public partial class PlayerWindow : Window
 
     private async void OnLoaded(object? sender, RoutedEventArgs e)
     {
-        if (_playerBackend is LibVlcBackend libVlcBackend)
+        try
         {
-            EmbeddedVideoPlayer.Attach(libVlcBackend);
-            // Subscribe to auto-recover hook
-            libVlcBackend.RecoverRequested += OnRecoverRequested;
+            if (_playerBackend is LibVlcBackend libVlcBackend)
+            {
+                EmbeddedVideoPlayer.Attach(libVlcBackend);
+                // Subscribe to auto-recover hook
+                libVlcBackend.RecoverRequested += OnRecoverRequested;
+            }
+
+            EmbeddedVideoPlayer.BackRequested  += OnCloseRequested;
+            EmbeddedVideoPlayer.CloseRequested += OnCloseRequested;
+            EmbeddedVideoPlayer.Focus();
+
+            await StartPlaybackAsync();
         }
-
-        EmbeddedVideoPlayer.BackRequested  += OnCloseRequested;
-        EmbeddedVideoPlayer.CloseRequested += OnCloseRequested;
-        EmbeddedVideoPlayer.Focus();
-
-        await StartPlaybackAsync();
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlayerWindow.OnLoaded] Error: {ex.Message}");
+        }
     }
 
     private void OnUnloaded(object? sender, RoutedEventArgs e)
@@ -78,7 +85,7 @@ public partial class PlayerWindow : Window
         if (_playerBackend is LibVlcBackend libVlcBackend)
             libVlcBackend.RecoverRequested -= OnRecoverRequested;
 
-        _playerBackend?.Stop();
+        Task.Run(() => _playerBackend?.Stop());
     }
 
     // ── Playback ──────────────────────────────────────────────────────────────
@@ -104,6 +111,7 @@ public partial class PlayerWindow : Window
         if (string.IsNullOrEmpty(url))
         {
             System.Diagnostics.Debug.WriteLine("[PlayerWindow] URL resolver returned empty string.");
+            EmbeddedVideoPlayer.HideLoading();
             return;
         }
 

@@ -1,6 +1,10 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using System.Net.Http;
 using AniCS.Extractors;
 using AniCS.Models;
@@ -22,7 +26,8 @@ public partial class AnimeDetailsView : UserControl
     private AnimeResult _anime;
     private static readonly HttpClient _httpClient = new HttpClient();
     // Backends de reproducción y resolución inyectados desde DI
-    private readonly IPlayerBackend   _playerBackend;
+    // No es readonly: se actualiza en cada reproducción con la config actual del usuario
+    private IPlayerBackend _playerBackend;
     private readonly IResolverBackend _resolverBackend;
     // Fallback forcing yt-dlp (reemplaza al antiguo YtDlpService.cs)
     private readonly IResolverBackend _ytdlpFallback = ResolverFactory.Create(ResolverBackendMode.YtDlp);
@@ -55,14 +60,52 @@ public partial class AnimeDetailsView : UserControl
 
     private void OnBackClicked(object? sender, RoutedEventArgs e)
     {
-        if (TopLevel.GetTopLevel(this) is Window window && window is MainWindow mainWindow)
+        Services.NavigationHelper.GoBack(this);
+    }
+
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        UpdateHeaderLayout(e.NewSize.Width);
+    }
+
+    private void UpdateHeaderLayout(double width)
+    {
+        if (HeaderGrid == null || LeftPanel == null || RightPanel == null) return;
+
+        if (width < 620)
         {
-            mainWindow.GoBack();
+            HeaderGrid.ColumnDefinitions = ColumnDefinitions.Parse("*");
+            HeaderGrid.RowDefinitions = RowDefinitions.Parse("Auto, Auto");
+
+            Grid.SetRow(LeftPanel, 0);
+            Grid.SetColumn(LeftPanel, 0);
+            LeftPanel.Margin = new Thickness(0, 0, 0, 15);
+            LeftPanel.Width = double.NaN;
+
+            Grid.SetRow(RightPanel, 1);
+            Grid.SetColumn(RightPanel, 0);
+        }
+        else
+        {
+            HeaderGrid.ColumnDefinitions = ColumnDefinitions.Parse("Auto, *");
+            HeaderGrid.RowDefinitions = RowDefinitions.Parse("Auto");
+
+            Grid.SetRow(LeftPanel, 0);
+            Grid.SetColumn(LeftPanel, 0);
+            LeftPanel.Margin = new Thickness(0, 0, 20, 15);
+            LeftPanel.Width = 280;
+
+            Grid.SetRow(RightPanel, 0);
+            Grid.SetColumn(RightPanel, 1);
         }
     }
 
     private async void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        // Suscribir eventos del backend de reproducción
+        _playerBackend.SessionChanged += OnPlayerSessionChanged;
+        _playerBackend.ErrorOccurred  += OnPlayerError;
 
         AniCS.Desktop.Services.DownloadManager.DownloadsChanged += OnDownloadsChanged;
         var extractor = ExtractorFactory.GetExtractorForUrl(_anime.Url);
@@ -166,6 +209,18 @@ public partial class AnimeDetailsView : UserControl
     }
 
     /// <summary>
+    /// Recibe errores del backend activo y los muestra en el StatusText de la vista.
+    /// </summary>
+    private void OnPlayerError(string message)
+    {
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            StatusText.Text = $"Error del reproductor: {message}";
+            StatusText.IsVisible = true;
+        });
+    }
+
+    /// <summary>
     /// Falls back to an unconditional yt-dlp resolution (was YtDlpService.ResolveAsync).
     /// Returns the direct URL, or string.Empty if yt-dlp could not resolve it.
     /// </summary>
@@ -181,6 +236,7 @@ public partial class AnimeDetailsView : UserControl
         AniCS.Desktop.Services.DownloadManager.DownloadsChanged -= OnDownloadsChanged;
         AniCS.Desktop.Services.DesktopPlayer.AudioStateChanged -= OnAudioStateChanged;
         _playerBackend.SessionChanged -= OnPlayerSessionChanged;
+        _playerBackend.ErrorOccurred  -= OnPlayerError;
     }
 
 
@@ -311,9 +367,8 @@ public partial class AnimeDetailsView : UserControl
         if (sender is Button btn && btn.DataContext is EpisodeViewModel vm)
         {
             var ownerWindow = TopLevel.GetTopLevel(this) as Window;
-            if (ownerWindow == null) return;
             
-            if (AniCS.ConfigManager.Current.UseSpatialHud)
+            if (ownerWindow != null && AniCS.ConfigManager.Current.UseSpatialHud)
             {
                 var options = new System.Collections.Generic.List<AniCS.Desktop.Controls.RadialMenuOption> 
                 { 
@@ -340,7 +395,93 @@ public partial class AnimeDetailsView : UserControl
         }
     }
 
-    private async System.Threading.Tasks.Task ProceedWithPlay(Button btn, EpisodeViewModel vm, Window ownerWindow, bool useHud)
+    private async Task<(VideoServer? Server, string Quality)> ShowServerPickerModalAsync(
+        System.Collections.Generic.List<VideoServer> servers, string title, bool useHud, Window? ownerWindow)
+    {
+        bool isDonghua = AniCS.ConfigManager.Current.ContentType == "Donghua";
+        if (ownerWindow != null)
+        {
+            if (useHud)
+            {
+                var options = new System.Collections.Generic.List<AniCS.Desktop.Controls.RadialMenuOption>();
+                foreach (var s in servers) options.Add(new AniCS.Desktop.Controls.RadialMenuOption { Text = s.Name, IsSupported = s.IsDirectPlaySupported });
+                
+                int srvIdx = await AniCS.Desktop.Controls.HudRadialMenuDialog.ShowAsync(ownerWindow, options, "");
+                if (srvIdx != -1) return (servers[srvIdx], AniCS.ConfigManager.Current.PreferredQuality);
+                return (null, AniCS.ConfigManager.Current.PreferredQuality);
+            }
+            else
+            {
+                var res = await ServerPickerDialog.ShowAsync(ownerWindow, servers, title, isDonghua);
+                return (res.Server, res.Quality);
+            }
+        }
+
+        // Android / Non-Window environment: show internal modal overlay
+        var tcs = new System.Threading.Tasks.TaskCompletionSource<(VideoServer?, string)>();
+        var container = new StackPanel { Spacing = 10, Margin = new Avalonia.Thickness(10) };
+
+        foreach (var srv in servers)
+        {
+            var btn = new Button
+            {
+                Content = srv.Name,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                Padding = new Avalonia.Thickness(12),
+                Background = Brushes.Purple,
+                Foreground = Brushes.White,
+                CornerRadius = new Avalonia.CornerRadius(8)
+            };
+            var capturedServer = srv;
+            btn.Click += (s, e) =>
+            {
+                CloseAndroidModal();
+                tcs.TrySetResult((capturedServer, AniCS.ConfigManager.Current.PreferredQuality));
+            };
+            container.Children.Add(btn);
+        }
+
+        if (!ShowAndroidModal(title, container))
+        {
+            return (servers.FirstOrDefault(), AniCS.ConfigManager.Current.PreferredQuality);
+        }
+
+        return await tcs.Task;
+    }
+
+    private bool ShowAndroidModal(string title, Control content)
+    {
+        Visual? current = this;
+        while (current != null)
+        {
+            if (current.GetType().Name == "AndroidMainView")
+            {
+                var method = current.GetType().GetMethod("ShowModal");
+                method?.Invoke(current, new object[] { title, content });
+                return true;
+            }
+            current = current.GetVisualParent();
+        }
+        return false;
+    }
+
+    private void CloseAndroidModal()
+    {
+        Visual? current = this;
+        while (current != null)
+        {
+            if (current.GetType().Name == "AndroidMainView")
+            {
+                var method = current.GetType().GetMethod("CloseModal");
+                method?.Invoke(current, null);
+                return;
+            }
+            current = current.GetVisualParent();
+        }
+    }
+
+    private async System.Threading.Tasks.Task ProceedWithPlay(Button btn, EpisodeViewModel vm, Window? ownerWindow, bool useHud)
     {
         StatusText.Text = $"Cargando servidores: {vm.Title}...";
         StatusText.IsVisible = true;
@@ -357,10 +498,8 @@ public partial class AnimeDetailsView : UserControl
                 return;
             }
 
-            // Si hay más de un servidor, mostrar el diálogo de selección
             VideoServer? chosenServer = null;
             string chosenQuality = "Mejor";
-            bool isDonghua = AniCS.ConfigManager.Current.ContentType == "Donghua";
             if (servers.Count == 1)
             {
                 chosenServer = servers[0];
@@ -369,35 +508,18 @@ public partial class AnimeDetailsView : UserControl
             else
             {
                 StatusText.IsVisible = false;
-                if (useHud)
-                {
-                    var options = new System.Collections.Generic.List<AniCS.Desktop.Controls.RadialMenuOption>();
-                    foreach (var s in servers) options.Add(new AniCS.Desktop.Controls.RadialMenuOption { Text = s.Name, IsSupported = s.IsDirectPlaySupported });
-                    
-                    int srvIdx = await AniCS.Desktop.Controls.HudRadialMenuDialog.ShowAsync(ownerWindow, options, "");
-                    if (srvIdx != -1) 
-                    {
-                        chosenServer = servers[srvIdx];
-                        chosenQuality = AniCS.ConfigManager.Current.PreferredQuality;
-                    }
-                }
-                else
-                {
-                    var result = await ServerPickerDialog.ShowAsync(ownerWindow, servers, $"{_anime.Title} — {vm.Title}", isDonghua);
-                    chosenServer = result.Server;
-                    chosenQuality = result.Quality;
-                }
+                var pickerResult = await ShowServerPickerModalAsync(servers, $"{_anime.Title} — {vm.Title}", useHud, ownerWindow);
+                chosenServer = pickerResult.Server;
+                chosenQuality = pickerResult.Quality;
             }
 
             if (chosenServer == null)
             {
-                // El usuario canceló
                 StatusText.IsVisible = false;
+                btn.IsEnabled = true;
                 return;
             }
 
-            // ── Encapsular toda la resolución en una lambda reutilizable ──────
-            // PlayerWindow la llamará una vez al inicio y de nuevo en cada auto-recover.
             var serverUrl   = chosenServer.Url;
             var quality     = chosenQuality;
             Func<System.Threading.Tasks.Task<string>> urlResolver = async () =>
@@ -414,9 +536,11 @@ public partial class AnimeDetailsView : UserControl
                         freshUrl = resolved.DirectUrl;
                     else if (_ytdlpFallback.IsAvailable)
                     {
-                        freshUrl = await ResolveWithYtDlpFallbackAsync(freshUrl, serverUrl);
-                        if (string.IsNullOrEmpty(freshUrl))
-                            freshUrl = await ResolveWithYtDlpFallbackAsync(vm.Url, _anime.Url);
+                        var fb = await ResolveWithYtDlpFallbackAsync(freshUrl, serverUrl);
+                        if (string.IsNullOrEmpty(fb))
+                            fb = await ResolveWithYtDlpFallbackAsync(vm.Url, _anime.Url);
+                        if (!string.IsNullOrEmpty(fb))
+                            freshUrl = fb;
                     }
                 }
                 else if (string.IsNullOrEmpty(freshUrl))
@@ -428,16 +552,20 @@ public partial class AnimeDetailsView : UserControl
                         freshUrl = resolved.DirectUrl;
                     else if (_ytdlpFallback.IsAvailable)
                     {
-                        freshUrl = await ResolveWithYtDlpFallbackAsync(serverUrl, serverUrl);
-                        if (string.IsNullOrEmpty(freshUrl))
-                            freshUrl = await ResolveWithYtDlpFallbackAsync(vm.Url, _anime.Url);
+                        var fb = await ResolveWithYtDlpFallbackAsync(serverUrl, serverUrl);
+                        if (string.IsNullOrEmpty(fb))
+                            fb = await ResolveWithYtDlpFallbackAsync(vm.Url, _anime.Url);
+                        if (!string.IsNullOrEmpty(fb))
+                            freshUrl = fb;
                     }
+                    
+                    if (string.IsNullOrEmpty(freshUrl))
+                        freshUrl = serverUrl;
                 }
 
                 return freshUrl ?? string.Empty;
             };
 
-            // Obtener la URL inicial para validar que hay algo reproducible antes de abrir la ventana
             StatusText.Text = $"Resolviendo video ({chosenServer.Name})... Por favor, espera.";
             StatusText.IsVisible = true;
             var videoUrl = await urlResolver();
@@ -447,34 +575,63 @@ public partial class AnimeDetailsView : UserControl
                 StatusText.Text = $"¡Abriendo reproductor para {vm.Title}!";
                 StatusText.IsVisible = true;
 
-                // Guardar historial
                 var history = new AniCS.History.WatchHistory();
                 history.Record(_anime.Title, _anime.Url, _anime.ThumbnailUrl, vm.EpisodeNumber, videoUrl);
 
                 _nowPlayingVm = vm;
 
-                // Abrir la nueva ventana independiente del reproductor
-                if (_playerBackend is LibVlcBackend)
+                // Detener cualquier reproducción de audio global/secundaria en segundo plano
+                AniCS.Desktop.Services.DesktopPlayer.StopAudio();
+
+                // Crear un backend fresco según la configuración actual del usuario.
+                // Esto garantiza que si el usuario cambió el motor en Ajustes (sin reiniciar
+                // la app), o si LibVLC falló al arrancar y quedó un MpvBackend como singleton,
+                // se respete la elección actual del usuario.
+                var currentBackend = PlayerFactory.CreateFromConfig();
+
+                // Actualizar el campo para que OnUnloaded desuscriba el evento correcto
+                _playerBackend.SessionChanged -= OnPlayerSessionChanged;
+                _playerBackend.ErrorOccurred  -= OnPlayerError;
+                _playerBackend = currentBackend;
+                _playerBackend.SessionChanged += OnPlayerSessionChanged;
+                _playerBackend.ErrorOccurred  += OnPlayerError;
+
+                if (currentBackend is LibVlcBackend libVlcForPlay)
                 {
                     StatusText.IsVisible = false;
+
+                    string initialResolvedUrl = videoUrl;
+                    Func<System.Threading.Tasks.Task<string>> safeResolver = async () =>
+                    {
+                        if (!string.IsNullOrEmpty(initialResolvedUrl))
+                        {
+                            var u = initialResolvedUrl;
+                            initialResolvedUrl = null!;
+                            return u;
+                        }
+                        return await urlResolver();
+                    };
+
                     var playerWindow = new PlayerWindow(
-                        _playerBackend,
-                        urlResolver,
+                        libVlcForPlay,
+                        safeResolver,
                         $"{_anime.Title} — {vm.Title}",
                         serverUrl,
                         quality);
-                    playerWindow.Show(ownerWindow);
+                    var ownerWin = TopLevel.GetTopLevel(this) as Window;
+                    if (ownerWin != null)
+                        playerWindow.Show(ownerWin);
+                    else
+                        playerWindow.Show();
                 }
                 else
                 {
-                    // Reproducir con el reproductor externo (mpv)
-                    _ = _playerBackend.PlayAsync(videoUrl, $"{_anime.Title} — {vm.Title}", new PlayOptions
+                    _ = currentBackend.PlayAsync(videoUrl, $"{_anime.Title} — {vm.Title}", new PlayOptions
                     {
                         Referer = serverUrl,
                         Quality = quality
                     });
 
-                    // Con mpv (proceso externo), solo mostrar el mensaje unos segundos
                     await System.Threading.Tasks.Task.Delay(3000);
                     StatusText.IsVisible = false;
                 }
@@ -485,7 +642,6 @@ public partial class AnimeDetailsView : UserControl
                     $"Motor activo: {_resolverBackend.BackendName} / {_playerBackend.BackendName}.";
             }
         }
-
         catch (Exception ex)
         {
             StatusText.Text = $"Error: {ex.Message}";
@@ -501,14 +657,11 @@ public partial class AnimeDetailsView : UserControl
         if (sender is Button btn && btn.DataContext is EpisodeViewModel vm)
         {
             var ownerWindow = TopLevel.GetTopLevel(this) as Window;
-            if (ownerWindow != null)
-            {
-                await ProceedWithDownload(btn, vm, ownerWindow, false);
-            }
+            await ProceedWithDownload(btn, vm, ownerWindow, false);
         }
     }
 
-    private async System.Threading.Tasks.Task ProceedWithDownload(Button btn, EpisodeViewModel vm, Window ownerWindow, bool useHud)
+    private async System.Threading.Tasks.Task ProceedWithDownload(Button btn, EpisodeViewModel vm, Window? ownerWindow, bool useHud)
     {
         if (AniCS.Desktop.Services.DownloadManager.IsEpisodeDownloaded(_anime.Url, vm.EpisodeNumber))
         {
@@ -535,10 +688,8 @@ public partial class AnimeDetailsView : UserControl
                 return;
             }
 
-            // Mostrar diálogo de selección si hay más de un servidor
             VideoServer? chosenServer = null;
             string chosenQuality = "Mejor";
-            bool isDonghua = AniCS.ConfigManager.Current.ContentType == "Donghua";
             
             if (servers.Count == 1)
             {
@@ -548,24 +699,9 @@ public partial class AnimeDetailsView : UserControl
             else
             {
                 StatusText.IsVisible = false;
-                if (useHud)
-                {
-                    var options = new System.Collections.Generic.List<AniCS.Desktop.Controls.RadialMenuOption>();
-                    foreach (var s in servers) options.Add(new AniCS.Desktop.Controls.RadialMenuOption { Text = s.Name, IsSupported = null });
-                    
-                    int srvIdx = await AniCS.Desktop.Controls.HudRadialMenuDialog.ShowAsync(ownerWindow, options, "");
-                    if (srvIdx != -1) 
-                    {
-                        chosenServer = servers[srvIdx];
-                        chosenQuality = AniCS.ConfigManager.Current.PreferredQuality;
-                    }
-                }
-                else
-                {
-                    var result = await ServerPickerDialog.ShowAsync(ownerWindow, servers, $"{_anime.Title} — {vm.Title}", isDonghua);
-                    chosenServer = result.Server;
-                    chosenQuality = result.Quality;
-                }
+                var pickerResult = await ShowServerPickerModalAsync(servers, $"{_anime.Title} — {vm.Title}", useHud, ownerWindow);
+                chosenServer = pickerResult.Server;
+                chosenQuality = pickerResult.Quality;
             }
 
             if (chosenServer == null)

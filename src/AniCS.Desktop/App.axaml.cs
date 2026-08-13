@@ -13,6 +13,8 @@ public partial class App : Application
 {
     public static IServiceProvider Services { get; private set; } = null!;
 
+    public static Func<IServiceProvider, Avalonia.Controls.Control>? SingleViewFactory { get; set; }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -64,6 +66,13 @@ public partial class App : Application
                 (Services.GetService<IPlayerBackend>() as IDisposable)?.Dispose();
                 (Services.GetService<IResolverBackend>() as IDisposable)?.Dispose();
             };
+        }
+        else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+        {
+            if (SingleViewFactory != null)
+            {
+                singleView.MainView = SingleViewFactory(Services);
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

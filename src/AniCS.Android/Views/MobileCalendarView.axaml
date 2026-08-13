@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:controls="clr-namespace:AniCS.Desktop.Controls;assembly=AniCS.Desktop"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="740"
+             x:Class="AniCS.Android.Views.MobileCalendarView">
+
+    <Grid RowDefinitions="Auto, Auto, *" Margin="15,10">
+        <!-- Title + Reload Header -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+            <TextBlock Name="TitleText" Text="Horario de Emisión" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center"/>
+            <Button Name="ReloadButton" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center" Click="OnReloadClicked" ToolTip.Tip="Recargar">
+                <material:MaterialIcon Kind="Refresh" Width="22" Height="22" />
+            </Button>
+        </StackPanel>
+        
+        <!-- Day Selector (Full Width Horizontal Scroll) - NO FilterTextBox for Phone! -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,0,15">
+            <StackPanel Name="DaysPanel" Orientation="Horizontal" Spacing="8">
+                <!-- Buttons generated in code-behind -->
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Content List -->
+        <Grid Grid.Row="2">
+            <TextBlock Name="StatusText" Text="Cargando horarios..." FontSize="16" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="True"/>
+            
+            <ScrollViewer>
+                <StackPanel>
+                    <TextBlock Name="CurrentDayTitleText" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,0,0,12" />
+                    <ItemsControl Name="DayItemsList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:AnimeResult">
+                                <controls:AnimeBlockControl Margin="0,0,0,10" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

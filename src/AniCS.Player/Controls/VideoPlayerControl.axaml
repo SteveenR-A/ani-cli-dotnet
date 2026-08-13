@@ -202,7 +202,7 @@
                             <!-- Separador -->
                             <Border Width="1" Background="#44FFFFFF" Margin="4,4" VerticalAlignment="Stretch"/>
 
-                            <!-- 🔊 Mute + Slider de Volumen -->
+                            <!-- 🔊 Mute + Slider de Volumen expandido + Porcentaje -->
                             <Button x:Name="MuteBtn" Classes="PlayerBtn" Padding="6,6"
                                     Click="OnMuteClicked"
                                     ToolTip.Tip="Silenciar (M)">
@@ -210,9 +210,15 @@
                             </Button>
                             <Slider x:Name="VolumeSlider"
                                     Minimum="0" Maximum="200" Value="100"
-                                    Width="76" VerticalAlignment="Center"
+                                    Width="130" VerticalAlignment="Center"
                                     ValueChanged="OnVolumeChanged"
                                     ToolTip.Tip="Volumen (0–200%)"/>
+                            <TextBlock x:Name="VolumeLabel"
+                                       Text="100%"
+                                       FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                                       Foreground="#AAAAAA" FontSize="11"
+                                       VerticalAlignment="Center" Margin="2,0,4,0"
+                                       Width="34"/>
 
                             <!-- Separador -->
                             <Border Width="1" Background="#44FFFFFF" Margin="8,4" VerticalAlignment="Stretch"/>

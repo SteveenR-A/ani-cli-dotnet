@@ -1,0 +1,260 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:vm="clr-namespace:AniCS.Desktop.ViewModels;assembly=AniCS.Desktop"
+             xmlns:controls="clr-namespace:AniCS.Desktop.Controls;assembly=AniCS.Desktop"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
+             x:Class="AniCS.Android.Views.AndroidMainView"
+             x:DataType="vm:HomeViewModel">
+
+    <Grid RowDefinitions="Auto, *, Auto">
+
+        <!-- ── 1. Barra de Navegación Superior (Top Navigation Bar igual a PC) ── -->
+        <Border Name="TopHeaderBorder" Grid.Row="0" Background="{DynamicResource AppSurfaceColor}" Height="56" Padding="8,0">
+            <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+                <!-- Hamburger Menu Button -->
+                <Button Grid.Column="0" Name="HamburgerButton" 
+                        Background="Transparent" 
+                        Foreground="{DynamicResource AppPrimaryColor}" 
+                        Click="OnHamburgerClicked" 
+                        Margin="0,0,10,0"
+                        VerticalAlignment="Center">
+                    <material:MaterialIcon Kind="Menu" Width="24" Height="24" />
+                </Button>
+
+                <!-- Page Title -->
+                <TextBlock Grid.Column="1" Name="PageTitleText" Text="Inicio" 
+                           FontSize="22" FontWeight="Bold" 
+                           Foreground="{DynamicResource AppPrimaryColor}" 
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+
+                <!-- Refresh Button -->
+                <Button Grid.Column="2" 
+                        Command="{Binding ReloadCommand}"
+                        Background="Transparent" 
+                        Foreground="{DynamicResource AppTitleColor}" 
+                        Margin="0,0,5,0"
+                        VerticalAlignment="Center">
+                    <material:MaterialIcon Kind="Refresh" Width="22" Height="22" />
+                </Button>
+
+                <!-- Toggle Anime / Donghua -->
+                <StackPanel Name="SourceTogglePanel" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Anime" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource AppSubtextColor}" Margin="0,0,4,0" />
+                    <ToggleSwitch Name="SourceToggle" IsChecked="{Binding IsDonghuaMode}" OnContent="Donghua" OffContent="" VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ── 2. Área de contenido principal con SplitView (Menú Lateral) ──── -->
+        <SplitView Grid.Row="1" Name="MainSplitView" 
+                   IsPaneOpen="False" 
+                   DisplayMode="Overlay" 
+                   OpenPaneLength="260" 
+                   PaneBackground="{DynamicResource AppSurfaceColor}">
+            
+            <!-- Panel Lateral (Sidebar con los 7 apartados de PC) -->
+            <SplitView.Pane>
+                <Grid RowDefinitions="*, Auto">
+                    <ScrollViewer Grid.Row="0" Margin="15,20">
+                        <StackPanel Spacing="12">
+
+                            <Button Name="NavBtnHome" Content="Inicio" 
+                                    Classes="SidebarBtn"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource AppTitleColor}"
+                                    FontSize="16" FontWeight="SemiBold"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    Click="OnHomeClicked"/>
+                                    
+                            <Button Name="NavBtnSearch" Content="Buscar Anime" 
+                                    Classes="SidebarBtn"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource AppSubtextColor}"
+                                    FontSize="16"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    Click="OnSearchClicked"/>
+                                    
+                            <Button Name="CalendarNavBtn" Content="Horarios" 
+                                    Classes="SidebarBtn"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource AppSubtextColor}"
+                                    FontSize="16"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    Click="OnCalendarClicked"/>
+
+                            <Button Name="TopAnimesNavBtn" Content="Top Animes" 
+                                    Classes="SidebarBtn"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource AppSubtextColor}"
+                                    FontSize="16"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    Click="OnTopAnimesClicked"/>
+
+                            <Button Name="NavBtnDownloads" Content="Descargas" 
+                                    Classes="SidebarBtn"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource AppSubtextColor}"
+                                    FontSize="16"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    Click="OnDownloadsClicked"/>
+                                    
+                            <Button Name="NavBtnHistory" Content="Historial" 
+                                    Classes="SidebarBtn"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource AppSubtextColor}"
+                                    FontSize="16"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    Click="OnHistoryClicked"/>
+
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Botón Ajustes al final del menú -->
+                    <Button Grid.Row="1"
+                            Classes="SidebarBtn"
+                            Background="Transparent"
+                            Foreground="{DynamicResource AppSubtextColor}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Margin="15,10,15,20"
+                            Click="OnSettingsClicked">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <material:MaterialIcon Kind="Cog" Width="22" Height="22" />
+                            <TextBlock Text="Ajustes" VerticalAlignment="Center" FontSize="16" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </SplitView.Pane>
+
+            <!-- Contenido Principal -->
+            <SplitView.Content>
+                <Border Background="{DynamicResource AppBackgroundColor}">
+                    <TransitioningContentControl Name="MainContent">
+                        <TransitioningContentControl.PageTransition>
+                            <CrossFade Duration="0:0:0.2" />
+                        </TransitioningContentControl.PageTransition>
+                    </TransitioningContentControl>
+                </Border>
+            </SplitView.Content>
+        </SplitView>
+
+        <!-- ── 3. Overlay Modal Interno (para diálogos sin Window.Show) ──────── -->
+        <Border Grid.Row="0" Grid.RowSpan="3" 
+                Name="ModalOverlay" 
+                Background="#C0000000" 
+                IsVisible="False" 
+                ZIndex="1000">
+            <Border Background="{DynamicResource AppSurfaceColor}" 
+                    CornerRadius="16" 
+                    Padding="20" 
+                    Margin="20" 
+                    VerticalAlignment="Center" 
+                    HorizontalAlignment="Stretch"
+                    MaxWidth="400">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <TextBlock Grid.Row="0" Name="ModalTitle" 
+                               Text="Seleccionar Servidor" 
+                               FontSize="18" FontWeight="Bold" 
+                               Foreground="{DynamicResource AppPrimaryColor}" 
+                               Margin="0,0,0,15" />
+
+                    <ScrollViewer Grid.Row="1" MaxHeight="350">
+                        <StackPanel Name="ModalContentContainer" Spacing="10" />
+                    </ScrollViewer>
+
+                    <Button Grid.Row="2" 
+                            Content="Cancelar" 
+                            HorizontalAlignment="Stretch" 
+                            HorizontalContentAlignment="Center" 
+                            Margin="0,15,0,0" 
+                            Padding="10"
+                            Background="Transparent"
+                            Foreground="{DynamicResource AppSubtextColor}"
+                            Click="OnCloseModalClicked" />
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- ── 4. Barra de Navegación Inferior Rapida (Bottom Bar) ────────── -->
+        <Border Name="BottomNavBar" Grid.Row="2" 
+                Background="{DynamicResource AppSurfaceColor}" 
+                BorderBrush="{DynamicResource AppSubtextColor}" 
+                BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*, *, *, *, *" Height="56">
+
+                <!-- Tab: Inicio -->
+                <Button Grid.Column="0" Name="TabHome" 
+                        Background="Transparent" 
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                        HorizontalContentAlignment="Center" 
+                        Click="OnTabHomeClicked">
+                    <StackPanel Spacing="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <material:MaterialIcon Name="IconHome" Kind="Home" Width="20" Height="20" Foreground="{DynamicResource AppPrimaryColor}" />
+                        <TextBlock Name="TextHome" Text="Inicio" FontSize="10" Foreground="{DynamicResource AppPrimaryColor}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Tab: Buscar -->
+                <Button Grid.Column="1" Name="TabSearch" 
+                        Background="Transparent" 
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                        HorizontalContentAlignment="Center" 
+                        Click="OnTabSearchClicked">
+                    <StackPanel Spacing="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <material:MaterialIcon Name="IconSearch" Kind="Magnify" Width="20" Height="20" Foreground="{DynamicResource AppSubtextColor}" />
+                        <TextBlock Name="TextSearch" Text="Buscar" FontSize="10" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Tab: Horarios -->
+                <Button Grid.Column="2" Name="TabCalendar" 
+                        Background="Transparent" 
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                        HorizontalContentAlignment="Center" 
+                        Click="OnTabCalendarClicked">
+                    <StackPanel Spacing="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <material:MaterialIcon Name="IconCalendar" Kind="CalendarClock" Width="20" Height="20" Foreground="{DynamicResource AppSubtextColor}" />
+                        <TextBlock Name="TextCalendar" Text="Horarios" FontSize="10" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Tab: Descargas -->
+                <Button Grid.Column="3" Name="TabDownloads" 
+                        Background="Transparent" 
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                        HorizontalContentAlignment="Center" 
+                        Click="OnTabDownloadsClicked">
+                    <StackPanel Spacing="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <material:MaterialIcon Name="IconDownloads" Kind="Download" Width="20" Height="20" Foreground="{DynamicResource AppSubtextColor}" />
+                        <TextBlock Name="TextDownloads" Text="Descargas" FontSize="10" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Tab: Historial -->
+                <Button Grid.Column="4" Name="TabHistory" 
+                        Background="Transparent" 
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                        HorizontalContentAlignment="Center" 
+                        Click="OnTabHistoryClicked">
+                    <StackPanel Spacing="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <material:MaterialIcon Name="IconHistory" Kind="History" Width="20" Height="20" Foreground="{DynamicResource AppSubtextColor}" />
+                        <TextBlock Name="TextHistory" Text="Historial" FontSize="10" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+            </Grid>
+        </Border>
+
+    </Grid>
+</UserControl>

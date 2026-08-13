@@ -90,9 +90,14 @@ public partial class VideoPlayerControl : UserControl
         _backend.ErrorOccurred  += OnPlayerError;
         VideoViewControl.MediaPlayer = backend.MediaPlayer;
         
-        // Sincronizar volumen inicial
-        VolumeSlider.Value = backend.Volume;
-        _lastVolume = backend.Volume;
+        // Sincronizar volumen inicial con la configuración global
+        int globalVol = ConfigManager.Current.Volume;
+        if (globalVol < 0 || globalVol > 200) globalVol = 100;
+
+        _backend.Volume    = globalVol;
+        VolumeSlider.Value = globalVol;
+        _lastVolume        = globalVol;
+        if (VolumeLabel != null) VolumeLabel.Text = $"{globalVol}%";
     }
 
     public void Detach()
@@ -355,10 +360,21 @@ public partial class VideoPlayerControl : UserControl
 
     private void OnVolumeChanged(object? sender, RangeBaseValueChangedEventArgs e)
     {
-        if (_backend != null)
-            _backend.Volume = (int)e.NewValue;
-
         int pct = (int)e.NewValue;
+        if (_backend != null)
+            _backend.Volume = pct;
+
+        // Guardar volumen global sincronizado
+        try
+        {
+            ConfigManager.Current.Volume = pct;
+            ConfigManager.Save(ConfigManager.Current);
+        }
+        catch { }
+
+        if (VolumeLabel != null)
+            VolumeLabel.Text = $"{pct}%";
+
         if (pct > 0) _lastVolume = pct;
         if (!_isMuted)
             MuteIcon.Kind = pct == 0 ? MaterialIconKind.VolumeOff : (pct < 50 ? MaterialIconKind.VolumeMedium : MaterialIconKind.VolumeHigh);

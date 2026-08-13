@@ -16,7 +16,8 @@ namespace AniCS.Desktop.Views;
 public partial class DownloadsView : UserControl, INotifyPropertyChanged
 {
     public bool HasActiveDownloads => DownloadManager.ActiveDownloads.Count > 0;
-    private readonly IPlayerBackend _playerBackend;
+    // No es readonly: se actualiza en cada reproducción con la config actual del usuario
+    private IPlayerBackend _playerBackend;
     private readonly IResolverBackend _resolverBackend;
     private readonly IResolverBackend _ytdlpFallback = ResolverFactory.Create(ResolverBackendMode.YtDlp);
 
@@ -255,7 +256,7 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
         }
     }
 
-    private void PlayEpisodeWithQuickControl(DownloadedAnime anime, DownloadedEpisode episode)
+    private async void PlayEpisodeWithQuickControl(DownloadedAnime anime, DownloadedEpisode episode)
     {
         _currentAnime = anime;
         _currentEpisode = episode;
@@ -269,7 +270,17 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
 
         UpdateQuickControlBar();
 
-        if (_playerBackend is LibVlcBackend && TopLevel.GetTopLevel(this) is Window ownerWindow)
+        // Detener cualquier reproducción de audio global/secundaria en segundo plano
+        AniCS.Desktop.Services.DesktopPlayer.StopAudio();
+
+        // Crear un backend fresco según la configuración actual del usuario
+        var currentBackend = PlayerFactory.CreateFromConfig();
+        // Reasignar eventos de sesión al nuevo backend
+        _playerBackend.SessionChanged -= OnPlayerSessionChanged;
+        _playerBackend = currentBackend;
+        _playerBackend.SessionChanged += OnPlayerSessionChanged;
+
+        if (currentBackend is LibVlcBackend libVlcForPlay)
         {
             // Para archivos locales el resolver simplemente devuelve la ruta fija;
             // el auto-recover no aplica, pero el constructor lo requiere.
@@ -278,16 +289,20 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
                 () => System.Threading.Tasks.Task.FromResult(filePath);
 
             var playerWindow = new PlayerWindow(
-                _playerBackend,
+                libVlcForPlay,
                 localResolver,
                 $"AniCS - {anime.Title} - {episode.EpisodeTitle}",
                 "",
                 "Mejor");
-            playerWindow.Show(ownerWindow);
+            var ownerWin = TopLevel.GetTopLevel(this) as Window;
+            if (ownerWin != null)
+                playerWindow.Show(ownerWin);
+            else
+                playerWindow.Show();
         }
         else
         {
-            _ = _playerBackend.PlayAsync(episode.FilePath, $"AniCS - {anime.Title} - {episode.EpisodeTitle}");
+            _ = currentBackend.PlayAsync(episode.FilePath, $"AniCS - {anime.Title} - {episode.EpisodeTitle}");
         }
     }
 

@@ -14,6 +14,11 @@ public static class ResolverFactory
     /// <param name="mode">Modo seleccionado en Ajustes.</param>
     public static IResolverBackend Create(ResolverBackendMode mode)
     {
+        if (System.OperatingSystem.IsAndroid())
+        {
+            return new NativeResolverBackend();
+        }
+
         return mode switch
         {
             ResolverBackendMode.Native => new NativeResolverBackend(),

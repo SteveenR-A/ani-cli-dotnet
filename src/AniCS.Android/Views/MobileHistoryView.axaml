@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:history="clr-namespace:AniCS.History;assembly=AniCS.Core"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="700"
+             x:Class="AniCS.Android.Views.MobileHistoryView">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="12" Spacing="12">
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBlock Grid.Column="0" Text="📜 Historial de Reproducción" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Click="OnClearHistoryClicked" Background="Transparent" Foreground="#FF5555">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <material:MaterialIcon Kind="DeleteSweep" Width="20" Height="20"/>
+                        <TextBlock Text="Limpiar" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <TextBlock Name="EmptyHistoryText" Text="No hay historial reciente" Foreground="{DynamicResource AppSubtextColor}" FontSize="14" HorizontalAlignment="Center" Margin="0,30,0,0" IsVisible="False"/>
+
+            <ItemsControl Name="HistoryItemsControl">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="history:WatchEntry">
+                        <Border Background="{DynamicResource AppCardBg}" CornerRadius="10" Margin="0,0,0,10" Padding="10" PointerPressed="OnHistoryCardPressed">
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding AnimeTitle}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding LastEpisodeNumber, StringFormat='Episodio {0}'}" FontSize="13" Foreground="{DynamicResource AppSubtextColor}"/>
+                                    <TextBlock Text="{Binding WatchedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" FontSize="11" Foreground="{DynamicResource AppSubtextColor}"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Click="OnPlayHistoryClicked" Background="{DynamicResource AppPrimaryColor}" Foreground="White" CornerRadius="6" VerticalAlignment="Center" Padding="8,6">
+                                    <material:MaterialIcon Kind="Play" Width="20" Height="20"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AniCS.Desktop;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, INavigableHost
 {
     private readonly ViewModels.HomeViewModel _sharedHomeViewModel;
     private HomeView _homeView = new HomeView();

@@ -83,27 +83,6 @@ public partial class AndroidAppView : UserControl
 
     private void NavigateToSeeMore(string title, IEnumerable<AnimeResult> items)
     {
-        if (TopLevel.GetTopLevel(this) is Window window && window is MainWindow mainWindow)
-            mainWindow.NavigateToSeeMore(title, items);
-    }
-
-    // ── Bottom Navigation Bar ─────────────────────────────────────────────
-
-    private void OnNavHomeClicked(object? sender, RoutedEventArgs e)
-    {
-        // Already on home — just scroll to top or clear search
-        SearchBox.Text = string.Empty;
-    }
-
-    private void OnNavSearchClicked(object? sender, RoutedEventArgs e)
-    {
-        // Focus the SearchBar
-        SearchBox.Focus();
-    }
-
-    private void OnNavDownloadsClicked(object? sender, RoutedEventArgs e)
-    {
-        if (TopLevel.GetTopLevel(this) is Window window && window is MainWindow mainWindow)
-            mainWindow.NavigateTo("Downloads");
+        Services.NavigationHelper.NavigateToSeeMore(this, title, items);
     }
 }

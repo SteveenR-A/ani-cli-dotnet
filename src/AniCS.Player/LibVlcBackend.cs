@@ -120,6 +120,7 @@ public sealed class LibVlcBackend : IPlayerBackend
                 };
             }
 
+            _mediaPlayer.Buffering -= OnBuffering; // evitar acumulación de handlers en reproducciones consecutivas
             _mediaPlayer.Buffering += OnBuffering;
 
             _mediaPlayer.Play(media);
@@ -160,8 +161,16 @@ public sealed class LibVlcBackend : IPlayerBackend
     {
         _progressTimer?.Dispose();
         _progressTimer = null;
-        _mediaPlayer?.Stop();
         _currentSession = null;
+
+        var mp = _mediaPlayer;
+        if (mp != null)
+        {
+            Task.Run(() =>
+            {
+                try { mp.Stop(); } catch { }
+            });
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────────

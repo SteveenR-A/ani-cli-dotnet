@@ -31,11 +31,14 @@
             <!-- Contenido original (ScrollViewer) -->
             <ScrollViewer Grid.Row="1">
             <StackPanel>
-                <!-- Header: Left (Cover + Sidebar Info), Right (Title, Opening Player Card, Synopsis) -->
-                <Grid ColumnDefinitions="220, *" Margin="0,0,0,20">
-                    <!-- Left Column: Cover & Information Card -->
-                    <StackPanel Grid.Column="0" Spacing="15">
-                        <Border CornerRadius="8" ClipToBounds="True" Width="220">
+                <!-- Title -->
+                <SelectableTextBlock Name="TitleText" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" Margin="0,0,0,15" />
+
+                <!-- Header Content (Responsive for mobile & desktop) -->
+                <Grid Name="HeaderGrid" ColumnDefinitions="Auto, *" Margin="0,0,0,20">
+                    <!-- Left: Cover & Info Card -->
+                    <StackPanel Name="LeftPanel" Grid.Column="0" Spacing="15" Margin="0,0,20,15" Width="280">
+                        <Border CornerRadius="8" ClipToBounds="True" Width="240" Height="340" HorizontalAlignment="Center" Background="{DynamicResource AppSurfaceColor}">
                             <Image Name="CoverImage"
                                    converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}"
                                    Stretch="Uniform" />
@@ -87,7 +90,7 @@
                                 </StackPanel>
 
                                 <!-- Géneros Badge List -->
-                                <StackPanel IsVisible="{Binding Genres.Count}" Margin="0,5,0,0">
+                                <StackPanel IsVisible="{Binding !!Genres.Count}" Margin="0,5,0,0">
                                     <TextBlock Text="Géneros:" FontSize="11" Foreground="{DynamicResource AppTextColor}" Margin="0,0,0,4" />
                                     <ItemsControl ItemsSource="{Binding Genres}">
                                         <ItemsControl.ItemsPanel>
@@ -108,59 +111,54 @@
                         </Border>
                     </StackPanel>
                     
-                    <!-- Right Column: Title, Opening, Synopsis, Episode List -->
-                    <StackPanel Grid.Column="1" Margin="20,0,0,0" Spacing="15">
-                        <SelectableTextBlock Name="TitleText" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" />
-                        
+                    <!-- Right: Opening & Synopsis Cards -->
+                    <StackPanel Name="RightPanel" Grid.Column="1" Spacing="15" HorizontalAlignment="Stretch">
                         <!-- Opening / Trailer Card -->
                         <Border Name="OpeningCard" IsVisible="{Binding OpeningUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                 Background="{DynamicResource AppSurfaceColor}" CornerRadius="8" Padding="15" BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
-                            <Grid ColumnDefinitions="*, Auto">
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <material:MaterialIcon Kind="Music" Width="20" Height="20" Foreground="{DynamicResource AppPrimaryColor}" />
-                                        <TextBlock Text="OPENING / TRAILER" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                    <TextBlock Text="Escucha el audio en la app, míralo directamente en YouTube o descárgalo." FontSize="12" Foreground="{DynamicResource AppTextColor}" Margin="0,4,0,0" />
+                            <StackPanel Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <material:MaterialIcon Kind="Music" Width="20" Height="20" Foreground="{DynamicResource AppPrimaryColor}" />
+                                    <TextBlock Text="OPENING / TRAILER" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <Button Name="PlayAudioBtn" Click="OnPlayOpeningAudioClicked" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="10,8" ToolTip.Tip="Reproducir solo audio en la app">
+                                <TextBlock Text="Escucha el audio en la app, míralo directamente en YouTube o descárgalo." FontSize="12" Foreground="{DynamicResource AppTextColor}" TextWrapping="Wrap" />
+                                
+                                <WrapPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                    <Button Name="PlayAudioBtn" Click="OnPlayOpeningAudioClicked" Background="{DynamicResource AppPrimaryColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="10,8" Margin="0,0,6,6" ToolTip.Tip="Reproducir solo audio en la app">
                                         <StackPanel Orientation="Horizontal" Spacing="5">
                                             <material:MaterialIcon Name="PlayAudioBtnIcon" Kind="VolumeHigh" Width="16" Height="16" />
                                             <TextBlock Name="PlayAudioBtnText" Text="Audio en App" FontWeight="Bold" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
 
-                                    <Button Click="OnOpenOpeningInBrowserClicked" Background="{DynamicResource AppStatusInProgressColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="10,8" ToolTip.Tip="Abrir directamente en YouTube">
+                                    <Button Click="OnOpenOpeningInBrowserClicked" Background="{DynamicResource AppStatusInProgressColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="10,8" Margin="0,0,6,6" ToolTip.Tip="Abrir directamente en YouTube">
                                         <StackPanel Orientation="Horizontal" Spacing="5">
                                             <material:MaterialIcon Kind="Youtube" Width="16" Height="16" />
                                             <TextBlock Text="Ver en YouTube" FontWeight="Bold" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Name="DownloadOpeningBtn" Click="OnDownloadOpeningClicked" Background="{DynamicResource AppStatusCompletedColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="10,8" ToolTip.Tip="Descargar archivo en máxima calidad">
+                                    <Button Name="DownloadOpeningBtn" Click="OnDownloadOpeningClicked" Background="{DynamicResource AppStatusCompletedColor}" Foreground="{DynamicResource AppPrimaryForegroundColor}" Padding="10,8" Margin="0,0,6,6" ToolTip.Tip="Descargar archivo en máxima calidad">
                                         <StackPanel Orientation="Horizontal" Spacing="5">
                                             <material:MaterialIcon Name="DownloadOpeningBtnIcon" Kind="Download" Width="16" Height="16" />
                                             <TextBlock Name="DownloadOpeningBtnText" Text="Descargar" FontWeight="Bold" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Name="CancelOpeningDownloadBtn" IsVisible="False" Click="OnCancelOpeningDownloadClicked" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}" Padding="8" ToolTip.Tip="Cancelar descarga">
+                                    <Button Name="CancelOpeningDownloadBtn" IsVisible="False" Click="OnCancelOpeningDownloadClicked" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}" Padding="8" Margin="0,0,6,6" ToolTip.Tip="Cancelar descarga">
                                         <material:MaterialIcon Kind="Close" Width="16" Height="16" />
                                     </Button>
-                                    <Button Name="DeleteOpeningDownloadBtn" IsVisible="False" Click="OnDeleteOpeningDownloadClicked" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}" Padding="8" ToolTip.Tip="Eliminar descarga de Opening">
+                                    <Button Name="DeleteOpeningDownloadBtn" IsVisible="False" Click="OnDeleteOpeningDownloadClicked" Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}" Padding="8" Margin="0,0,6,6" ToolTip.Tip="Eliminar descarga de Opening">
                                         <material:MaterialIcon Kind="TrashCan" Width="16" Height="16" />
                                     </Button>
-                                </StackPanel>
-                            </Grid>
+                                </WrapPanel>
+                            </StackPanel>
                         </Border>
-
-
                         
                         <!-- Synopsis Card -->
-                        <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="8" Padding="15">
+                        <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="8" Padding="15" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="6">
                                 <TextBlock Text="SINOPSIS" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" />
-                                <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
-                                    <SelectableTextBlock Name="SynopsisText" FontSize="15" Foreground="{DynamicResource AppTextColor}" TextWrapping="Wrap" Text="Cargando sinopsis..." LineHeight="22" />
+                                <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                    <SelectableTextBlock Name="SynopsisText" FontSize="14" Foreground="{DynamicResource AppTextColor}" TextWrapping="Wrap" Text="Cargando sinopsis..." LineHeight="20" />
                                 </ScrollViewer>
                             </StackPanel>
                         </Border>

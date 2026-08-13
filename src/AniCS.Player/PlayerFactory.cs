@@ -13,6 +13,11 @@ public static class PlayerFactory
     /// </summary>
     public static IPlayerBackend Create(PlayerBackendMode mode)
     {
+        if (System.OperatingSystem.IsAndroid())
+        {
+            return new LibVlcBackend();
+        }
+
         return mode switch
         {
             PlayerBackendMode.Native => new LibVlcBackend(),

@@ -4,10 +4,16 @@ using Android.Runtime;
 using Avalonia;
 using Avalonia.Android;
 using AniCS.Desktop;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AniCS.Android;
 
-[Application]
+[Application(
+    Label = "AniCS",
+    Icon = "@mipmap/ic_launcher",
+    RoundIcon = "@mipmap/ic_launcher",
+    Theme = "@style/Theme.AppCompat.NoActionBar",
+    AllowBackup = true)]
 public class MainApplication : AvaloniaAndroidApplication<App>
 {
     public MainApplication(IntPtr javaReference, JniHandleOwnership transfer) 
@@ -18,8 +24,6 @@ public class MainApplication : AvaloniaAndroidApplication<App>
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
         // ── 1. Set the cross-platform data path before ANY AniCS code runs ──
-        // Android sandboxes each app to its own private directory; we use
-        // FilesDir (internal storage, always available, no permissions needed).
         var dataDir = ApplicationContext?.FilesDir?.AbsolutePath
                       ?? System.IO.Path.Combine(
                              System.Environment.GetFolderPath(
@@ -27,6 +31,24 @@ public class MainApplication : AvaloniaAndroidApplication<App>
                              "AniCS");
 
         AniCS.ConfigManager.BaseDataPath = System.IO.Path.Combine(dataDir, "AniCS");
+
+        // ── Global Exception Handling for Android ──────────────────────────
+        AndroidEnvironment.UnhandledExceptionRaiser += (sender, args) =>
+        {
+            AppLogger.Error("AndroidEnvironment.UnhandledException", args.Exception);
+            global::Android.Util.Log.Error("AniCS", $"Unhandled Android Exception: {args.Exception}");
+        };
+        AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
+        {
+            var ex = args.ExceptionObject as Exception;
+            AppLogger.Error("AppDomain.UnhandledException", ex);
+            global::Android.Util.Log.Error("AniCS", $"Unhandled AppDomain Exception: {ex}");
+        };
+        System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (sender, args) =>
+        {
+            AppLogger.Error("TaskScheduler.UnobservedTaskException", args.Exception);
+            global::Android.Util.Log.Error("AniCS", $"Unobserved Task Exception: {args.Exception}");
+        };
 
         // ── 2. Initialize LibVLC with the Android context ────────────────
         try
@@ -42,9 +64,12 @@ public class MainApplication : AvaloniaAndroidApplication<App>
         }
         catch
         {
-            // LibVLC initialization can fail if binaries are missing
-            // We ignore it so the UI still loads (it'll fallback/show error when playing).
+            // Ignore LibVLC init errors
         }
+
+        // ── 3. Register Android dedicated view factory ──────────────────
+        AniCS.Desktop.App.SingleViewFactory = sp => 
+            new Views.AndroidMainView(sp.GetRequiredService<AniCS.Desktop.ViewModels.HomeViewModel>());
 
         return base.CustomizeAppBuilder(builder);
     }

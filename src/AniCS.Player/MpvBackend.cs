@@ -28,8 +28,8 @@ public sealed class MpvBackend : IPlayerBackend
 
     public MpvBackend()
     {
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => KillAll();
-        Console.CancelKeyPress += (_, _) => KillAll();
+        try { AppDomain.CurrentDomain.ProcessExit += (_, _) => KillAll(); } catch { }
+        try { Console.CancelKeyPress += (_, _) => KillAll(); } catch { }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
