@@ -18,17 +18,7 @@
         android:theme="@style/Theme.AppCompat.NoActionBar"
         android:supportsRtl="true">
 
-        <activity
-            android:name="com.anics.android.MainActivity"
-            android:exported="true"
-            android:configChanges="orientation|screenSize|layoutDirection|keyboard|keyboardHidden|uiMode"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+
 
         <!-- FileProvider for APK installs (Android 7+) -->
         <provider
