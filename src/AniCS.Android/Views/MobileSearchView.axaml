@@ -9,7 +9,7 @@
              x:Class="AniCS.Android.Views.MobileSearchView">
 
     <Grid Margin="12,10">
-        <ScrollViewer Name="MainScroll" ScrollChanged="OnScrollChanged">
+        <ScrollViewer Name="MainScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" ScrollChanged="OnScrollChanged">
             <StackPanel Spacing="10">
                 <!-- Text Search (Fluid Grid, 100% width on Mobile) -->
                 <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,5">

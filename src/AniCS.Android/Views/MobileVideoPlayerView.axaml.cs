@@ -18,6 +18,12 @@ public partial class MobileVideoPlayerView : UserControl
     private readonly string _serverUrl;
     private readonly string _quality;
 
+    private readonly string _animeTitle;
+    private readonly string _animeUrl;
+    private readonly string _thumbnailUrl;
+    private readonly string _episodeNumber;
+    private readonly string _episodeUrl;
+
     private AndroidVideoPlayerControl? _nativePlayer;
     private DispatcherTimer? _progressTimer;
     private DispatcherTimer? _osdTimer;
@@ -28,6 +34,7 @@ public partial class MobileVideoPlayerView : UserControl
     private bool _isRecovering;
     private int _recoverAttempts;
     private const int MaxRecoverAttempts = 3;
+    private bool _hasMarkedCompleted = false;
 
     public MobileVideoPlayerView()
     {
@@ -35,6 +42,11 @@ public partial class MobileVideoPlayerView : UserControl
         _title = "";
         _serverUrl = "";
         _quality = "";
+        _animeTitle = "";
+        _animeUrl = "";
+        _thumbnailUrl = "";
+        _episodeNumber = "";
+        _episodeUrl = "";
     }
 
     public MobileVideoPlayerView(
@@ -42,7 +54,12 @@ public partial class MobileVideoPlayerView : UserControl
         Func<Task<string>> urlResolver,
         string title,
         string serverUrl,
-        string quality)
+        string quality,
+        string animeTitle = "",
+        string animeUrl = "",
+        string thumbnailUrl = "",
+        string episodeNumber = "",
+        string episodeUrl = "")
     {
         InitializeComponent();
         _playerBackend = playerBackend;
@@ -50,6 +67,11 @@ public partial class MobileVideoPlayerView : UserControl
         _title = title;
         _serverUrl = serverUrl;
         _quality = quality;
+        _animeTitle = animeTitle;
+        _animeUrl = animeUrl;
+        _thumbnailUrl = thumbnailUrl;
+        _episodeNumber = episodeNumber;
+        _episodeUrl = episodeUrl;
 
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
@@ -159,11 +181,22 @@ public partial class MobileVideoPlayerView : UserControl
             if (_nativePlayer == null)
             {
                 _nativePlayer = new AndroidVideoPlayerControl();
+                _nativePlayer.SetInfo(_title, !string.IsNullOrEmpty(_quality) ? _quality : "Nativo");
+                _nativePlayer.BackRequested += (s, e) => ClosePlayer();
                 _nativePlayer.PlaybackError += OnNativePlaybackError;
-                _nativePlayer.PlaybackCompleted += (s, e) => ClosePlayer();
+                _nativePlayer.ProgressChanged += (s, ev) => UpdatePlaybackWatchHistory(ev.Position, ev.Duration);
+                _nativePlayer.PlaybackCompleted += (s, e) =>
+                {
+                    UpdatePlaybackWatchHistory(1, 1, isCompleted: true);
+                    ClosePlayer();
+                };
 
                 PlayerHostContainer.Children.Clear();
                 PlayerHostContainer.Children.Add(_nativePlayer);
+            }
+            else
+            {
+                _nativePlayer.SetInfo(_title, !string.IsNullOrEmpty(_quality) ? _quality : "Nativo");
             }
 
             _nativePlayer.Play(url, _serverUrl);
@@ -377,5 +410,30 @@ public partial class MobileVideoPlayerView : UserControl
     private void OnBackClicked(object? sender, RoutedEventArgs e)
     {
         ClosePlayer();
+    }
+
+    private void UpdatePlaybackWatchHistory(int currentPosMs, int durationMs, bool isCompleted = false)
+    {
+        if (string.IsNullOrEmpty(_animeUrl)) return;
+
+        double posSec = currentPosMs / 1000.0;
+        double durSec = durationMs / 1000.0;
+        double pct = durationMs > 0 ? (double)currentPosMs / durationMs : 0;
+
+        bool completed = isCompleted || pct >= 0.85;
+
+        if (completed && _hasMarkedCompleted) return;
+        if (completed) _hasMarkedCompleted = true;
+
+        if (currentPosMs > 1000 || completed)
+        {
+            var history = new AniCS.History.WatchHistory();
+            history.Record(_animeTitle, _animeUrl, _thumbnailUrl, _episodeNumber, _episodeUrl, posSec, durSec, completed);
+
+            AniCS.Desktop.Services.DownloadManager.UpdateEpisodeStatus(
+                _animeUrl,
+                _episodeNumber,
+                completed ? EpisodeWatchStatus.Completed : EpisodeWatchStatus.InProgress);
+        }
     }
 }

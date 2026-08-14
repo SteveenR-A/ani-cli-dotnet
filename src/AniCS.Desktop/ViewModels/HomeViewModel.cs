@@ -35,6 +35,13 @@ public class HomeViewModel : ViewModelBase
         set => SetProperty(ref _premieresList, value);
     }
 
+    private bool _hasPremieres;
+    public bool HasPremieres
+    {
+        get => _hasPremieres;
+        set => SetProperty(ref _hasPremieres, value);
+    }
+
     private ObservableCollection<AnimeResult> _historyList = new();
     public ObservableCollection<AnimeResult> HistoryList
     {
@@ -186,15 +193,24 @@ public class HomeViewModel : ViewModelBase
             var cacheKey = $"Premieres_{extractor.Domain}";
             var premieres = await DataCache.GetOrFetchDataAsync(cacheKey, TimeSpan.FromMinutes(15), 
                 async () => await extractor.GetPremieresAsync());
-            if (premieres != null && premieres.Count > 0)
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => 
             {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => 
+                if (premieres != null && premieres.Count > 0)
                 {
                     PremieresList = new ObservableCollection<AnimeResult>(premieres);
-                });
-            }
+                    HasPremieres = true;
+                }
+                else
+                {
+                    PremieresList.Clear();
+                    HasPremieres = false;
+                }
+            });
         }
-        catch { /* Ignore */ }
+        catch 
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => HasPremieres = false);
+        }
     }
 
     private async Task LoadHistoryAsync(AniCS.History.WatchHistory history)

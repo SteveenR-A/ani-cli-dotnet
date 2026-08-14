@@ -1,8 +1,9 @@
 using Android.App;
 using Android.OS;
+using AndroidX.Activity;
 using Avalonia;
 using Avalonia.Android;
-using AniCS.Desktop;
+using AniCS.Android.Services;
 
 namespace AniCS.Android;
 
@@ -35,6 +36,58 @@ public class MainActivity : AvaloniaMainActivity
     {
         Instance = this;
         base.OnCreate(savedInstanceState);
+
+        // 1. AndroidX OnBackPressedDispatcher callback
+        try
+        {
+            OnBackPressedDispatcher.AddCallback(this, new BackPressHandler(this));
+        }
+        catch (System.Exception ex)
+        {
+            global::Android.Util.Log.Error("AniCS_Back", $"Error registering OnBackPressedDispatcher callback: {ex}");
+        }
+
+        // 2. AvaloniaActivity BackRequested event (si está soportado por Avalonia)
+        try
+        {
+            this.BackRequested += (s, e) =>
+            {
+                global::Android.Util.Log.Debug("AniCS_Back", "AvaloniaActivity.BackRequested event triggered!");
+                bool handled = MobileNavigationService.HandleBackPress();
+                if (handled)
+                {
+                    e.Handled = true;
+                }
+            };
+        }
+        catch { }
+    }
+
+    public override void OnBackPressed()
+    {
+        global::Android.Util.Log.Debug("AniCS_Back", "MainActivity.OnBackPressed() invoked!");
+        bool handled = MobileNavigationService.HandleBackPress();
+        if (!handled)
+        {
+            base.OnBackPressed();
+        }
+    }
+
+    public override bool DispatchKeyEvent(global::Android.Views.KeyEvent? e)
+    {
+        if (e != null && e.KeyCode == global::Android.Views.Keycode.Back)
+        {
+            global::Android.Util.Log.Debug("AniCS_Back", $"DispatchKeyEvent KEYCODE_BACK Action={e.Action}");
+            if (e.Action == global::Android.Views.KeyEventActions.Up)
+            {
+                bool handled = MobileNavigationService.HandleBackPress();
+                if (handled)
+                {
+                    return true;
+                }
+            }
+        }
+        return base.DispatchKeyEvent(e);
     }
 
     public void SetOrientationLandscape()
@@ -86,14 +139,41 @@ public class MainActivity : AvaloniaMainActivity
         catch { }
     }
 
-    public override void OnBackPressed()
+    private class BackPressHandler : OnBackPressedCallback
     {
-        if (Views.AndroidMainView.Current != null && Views.AndroidMainView.Current.CanGoBack)
+        private readonly MainActivity _activity;
+
+        public BackPressHandler(MainActivity activity) : base(true)
         {
-            Views.AndroidMainView.Current.GoBack();
-            return;
+            _activity = activity;
         }
 
-        base.OnBackPressed();
+        public override void HandleOnBackPressed()
+        {
+            try
+            {
+                global::Android.Util.Log.Debug("AniCS_Back", "BackPressHandler.HandleOnBackPressed triggered!");
+
+                // Llama al servicio de navegación desacoplado de Avalonia
+                bool handled = MobileNavigationService.HandleBackPress();
+
+                global::Android.Util.Log.Debug("AniCS_Back", $"HandleBackPress result: {handled}");
+
+                if (!handled)
+                {
+                    // Si Avalonia no consumió el evento (ej. estamos en Inicio y pila vacía),
+                    // desactivamos temporalmente el callback y permitimos que el sistema Android
+                    // ejecute el comportamiento nativo (minimizar/cerrar Activity).
+                    Enabled = false;
+                    _activity.OnBackPressedDispatcher.OnBackPressed();
+                    Enabled = true;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                global::Android.Util.Log.Error("AniCS_Back", $"Error in BackPressHandler.HandleOnBackPressed: {ex}");
+                AniCS.AppLogger.Error("BackPressHandler.HandleOnBackPressed", ex);
+            }
+        }
     }
 }

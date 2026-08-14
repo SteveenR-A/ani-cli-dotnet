@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:converters="clr-namespace:AniCS.Desktop.Converters;assembly=AniCS.Desktop"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="AniCS.Android.Views.MobileSeeMoreView"
+             Margin="8,10">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,12">
+            <Button Grid.Column="0" Background="Transparent" Foreground="{DynamicResource AppTitleColor}" Click="OnBackClicked" Padding="6,4" Margin="0,0,10,0">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <material:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" />
+                    <TextBlock Text="Volver" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <TextBlock Grid.Column="1" Name="CategoryTitle" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+        </Grid>
+
+        <!-- 2-Column Responsive Card Grid (Smooth Touch Scroll) -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl Name="AnimeItemsControl">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="2" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:AnimeResult">
+                        <Button Background="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                Margin="4,6"
+                                CornerRadius="10"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
+                                Click="OnAnimeCardClicked"
+                                Tag="{Binding}">
+                            <Border Background="{DynamicResource AppCardBg}"
+                                    CornerRadius="10"
+                                    Padding="0"
+                                    ClipToBounds="True">
+                                <Grid RowDefinitions="190, Auto">
+                                    <!-- Anime Poster Image -->
+                                    <Border Grid.Row="0" ClipToBounds="True" Background="#20FFFFFF">
+                                        <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
+                                    </Border>
+
+                                    <!-- Title and Subtitle Info -->
+                                    <StackPanel Grid.Row="1" Margin="8,6" Spacing="2">
+                                        <TextBlock Text="{Binding Title}"
+                                                   FontSize="13"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource AppTitleColor}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxLines="2"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Description}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource AppSubtextColor}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxLines="1" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

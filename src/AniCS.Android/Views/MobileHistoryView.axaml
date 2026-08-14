@@ -4,13 +4,17 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:history="clr-namespace:AniCS.History;assembly=AniCS.Core"
              xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:converters="clr-namespace:AniCS.Desktop.Converters;assembly=AniCS.Desktop"
              mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="700"
              x:Class="AniCS.Android.Views.MobileHistoryView">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="12" Spacing="12">
             <Grid ColumnDefinitions="*, Auto">
-                <TextBlock Grid.Column="0" Text="📜 Historial de Reproducción" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <material:MaterialIcon Kind="History" Width="22" Height="22" Foreground="{DynamicResource AppPrimaryColor}"/>
+                    <TextBlock Text="Historial de Reproducción" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                </StackPanel>
                 <Button Grid.Column="1" Click="OnClearHistoryClicked" Background="Transparent" Foreground="#FF5555">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <material:MaterialIcon Kind="DeleteSweep" Width="20" Height="20"/>
@@ -25,15 +29,41 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="history:WatchEntry">
                         <Border Background="{DynamicResource AppCardBg}" CornerRadius="10" Margin="0,0,0,10" Padding="10" PointerPressed="OnHistoryCardPressed">
-                            <Grid ColumnDefinitions="*, Auto">
-                                <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding AnimeTitle}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding LastEpisodeNumber, StringFormat='Episodio {0}'}" FontSize="13" Foreground="{DynamicResource AppSubtextColor}"/>
+                            <Grid ColumnDefinitions="52, *, Auto">
+                                <!-- Anime Cover Image (Clickable for full image) -->
+                                <Button Grid.Column="0"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="0"
+                                        CornerRadius="8"
+                                        Click="OnHistoryImageClicked"
+                                        Tag="{Binding}"
+                                        ToolTip.Tip="Ver portada en grande">
+                                    <Border CornerRadius="8" ClipToBounds="True" Height="68" Width="48" Margin="0,0,10,0" Background="#20FFFFFF">
+                                        <Image converters:AsyncImageLoader.SourceUrl="{Binding AnimeThumbnailUrl}" Stretch="UniformToFill"/>
+                                    </Border>
+                                </Button>
+
+                                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding AnimeTitle}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextTrimming="CharacterEllipsis"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding LastEpisodeNumber, StringFormat='Episodio {0}'}" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                                        <Border IsVisible="{Binding IsCompleted}" Background="#22DD8833" CornerRadius="4" Padding="4,1">
+                                            <TextBlock Text="Visto" FontSize="10" Foreground="#22DD88" FontWeight="SemiBold"/>
+                                        </Border>
+                                    </StackPanel>
                                     <TextBlock Text="{Binding WatchedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" FontSize="11" Foreground="{DynamicResource AppSubtextColor}"/>
                                 </StackPanel>
-                                <Button Grid.Column="1" Click="OnPlayHistoryClicked" Background="{DynamicResource AppPrimaryColor}" Foreground="White" CornerRadius="6" VerticalAlignment="Center" Padding="8,6">
-                                    <material:MaterialIcon Kind="Play" Width="20" Height="20"/>
-                                </Button>
+
+                                <!-- Action Buttons: Delete Single + Play -->
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <Button Click="OnDeleteSingleHistoryClicked" Tag="{Binding}" Background="Transparent" Foreground="#FF6666" Padding="6,6" CornerRadius="6" ToolTip.Tip="Eliminar este anime">
+                                        <material:MaterialIcon Kind="TrashCanOutline" Width="20" Height="20"/>
+                                    </Button>
+                                    <Button Click="OnPlayHistoryClicked" Background="{DynamicResource AppPrimaryColor}" Foreground="White" CornerRadius="6" Padding="8,6">
+                                        <material:MaterialIcon Kind="Play" Width="20" Height="20"/>
+                                    </Button>
+                                </StackPanel>
                             </Grid>
                         </Border>
                     </DataTemplate>

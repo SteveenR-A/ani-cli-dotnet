@@ -14,19 +14,27 @@ namespace AniCS.Android.Views;
 
 public partial class AndroidMainView : UserControl, INavigableHost
 {
+    private record NavigationEntry(UserControl View, string Title);
+
     private readonly HomeViewModel _sharedHomeViewModel;
     private readonly AndroidAppView _androidHomeView;
     private readonly MobileSearchView _searchView;
     private readonly MobileCalendarView _calendarView;
     private readonly MobileTopAnimesView _topAnimesView;
-    private readonly DesktopViews.DownloadsView _downloadsView;
+    private readonly MobileDownloadsView _downloadsView;
     private readonly MobileHistoryView _historyView;
-    private readonly DesktopViews.SettingsView _settingsView;
-    private UserControl? _previousView;
+    private readonly MobileSettingsView _settingsView;
+    private readonly Stack<NavigationEntry> _navigationStack = new();
 
     public static AndroidMainView? Current { get; private set; }
 
-    public bool CanGoBack => MainContent.Content != null && !(MainContent.Content is AndroidAppView) || _previousView != null;
+    public bool CanGoBack =>
+        ImageModalOverlay.IsVisible ||
+        MainContent.Content is MobileVideoPlayerView ||
+        ModalOverlay.IsVisible ||
+        MainSplitView.IsPaneOpen ||
+        _navigationStack.Count > 0 ||
+        MainContent.Content != _androidHomeView;
 
     public AndroidMainView()
         : this(AniCS.Desktop.App.Services?.GetService<HomeViewModel>() ?? new HomeViewModel())
@@ -40,13 +48,26 @@ public partial class AndroidMainView : UserControl, INavigableHost
         InitializeComponent();
         DataContext = _sharedHomeViewModel;
 
+        // Registrar manejador en el servicio desacoplado de navegación móvil
+        Services.MobileNavigationService.BackPressHandler = HandleBackPress;
+
+        Loaded += (s, e) =>
+        {
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel != null)
+            {
+                topLevel.BackRequested -= OnTopLevelBackRequested;
+                topLevel.BackRequested += OnTopLevelBackRequested;
+            }
+        };
+
         _androidHomeView = new AndroidAppView { DataContext = _sharedHomeViewModel };
         _searchView = new MobileSearchView();
         _calendarView = new MobileCalendarView();
         _topAnimesView = new MobileTopAnimesView();
-        _downloadsView = new DesktopViews.DownloadsView();
+        _downloadsView = new MobileDownloadsView();
         _historyView = new MobileHistoryView();
-        _settingsView = new DesktopViews.SettingsView();
+        _settingsView = new MobileSettingsView();
 
         // Monitorear modo Donghua para ocultar/mostrar Horarios y Top Animes
         _sharedHomeViewModel.PropertyChanged += (s, e) =>
@@ -132,7 +153,11 @@ public partial class AndroidMainView : UserControl, INavigableHost
     {
         try
         {
-            _previousView = MainContent.Content as UserControl;
+            if (MainContent.Content is UserControl current && !(current is MobileVideoPlayerView))
+            {
+                _navigationStack.Push(new NavigationEntry(current, PageTitleText.Text ?? "Inicio"));
+            }
+
             var detailsView = new MobileAnimeDetailsView(anime);
             SetMainContent(detailsView);
             PageTitleText.Text = anime.Title;
@@ -145,43 +170,109 @@ public partial class AndroidMainView : UserControl, INavigableHost
 
     public void NavigateToSeeMore(string title, IEnumerable<AnimeResult> items)
     {
-        _previousView = MainContent.Content as UserControl;
-        var seeMoreView = new DesktopViews.SeeMoreView(title, items);
+        if (MainContent.Content is UserControl current && !(current is MobileVideoPlayerView))
+        {
+            _navigationStack.Push(new NavigationEntry(current, PageTitleText.Text ?? "Inicio"));
+        }
+
+        var seeMoreView = new MobileSeeMoreView(title, items);
         SetMainContent(seeMoreView);
         PageTitleText.Text = title;
     }
 
-    public void GoBack()
+    public void PushPlayerView(MobileVideoPlayerView playerView)
     {
+        if (MainContent.Content is UserControl current && !(current is MobileVideoPlayerView))
+        {
+            _navigationStack.Push(new NavigationEntry(current, PageTitleText.Text ?? "Inicio"));
+        }
+
+        SetMainContent(playerView);
+    }
+
+    public bool HandleBackPress()
+    {
+        // 0. Si el visor de imágenes en grande está abierto -> cerrarlo
+        if (ImageModalOverlay.IsVisible)
+        {
+            CloseImageModal();
+            return true;
+        }
+
+        // 1. Si el reproductor de video está activo -> cerrarlo
         if (MainContent.Content is MobileVideoPlayerView playerView)
         {
             playerView.ClosePlayer();
-            return;
+            return true;
         }
 
-        if (_previousView != null)
+        // 2. Si hay un modal abierto -> cerrarlo
+        if (ModalOverlay.IsVisible)
         {
-            var targetView = _previousView;
-            _previousView = null;
-            SetMainContent(targetView);
-            SetTitleForView(targetView);
+            CloseModal();
+            return true;
         }
-        else
+
+        // 3. Si el menú lateral está abierto -> cerrarlo
+        if (MainSplitView.IsPaneOpen)
         {
-            SetMainContent(_androidHomeView);
-            PageTitleText.Text = "Inicio";
-            HighlightTab(IconHome, TextHome);
+            MainSplitView.IsPaneOpen = false;
+            return true;
         }
+
+        // 4. Si hay vistas en la pila de navegación -> volver a la anterior
+        if (_navigationStack.Count > 0)
+        {
+            var prev = _navigationStack.Pop();
+            SetMainContent(prev.View);
+            PageTitleText.Text = prev.Title;
+            UpdateTabHighlightsForView(prev.View);
+            return true;
+        }
+
+        // 5. Si no estamos en la pestaña Inicio -> volver a Inicio
+        if (MainContent.Content != _androidHomeView)
+        {
+            OnHomeClicked(null, new RoutedEventArgs());
+            return true;
+        }
+
+        // 6. Estamos en Inicio y pila vacía -> permitir salir de la app
+        return false;
+    }
+
+    private void OnTopLevelBackRequested(object? sender, RoutedEventArgs e)
+    {
+        global::Android.Util.Log.Debug("AniCS_Back", "AndroidMainView: TopLevel.BackRequested routed event received!");
+        bool handled = HandleBackPress();
+        if (handled)
+        {
+            e.Handled = true;
+        }
+    }
+
+    private void UpdateTabHighlightsForView(Control view)
+    {
+        if (view == _androidHomeView) HighlightTab(IconHome, TextHome);
+        else if (view == _searchView) HighlightTab(IconSearch, TextSearch);
+        else if (view == _calendarView) HighlightTab(IconCalendar, TextCalendar);
+        else if (view == _downloadsView) HighlightTab(IconDownloads, TextDownloads);
+        else if (view == _historyView) HighlightTab(IconHistory, TextHistory);
+        else ClearTabHighlights();
+    }
+
+    public void GoBack()
+    {
+        HandleBackPress();
     }
 
     public void FinishPlayerClose(MobileVideoPlayerView playerView)
     {
-        if (_previousView != null)
+        if (_navigationStack.Count > 0)
         {
-            var targetView = _previousView;
-            _previousView = null;
-            SetMainContent(targetView);
-            SetTitleForView(targetView);
+            var prev = _navigationStack.Pop();
+            SetMainContent(prev.View);
+            PageTitleText.Text = prev.Title;
         }
         else
         {
@@ -189,23 +280,13 @@ public partial class AndroidMainView : UserControl, INavigableHost
             PageTitleText.Text = "Inicio";
             HighlightTab(IconHome, TextHome);
         }
-    }
-
-    private void SetTitleForView(UserControl view)
-    {
-        if (view is DesktopViews.SearchView || view is MobileSearchView) PageTitleText.Text = "Buscar Anime";
-        else if (view is DesktopViews.CalendarView || view is MobileCalendarView) PageTitleText.Text = "Horarios";
-        else if (view is DesktopViews.TopAnimesView) PageTitleText.Text = "Top Animes";
-        else if (view is DesktopViews.DownloadsView) PageTitleText.Text = "Descargas";
-        else if (view is DesktopViews.HistoryView) PageTitleText.Text = "Historial";
-        else if (view is DesktopViews.SettingsView) PageTitleText.Text = "Configuración";
-        else PageTitleText.Text = "Inicio";
     }
 
     // ── Sidebar & Navigation Handlers (Los 7 apartados de PC) ────────────
 
     private void OnHomeClicked(object? sender, RoutedEventArgs e)
     {
+        _navigationStack.Clear();
         SetMainContent(_androidHomeView);
         PageTitleText.Text = "Inicio";
         MainSplitView.IsPaneOpen = false;
@@ -214,6 +295,7 @@ public partial class AndroidMainView : UserControl, INavigableHost
 
     private void OnSearchClicked(object? sender, RoutedEventArgs e)
     {
+        _navigationStack.Clear();
         SetMainContent(_searchView);
         PageTitleText.Text = "Buscar Anime";
         MainSplitView.IsPaneOpen = false;
@@ -222,6 +304,7 @@ public partial class AndroidMainView : UserControl, INavigableHost
 
     private void OnCalendarClicked(object? sender, RoutedEventArgs e)
     {
+        _navigationStack.Clear();
         SetMainContent(_calendarView);
         PageTitleText.Text = "Horarios";
         MainSplitView.IsPaneOpen = false;
@@ -230,6 +313,7 @@ public partial class AndroidMainView : UserControl, INavigableHost
 
     private void OnTopAnimesClicked(object? sender, RoutedEventArgs e)
     {
+        _navigationStack.Clear();
         SetMainContent(_topAnimesView);
         PageTitleText.Text = "Top Animes";
         MainSplitView.IsPaneOpen = false;
@@ -238,6 +322,8 @@ public partial class AndroidMainView : UserControl, INavigableHost
 
     private void OnDownloadsClicked(object? sender, RoutedEventArgs e)
     {
+        _navigationStack.Clear();
+        _downloadsView.LoadDownloads();
         SetMainContent(_downloadsView);
         PageTitleText.Text = "Descargas";
         MainSplitView.IsPaneOpen = false;
@@ -246,6 +332,7 @@ public partial class AndroidMainView : UserControl, INavigableHost
 
     private void OnHistoryClicked(object? sender, RoutedEventArgs e)
     {
+        _navigationStack.Clear();
         _historyView.LoadHistory();
         SetMainContent(_historyView);
         PageTitleText.Text = "Historial";
@@ -255,6 +342,7 @@ public partial class AndroidMainView : UserControl, INavigableHost
 
     private void OnSettingsClicked(object? sender, RoutedEventArgs e)
     {
+        _navigationStack.Clear();
         _settingsView.LoadConfig();
         SetMainContent(_settingsView);
         PageTitleText.Text = "Configuración";
@@ -314,5 +402,25 @@ public partial class AndroidMainView : UserControl, INavigableHost
     private void OnCloseModalClicked(object? sender, RoutedEventArgs e)
     {
         CloseModal();
+    }
+
+    // ── Visor de Portadas en Grande (Lightbox) ─────────────────────────
+
+    public void ShowImageModal(string imageUrl, string title)
+    {
+        ImageModalTitle.Text = title;
+        AniCS.Desktop.Converters.AsyncImageLoader.SetSourceUrl(ImageModalPicture, imageUrl);
+        ImageModalOverlay.IsVisible = true;
+    }
+
+    public void CloseImageModal()
+    {
+        ImageModalOverlay.IsVisible = false;
+        AniCS.Desktop.Converters.AsyncImageLoader.SetSourceUrl(ImageModalPicture, string.Empty);
+    }
+
+    private void OnCloseImageModalClicked(object? sender, RoutedEventArgs e)
+    {
+        CloseImageModal();
     }
 }

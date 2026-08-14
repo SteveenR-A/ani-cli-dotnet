@@ -636,16 +636,39 @@ public class JKAnimeExtractor : BaseExtractor
     public override async Task<string> ResolveVideoUrlAsync(string url)
     {
         // Internal JKAnime servers (Desu, Magi)
-        if (url.Contains("/jkplayer") || url.Contains("um2.php") || url.Contains("um.php") || url.Contains("jk.php") || url.Contains("desu.php"))
+        if (url.Contains("/jkplayer") || url.Contains("um2.php") || url.Contains("um.php") || url.Contains("jk.php") || url.Contains("desu.php") || url.Contains("/desu/"))
         {
             var playerHtml = await DownloadWebpageAsync(url, BaseUrl);
             if (string.IsNullOrEmpty(playerHtml)) return string.Empty;
 
-            var m3u8 = SearchRegex(@"(https://[^\s'""\\]+\.m3u8[^\s'""\\]*)", playerHtml);
+            var m3u8 = SearchRegex(@"(https?://[^\s'""\\]+\.m3u8[^\s'""\\]*)", playerHtml);
             if (!string.IsNullOrEmpty(m3u8)) return m3u8;
 
-            var mp4 = SearchRegex(@"(https://[^\s'""\\]+\.mp4[^\s'""\\]*)", playerHtml);
-            return mp4 ?? string.Empty;
+            var fileMatch = SearchRegex(@"(?:file|source|src)\s*:\s*[""'](https?://[^""']+)[""']", playerHtml);
+            if (!string.IsNullOrEmpty(fileMatch)) return fileMatch;
+
+            var mp4 = SearchRegex(@"(https?://[^\s'""\\]+\.mp4[^\s'""\\]*)", playerHtml);
+            if (!string.IsNullOrEmpty(mp4)) return mp4;
+
+            // Check nested iframe in player HTML
+            var nestedIframe = SearchRegex(@"<iframe[^>]+src=""([^""]+)""", playerHtml);
+            if (!string.IsNullOrEmpty(nestedIframe))
+            {
+                var nestedHtml = await DownloadWebpageAsync(nestedIframe, url);
+                if (!string.IsNullOrEmpty(nestedHtml))
+                {
+                    var nestedM3u8 = SearchRegex(@"(https?://[^\s'""\\]+\.m3u8[^\s'""\\]*)", nestedHtml);
+                    if (!string.IsNullOrEmpty(nestedM3u8)) return nestedM3u8;
+
+                    var nestedFile = SearchRegex(@"(?:file|source|src)\s*:\s*[""'](https?://[^""']+)[""']", nestedHtml);
+                    if (!string.IsNullOrEmpty(nestedFile)) return nestedFile;
+
+                    var nestedMp4 = SearchRegex(@"(https?://[^\s'""\\]+\.mp4[^\s'""\\]*)", nestedHtml);
+                    if (!string.IsNullOrEmpty(nestedMp4)) return nestedMp4;
+                }
+            }
+
+            return string.Empty;
         }
 
         // Custom Mediafire Resolver (yt-dlp does not support it natively)

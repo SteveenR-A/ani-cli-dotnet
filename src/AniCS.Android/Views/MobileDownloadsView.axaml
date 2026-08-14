@@ -1,0 +1,190 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:services="clr-namespace:AniCS.Desktop.Services;assembly=AniCS.Desktop"
+             xmlns:converters="clr-namespace:AniCS.Desktop.Converters;assembly=AniCS.Desktop"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="740"
+             x:Class="AniCS.Android.Views.MobileDownloadsView">
+
+    <UserControl.Resources>
+        <converters:AsyncImageLoader x:Key="AsyncImageLoader"/>
+        <converters:EpisodeStatusBrushConverter x:Key="EpisodeStatusBrushConverter"/>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto, *" Margin="14,10">
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,12">
+            <TextBlock Grid.Column="0" Text="Descargas" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" Click="OnReloadClicked">
+                <material:MaterialIcon Kind="Refresh" Width="22" Height="22" />
+            </Button>
+        </Grid>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="14">
+
+                <!-- ── 1. Descargas Activas ─────────────────────────────────── -->
+                <Border Name="ActiveDownloadsSection"
+                        Background="{DynamicResource AppSurfaceColor}"
+                        CornerRadius="12"
+                        Padding="14"
+                        BorderBrush="{DynamicResource AppPrimaryColor}"
+                        BorderThickness="1"
+                        IsVisible="False">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <material:MaterialIcon Kind="DownloadNetwork" Width="20" Height="20" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Descargas Activas" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <ItemsControl Name="ActiveDownloadsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="services:ActiveDownload">
+                                    <Border Background="#1AFFFFFF" CornerRadius="8" Padding="10" Margin="0,0,0,8">
+                                        <Grid RowDefinitions="Auto, Auto">
+                                            <!-- Top Row: Thumbnail + Info -->
+                                            <Grid Grid.Row="0" ColumnDefinitions="48, *">
+                                                <Border Grid.Column="0" CornerRadius="6" ClipToBounds="True" Height="48" Margin="0,0,10,0">
+                                                    <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill"/>
+                                                </Border>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding AnimeTitle}" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource AppTitleColor}" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding EpisodeTitle}" FontSize="12" Foreground="{DynamicResource AppSubtextColor}" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,2,0,0"/>
+                                                    <ProgressBar Value="{Binding Progress}" Maximum="100" Height="4" Margin="0,4,0,0"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Bottom Row: Buttons (Mobile Friendly) -->
+                                            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+                                                <Button Click="OnPauseResumeActiveDownloadClicked" Tag="{Binding}"
+                                                        Background="{DynamicResource AppWarningColor}" Foreground="{DynamicResource AppWarningForegroundColor}"
+                                                        Padding="10,4" CornerRadius="6">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <material:MaterialIcon Kind="{Binding PauseResumeIcon}" Width="14" Height="14" />
+                                                        <TextBlock Text="{Binding PauseResumeText}" FontSize="11" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Click="OnCancelActiveDownloadClicked" Tag="{Binding}"
+                                                        Background="{DynamicResource AppDangerColor}" Foreground="{DynamicResource AppDangerForegroundColor}"
+                                                        Padding="10,4" CornerRadius="6">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <material:MaterialIcon Kind="Close" Width="14" Height="14" />
+                                                        <TextBlock Text="Cancelar" FontSize="11" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Filter Tabs Bar ──────────────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="10" Padding="4">
+                    <Grid ColumnDefinitions="*, *, *, *">
+                        <Button Grid.Column="0" Name="FilterAllBtn" Click="OnFilterAllClicked" Content="Todos" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="{DynamicResource AppPrimaryColor}" Foreground="White" CornerRadius="8" Padding="0,6"/>
+                        <Button Grid.Column="1" Name="FilterUnwatchedBtn" Click="OnFilterUnwatchedClicked" Content="Sin ver" FontSize="12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="Transparent" Foreground="{DynamicResource AppSubtextColor}" CornerRadius="8" Padding="0,6"/>
+                        <Button Grid.Column="2" Name="FilterInProgressBtn" Click="OnFilterInProgressClicked" Content="Progreso" FontSize="12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="Transparent" Foreground="{DynamicResource AppSubtextColor}" CornerRadius="8" Padding="0,6"/>
+                        <Button Grid.Column="3" Name="FilterCompletedBtn" Click="OnFilterCompletedClicked" Content="Vistos" FontSize="12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="Transparent" Foreground="{DynamicResource AppSubtextColor}" CornerRadius="8" Padding="0,6"/>
+                    </Grid>
+                </Border>
+
+                <!-- ── 2. Animes Descargados ────────────────────────────────── -->
+                <TextBlock Name="EmptyDownloadsText"
+                           Text="No hay animes descargados."
+                           FontSize="15"
+                           Foreground="{DynamicResource AppSubtextColor}"
+                           HorizontalAlignment="Center"
+                           Margin="0,40,0,0"
+                           IsVisible="True"/>
+
+                <ItemsControl Name="DownloadedAnimeList" IsVisible="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="services:DownloadedAnime">
+                            <Border Background="{DynamicResource AppSurfaceColor}"
+                                    CornerRadius="12"
+                                    Padding="12"
+                                    Margin="0,0,0,10"
+                                    BorderBrush="{DynamicResource AppSubtextColor}"
+                                    BorderThickness="0.5">
+                                <StackPanel Spacing="10">
+                                    <!-- Anime Header -->
+                                    <Grid ColumnDefinitions="48, *, Auto">
+                                        <!-- Anime Cover (Clickable for Full Image) -->
+                                        <Button Grid.Column="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="0"
+                                                CornerRadius="6"
+                                                Click="OnDownloadAnimeImageClicked"
+                                                Tag="{Binding}"
+                                                ToolTip.Tip="Ver portada en grande">
+                                            <Border CornerRadius="6" ClipToBounds="True" Height="58" Width="42" Margin="0,0,10,0" Background="#20FFFFFF">
+                                                <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill"/>
+                                            </Border>
+                                        </Button>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource AppTitleColor}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Episodes.Count, StringFormat='{}{0} episodios descargados'}" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Background="Transparent" Foreground="{DynamicResource AppDangerColor}" Click="OnDeleteAnimeClicked" Tag="{Binding}" ToolTip.Tip="Eliminar todo">
+                                            <material:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" />
+                                        </Button>
+                                    </Grid>
+
+                                    <!-- Episodes List -->
+                                    <ItemsControl ItemsSource="{Binding Episodes}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="services:DownloadedEpisode">
+                                                <Border Background="#12FFFFFF" CornerRadius="6" Padding="10,8" Margin="0,0,0,4">
+                                                    <Grid ColumnDefinitions="*, Auto, Auto">
+                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="3">
+                                                            <TextBlock Text="{Binding EpisodeTitle}" FontSize="13" Foreground="{DynamicResource AppTitleColor}" TextTrimming="CharacterEllipsis"/>
+                                                            <!-- Interactive Status Badge Button -->
+                                                            <Button Click="OnToggleStatusClicked" Tag="{Binding}"
+                                                                    Background="Transparent"
+                                                                    BorderBrush="{Binding Status, Converter={StaticResource EpisodeStatusBrushConverter}}"
+                                                                    BorderThickness="1" CornerRadius="4" Padding="6,2"
+                                                                    HorizontalAlignment="Left">
+                                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                    <material:MaterialIcon Kind="{Binding StatusIcon}" Width="12" Height="12"
+                                                                                           Foreground="{Binding Status, Converter={StaticResource EpisodeStatusBrushConverter}}"/>
+                                                                    <TextBlock Text="{Binding StatusText}" FontSize="10" FontWeight="SemiBold"
+                                                                               Foreground="{Binding Status, Converter={StaticResource EpisodeStatusBrushConverter}}"/>
+                                                                </StackPanel>
+                                                            </Button>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1" Click="OnPlayEpisodeClicked" Tag="{Binding}"
+                                                                Background="{DynamicResource AppPrimaryColor}" Foreground="White"
+                                                                Padding="10,6" CornerRadius="6" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <material:MaterialIcon Kind="Play" Width="14" Height="14" />
+                                                                <TextBlock Text="Ver" FontSize="11" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Grid.Column="2" Click="OnDeleteEpisodeClicked" Tag="{Binding}"
+                                                                Background="Transparent" Foreground="{DynamicResource AppDangerColor}"
+                                                                Padding="6,6" VerticalAlignment="Center">
+                                                            <material:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

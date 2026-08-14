@@ -167,18 +167,46 @@ public sealed class NativeResolverBackend : IResolverBackend, IDisposable
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        using var response = await _client.GetAsync(media.DirectUrl,
-            HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
+        long existingBytes = 0;
+        if (File.Exists(finalPath))
+        {
+            try { existingBytes = new FileInfo(finalPath).Length; } catch { }
+        }
 
-        long? totalBytes = response.Content.Headers.ContentLength;
+        using var request = new HttpRequestMessage(HttpMethod.Get, media.DirectUrl);
+        request.Headers.UserAgent.ParseAdd(ConfigManager.Current.RandomUserAgent);
+
+        if (media.DirectUrl.Contains("mediafire.com", StringComparison.OrdinalIgnoreCase))
+        {
+            request.Headers.Referrer = new Uri("https://www.mediafire.com");
+        }
+
+        if (existingBytes > 0)
+        {
+            request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingBytes, null);
+        }
+
+        using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        
+        bool isRangeResponse = response.StatusCode == System.Net.HttpStatusCode.PartialContent;
+        if (!response.IsSuccessStatusCode && !isRangeResponse)
+        {
+            response.EnsureSuccessStatusCode();
+        }
+
+        long? totalContentLength = response.Content.Headers.ContentLength;
+        long totalBytes = (isRangeResponse && totalContentLength.HasValue)
+            ? existingBytes + totalContentLength.Value
+            : (totalContentLength ?? 0);
+
+        long downloadedBytes = isRangeResponse ? existingBytes : 0;
+        var fileMode = isRangeResponse ? FileMode.Append : FileMode.Create;
 
         using var inputStream  = await response.Content.ReadAsStreamAsync(ct);
-        using var outputStream = new FileStream(finalPath, FileMode.Create, FileAccess.Write,
+        using var outputStream = new FileStream(finalPath, fileMode, FileAccess.Write,
             FileShare.None, bufferSize: 65536, useAsync: true);
 
         var buffer = new byte[65536];
-        long downloadedBytes = 0;
         int bytesRead;
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -187,17 +215,17 @@ public sealed class NativeResolverBackend : IResolverBackend, IDisposable
             await outputStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
             downloadedBytes += bytesRead;
 
-            if (progress != null && totalBytes.HasValue && totalBytes.Value > 0)
+            if (progress != null && totalBytes > 0)
             {
-                double pct = (double)downloadedBytes / totalBytes.Value * 100.0;
+                double pct = (double)downloadedBytes / totalBytes * 100.0;
                 double dlMb = downloadedBytes / (1024.0 * 1024.0);
-                double totalMb = totalBytes.Value / (1024.0 * 1024.0);
+                double totalMb = totalBytes / (1024.0 * 1024.0);
                 
                 string speedStr = "";
                 double seconds = stopwatch.Elapsed.TotalSeconds;
                 if (seconds > 0)
                 {
-                    double bytesPerSec = downloadedBytes / seconds;
+                    double bytesPerSec = (downloadedBytes - (isRangeResponse ? existingBytes : 0)) / seconds;
                     if (bytesPerSec >= 1024 * 1024) speedStr = $"{bytesPerSec / (1024.0 * 1024):F2} MB/s";
                     else if (bytesPerSec >= 1024) speedStr = $"{bytesPerSec / 1024.0:F2} KB/s";
                     else speedStr = $"{bytesPerSec:F0} B/s";

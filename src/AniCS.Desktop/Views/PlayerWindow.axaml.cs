@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using AniCS.Player;
+using AniCS.Desktop.Services;
 using System;
 using System.Threading.Tasks;
 
@@ -15,6 +16,7 @@ public partial class PlayerWindow : Window
     private string _title     = "";
     private string _serverUrl = "";
     private string _quality   = "";
+    private IAudioMixerController? _mixer;
 
     // Auto-recover state
     private bool   _isRecovering   = false;
@@ -57,6 +59,13 @@ public partial class PlayerWindow : Window
     {
         try
         {
+            // Crear el controlador de audio del sistema (solo Windows)
+            if (OperatingSystem.IsWindows())
+            {
+                _mixer = new WindowsAudioSessionController();
+                EmbeddedVideoPlayer.SetMixer(_mixer);
+            }
+
             if (_playerBackend is LibVlcBackend libVlcBackend)
             {
                 EmbeddedVideoPlayer.Attach(libVlcBackend);
@@ -80,10 +89,14 @@ public partial class PlayerWindow : Window
     {
         EmbeddedVideoPlayer.BackRequested  -= OnCloseRequested;
         EmbeddedVideoPlayer.CloseRequested -= OnCloseRequested;
+        EmbeddedVideoPlayer.SetMixer(null);
         EmbeddedVideoPlayer.Detach();
 
         if (_playerBackend is LibVlcBackend libVlcBackend)
             libVlcBackend.RecoverRequested -= OnRecoverRequested;
+
+        _mixer?.Dispose();
+        _mixer = null;
 
         Task.Run(() => _playerBackend?.Stop());
     }

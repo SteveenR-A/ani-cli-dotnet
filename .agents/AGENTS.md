@@ -30,7 +30,7 @@ Adicionalmente:
 
 1. Modificar interfaz (Desktop/CLI) -> Validar -> Construir.
 2. Si un proveedor de anime (web) cambia, actualizar ÚNICAMENTE el `Extractor` correspondiente en `AniCS.Core` y probar (selectores documentados en `.agents/scraper_logic.md`).
-3. **Actualización de Versiones (Version Bumping)**: Al generar una nueva versión pública (actual: **1.6.0**), actualizar:
+3. **Actualización de Versiones (Version Bumping)**: Al generar una nueva versión pública (actual: **1.6.1**), actualizar:
    - `src/AniCS.Desktop/AniCS.Desktop.csproj`: `<Version>`, `<AssemblyVersion>` y `<FileVersion>`.
    - `Installer/AniCS-Installer.wxs`: atributo `Version` en el nodo `<Package>`.
    - `src/AniCS.Desktop/AppInfo.cs`: texto del `LatestChangelog` (fallback local). Las notas de la release se toman del `body` de la Release de GitHub.

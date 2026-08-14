@@ -30,6 +30,7 @@ public partial class MobileAnimeDetailsView : UserControl
     private readonly IPlayerBackend _playerBackend;
     private readonly IResolverBackend _resolverBackend;
     private EpisodeViewModel? _nowPlayingVm;
+    private List<EpisodeViewModel>? _episodeViewModels;
 
     public MobileAnimeDetailsView()
     {
@@ -51,6 +52,7 @@ public partial class MobileAnimeDetailsView : UserControl
         _resolverBackend = App.Services.GetService(typeof(IResolverBackend)) as IResolverBackend ?? ResolverFactory.CreateFromConfig();
 
         Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
     private void OnBackClicked(object? sender, RoutedEventArgs e)
@@ -58,8 +60,37 @@ public partial class MobileAnimeDetailsView : UserControl
         NavigationHelper.GoBack(this);
     }
 
+    private void OnCoverImageClicked(object? sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(_anime.ThumbnailUrl))
+        {
+            AndroidMainView.Current?.ShowImageModal(_anime.ThumbnailUrl, _anime.Title);
+        }
+    }
+
+    private void OnUnloaded(object? sender, RoutedEventArgs e)
+    {
+        DownloadManager.DownloadsChanged -= OnDownloadsChanged;
+    }
+
+    private void OnDownloadsChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_episodeViewModels != null)
+            {
+                foreach (var vm in _episodeViewModels)
+                {
+                    UpdateEpisodeViewModelState(vm);
+                }
+            }
+        });
+    }
+
     private async void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        DownloadManager.DownloadsChanged -= OnDownloadsChanged;
+        DownloadManager.DownloadsChanged += OnDownloadsChanged;
         await LoadAnimeInfoAsync();
     }
 
@@ -144,7 +175,8 @@ public partial class MobileAnimeDetailsView : UserControl
                             UpdateEpisodeViewModelState(vm);
                             viewModels.Add(vm);
                         }
-                        EpisodesList.ItemsSource = viewModels;
+                        _episodeViewModels = viewModels;
+                        EpisodesList.ItemsSource = _episodeViewModels;
                     }
                     else
                     {
@@ -174,6 +206,25 @@ public partial class MobileAnimeDetailsView : UserControl
     {
         try
         {
+            var history = new History.WatchHistory();
+            var historyEntry = history.GetAll().FirstOrDefault(h => h.AnimeUrl.Equals(_anime.Url, StringComparison.OrdinalIgnoreCase));
+            if (historyEntry != null && historyEntry.LastEpisodeNumber == vm.EpisodeNumber)
+            {
+                vm.WatchStatus = historyEntry.IsCompleted ? EpisodeWatchStatus.Completed : EpisodeWatchStatus.InProgress;
+            }
+            else
+            {
+                var downloadedEp = DownloadManager.GetDownloadedEpisode(_anime.Url, vm.EpisodeNumber);
+                if (downloadedEp != null)
+                {
+                    vm.WatchStatus = downloadedEp.Status;
+                }
+                else
+                {
+                    vm.WatchStatus = EpisodeWatchStatus.Unwatched;
+                }
+            }
+
             if (DownloadManager.IsEpisodeDownloaded(_anime.Url, vm.EpisodeNumber))
             {
                 vm.DownloadText = "Descargado";
@@ -279,9 +330,14 @@ public partial class MobileAnimeDetailsView : UserControl
                 urlResolver,
                 $"{_anime.Title} — {vm.Title}",
                 chosenServer.Url,
-                chosenQuality);
+                chosenQuality,
+                animeTitle: _anime.Title,
+                animeUrl: _anime.Url,
+                thumbnailUrl: _anime.ThumbnailUrl,
+                episodeNumber: vm.EpisodeNumber,
+                episodeUrl: vm.Url);
 
-            AndroidMainView.Current.SetMainContent(playerView);
+            AndroidMainView.Current.PushPlayerView(playerView);
         }
     }
 
@@ -443,11 +499,22 @@ public partial class MobileAnimeDetailsView : UserControl
                 if (!string.IsNullOrEmpty(videoUrl))
                 {
                     StatusText.Text = $"Descarga iniciada para {vm.Title}";
-                    var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+                    var defaultDir = System.IO.Path.Combine(ConfigManager.BaseDataPath, "Downloads");
                     var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
                     if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime";
                     var animeDir = System.IO.Path.Combine(defaultDir, safeTitle);
                     if (!System.IO.Directory.Exists(animeDir)) System.IO.Directory.CreateDirectory(animeDir);
+
+                    var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
+                    var outputPath = System.IO.Path.Combine(animeDir, $"Episodio {episodeNumStr}.mp4");
+
+                    var mediaType = videoUrl.Contains(".m3u8", StringComparison.OrdinalIgnoreCase) ? MediaType.Hls : MediaType.Mp4;
+                    var resolvedMedia = new ResolvedMedia(
+                        chosenServer.Url,
+                        videoUrl,
+                        mediaType,
+                        chosenServer.Url,
+                        ConfigManager.Current.RandomUserAgent);
 
                     var activeDownload = new ActiveDownload
                     {
@@ -463,6 +530,65 @@ public partial class MobileAnimeDetailsView : UserControl
 
                     DownloadManager.AddActiveDownload(activeDownload);
                     UpdateEpisodeViewModelState(vm);
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var progress = new Progress<DownloadProgress>(p =>
+                            {
+                                Dispatcher.UIThread.Post(() =>
+                                {
+                                    activeDownload.Progress = p.Percent;
+                                    if (!string.IsNullOrEmpty(p.SizeInfo)) activeDownload.SizeText = p.SizeInfo;
+                                });
+                            });
+
+                            var resolverResult = await _resolverBackend.DownloadAsync(
+                                resolvedMedia,
+                                outputPath,
+                                progress,
+                                activeDownload.CancellationTokenSource.Token);
+
+                            if (resolverResult.Code == DownloadResultCode.Success && resolverResult.OutputPath != null)
+                            {
+                                activeDownload.State = DownloadState.Completed;
+                                DownloadManager.RecordDownload(
+                                    _anime.Title,
+                                    _anime.Url,
+                                    _anime.ThumbnailUrl,
+                                    vm.EpisodeNumber,
+                                    vm.Title,
+                                    resolverResult.OutputPath);
+                            }
+                            else if (resolverResult.Code == DownloadResultCode.Cancelled)
+                            {
+                                activeDownload.State = DownloadState.Cancelled;
+                                DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
+                            }
+                            else
+                            {
+                                activeDownload.State = DownloadState.Error;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLogger.Error("MobileAnimeDetailsView.DownloadAsync", ex);
+                            activeDownload.State = DownloadState.Error;
+                        }
+                        finally
+                        {
+                            await Dispatcher.UIThread.InvokeAsync(() =>
+                            {
+                                if (activeDownload.State == DownloadState.Completed ||
+                                    activeDownload.State == DownloadState.Cancelled)
+                                {
+                                    DownloadManager.RemoveActiveDownload(activeDownload);
+                                }
+                                UpdateEpisodeViewModelState(vm);
+                            });
+                        }
+                    });
                 }
             }
             catch (Exception ex)

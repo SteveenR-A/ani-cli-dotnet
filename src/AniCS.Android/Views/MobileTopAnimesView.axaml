@@ -3,21 +3,25 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:models="clr-namespace:AniCS.Models;assembly=AniCS.Core"
+             xmlns:converters="clr-namespace:AniCS.Desktop.Converters;assembly=AniCS.Desktop"
              xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="700"
              x:Class="AniCS.Android.Views.MobileTopAnimesView">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="12" Spacing="12">
-            <TextBlock Text="🏆 Top Animes Más Populares" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}"/>
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <material:MaterialIcon Kind="Trophy" Width="22" Height="22" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                <TextBlock Text="Top Animes Más Populares" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+            </StackPanel>
             
             <ItemsControl Name="TopAnimesItemsControl">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="models:AnimeResult">
                         <Border Background="{DynamicResource AppCardBg}" CornerRadius="10" Margin="0,0,0,10" Padding="10" ClipToBounds="True" PointerPressed="OnAnimeCardPressed">
                             <Grid ColumnDefinitions="70, *, Auto">
-                                <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="70" Height="100">
-                                    <Image Source="{Binding ThumbnailUrl}" Stretch="UniformToFill"/>
+                                <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="70" Height="100" Background="#20FFFFFF">
+                                    <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" Margin="10,0,6,0" VerticalAlignment="Center" Spacing="4">
                                     <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" TextTrimming="CharacterEllipsis" MaxLines="2"/>

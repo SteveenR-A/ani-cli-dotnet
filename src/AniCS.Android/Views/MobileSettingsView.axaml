@@ -1,0 +1,158 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="360" d:DesignHeight="740"
+             x:Class="AniCS.Android.Views.MobileSettingsView">
+
+    <Grid RowDefinitions="*, Auto">
+
+        <!-- Contenido scrolleable -->
+        <ScrollViewer Grid.Row="0">
+            <StackPanel Margin="16,16,16,10" Spacing="14">
+
+                <TextBlock Text="Configuración" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" Margin="0,0,0,4"/>
+
+                <!-- ── 1. Apariencia ─────────────────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="14"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <material:MaterialIcon Kind="PaletteOutline" Width="20" Height="20" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Apariencia" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="15" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Tema Visual" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource AppTitleColor}"/>
+                        <ComboBox Name="ThemeComboBox" HorizontalAlignment="Stretch" SelectionChanged="OnThemeSelectionChanged">
+                            <ComboBoxItem Content="Default (Oscuro)" Tag="Dark"/>
+                            <ComboBoxItem Content="Claro" Tag="Light"/>
+                            <ComboBoxItem Content="Dracula" Tag="Dracula"/>
+                            <ComboBoxItem Content="Tokyo Night" Tag="TokyoNight"/>
+                            <ComboBoxItem Content="Cyberpunk" Tag="Cyberpunk"/>
+                            <ComboBoxItem Content="Catppuccin" Tag="Catppuccin"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── 2. Reproducción y Red ─────────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="14"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <material:MaterialIcon Kind="PlayCircleOutline" Width="20" Height="20" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Reproducción" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="15" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Calidad de Video Preferida" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource AppTitleColor}"/>
+                        <ComboBox Name="QualityComboBox" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="1080p (Máxima)" Tag="1080"/>
+                            <ComboBoxItem Content="720p (Recomendada)" Tag="720"/>
+                            <ComboBoxItem Content="480p (Ahorro de datos)" Tag="480"/>
+                        </ComboBox>
+
+                        <Separator Background="{DynamicResource AppSubtextColor}" Opacity="0.2"/>
+
+                        <Grid ColumnDefinitions="*, Auto">
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="Auto-Recover (Reconexión)" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource AppTitleColor}"/>
+                                <TextBlock Text="Reconecta automáticamente el stream si se corta." FontSize="11" Foreground="{DynamicResource AppSubtextColor}"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" Name="AutoRecoverToggle" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── 3. Fuentes y Almacenamiento ────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="14"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <material:MaterialIcon Kind="ServerNetwork" Width="20" Height="20" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Fuentes y Datos" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="15" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <TextBlock Text="URL Base de JKAnime" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource AppTitleColor}"/>
+                        <TextBox Name="CustomJkAnimeUrlInput" PlaceholderText="https://jkanime.net" />
+
+                        <TextBlock Text="Límite de imágenes en caché" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource AppTitleColor}"/>
+                        <NumericUpDown Name="CacheLimitInput" Minimum="0" Maximum="1000" FormatString="0" />
+
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
+                            <Button Content="Limpiar Caché" Background="Transparent" Foreground="{DynamicResource AppWarningColor}" BorderBrush="{DynamicResource AppWarningColor}" BorderThickness="1" Padding="10,6" Click="OnClearCacheClicked"/>
+                            <Button Content="Limpiar Historial" Background="Transparent" Foreground="{DynamicResource AppDangerColor}" BorderBrush="{DynamicResource AppDangerColor}" BorderThickness="1" Padding="10,6" Click="OnClearHistoryClicked"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── 4. Actualizaciones (APK) ───────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="14"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <material:MaterialIcon Kind="Update" Width="20" Height="20" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Actualizaciones" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="15" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <TextBlock FontSize="12" Foreground="{DynamicResource AppSubtextColor}"
+                                   Text="Revisa si hay nuevas versiones de AniCS para Android en GitHub." TextWrapping="Wrap"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button Name="CheckForUpdatesBtn" Content="Buscar actualizaciones" Padding="12,7" Click="OnCheckForUpdatesClicked"/>
+                            <Button Name="DownloadUpdateBtn" Content="Instalar APK" Padding="12,7" IsVisible="False" Background="{DynamicResource AppPrimaryColor}" Foreground="White" Click="OnDownloadUpdateClicked"/>
+                        </StackPanel>
+
+                        <TextBlock Name="UpdateStatusText" Text="Listo." FontSize="12" Foreground="{DynamicResource AppSubtextColor}" TextWrapping="Wrap"/>
+                        <ProgressBar Name="UpdateProgress" Height="6" IsVisible="False" Maximum="100" />
+                        <TextBlock Name="UpdateProgressText" Text="" FontSize="11" Foreground="{DynamicResource AppSubtextColor}" IsVisible="False"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── 5. Acerca de & Notas de Parche ────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="14"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1" Margin="0,0,0,10">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <material:MaterialIcon Kind="InformationOutline" Width="20" Height="20" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Acerca de AniCS" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="15" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBlock Name="AppVersionText" Grid.Column="0" Text="Versión: 1.6.1" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource AppSubtextColor}"/>
+                            <Button Grid.Column="1" Content="Ver Notas de Parche" Click="OnViewChangelogClicked" Padding="10,6" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ── Barra inferior sticky ──────────────────────────────────── -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource AppSurfaceColor}"
+                BorderBrush="{DynamicResource AppSubtextColor}"
+                BorderThickness="0,1,0,0"
+                Padding="16,10">
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBlock Name="StatusMessage"
+                           Grid.Column="0"
+                           Text=""
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,0,10,0"/>
+
+                <Button Grid.Column="1"
+                        Name="SaveButton"
+                        Content="Guardar Cambios"
+                        Click="OnSaveClicked"
+                        Background="{DynamicResource AppPrimaryColor}"
+                        Foreground="{DynamicResource AppPrimaryForegroundColor}"
+                        FontWeight="Bold"
+                        Padding="16,10"
+                        CornerRadius="8"/>
+            </Grid>
+        </Border>
+
+    </Grid>
+</UserControl>

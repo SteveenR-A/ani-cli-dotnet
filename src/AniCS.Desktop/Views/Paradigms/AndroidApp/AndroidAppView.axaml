@@ -56,7 +56,7 @@
             </Border>
 
             <!-- Carruseles -->
-            <ScrollViewer Grid.Row="2" Margin="0,0,0,0">
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,0">
                 <StackPanel Spacing="28" Margin="0,0,0,16">
 
                     <!-- Estado de carga global -->
@@ -81,7 +81,7 @@
                                     Click="OnSeeMoreLatestClicked"
                                     Cursor="Hand"/>
                         </Grid>
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                        <ScrollViewer HorizontalScrollBarVisibility="Hidden"
                                       VerticalScrollBarVisibility="Disabled"
                                       Margin="20,0,0,0">
                             <ItemsControl Name="LatestItemsControl" ItemsSource="{Binding LatestList}">
@@ -100,7 +100,7 @@
                     </StackPanel>
 
                     <!-- Carrusel 2: Estrenos / Destacados -->
-                    <StackPanel>
+                    <StackPanel IsVisible="{Binding HasPremieres}">
                         <Grid ColumnDefinitions="*, Auto" Margin="20,0,20,10">
                             <TextBlock Grid.Column="0"
                                        Text="Estrenos / Destacados"
@@ -113,7 +113,7 @@
                                     Click="OnSeeMorePremieresClicked"
                                     Cursor="Hand"/>
                         </Grid>
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                        <ScrollViewer HorizontalScrollBarVisibility="Hidden"
                                       VerticalScrollBarVisibility="Disabled"
                                       Margin="20,0,0,0">
                             <ItemsControl Name="PremieresItemsControl" ItemsSource="{Binding PremieresList}">
@@ -165,7 +165,7 @@
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                         <ScrollViewer Name="HistoryScrollViewer"
-                                      HorizontalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Hidden"
                                       VerticalScrollBarVisibility="Disabled"
                                       Margin="20,0,0,0">
                             <ItemsControl ItemsSource="{Binding HistoryList}">

@@ -11,8 +11,8 @@
         <!-- 1. Native Android Video View Container -->
         <Panel Name="PlayerHostContainer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ZIndex="1" />
 
-        <!-- 2. Transparent Touch Layer to Toggle Controls -->
-        <Panel Name="ClickLayer" Background="Transparent" PointerPressed="OnVideoAreaTapped" ZIndex="2" />
+        <!-- 2. Touch Layer to Toggle Controls (HitTestable) -->
+        <Panel Name="ClickLayer" Background="#01000000" PointerPressed="OnVideoAreaTapped" ZIndex="2" IsVisible="False" />
 
         <!-- 3. Central Toast Feedback OSD -->
         <Border Name="OsdToastPanel"
@@ -25,8 +25,8 @@
                        HorizontalAlignment="Center"/>
         </Border>
 
-        <!-- 4. Fullscreen OSD Overlay Layer -->
-        <Grid Name="OsdOverlay" RowDefinitions="Auto, *, Auto" ZIndex="10" IsVisible="True">
+        <!-- 4. Fullscreen OSD Overlay Layer (Handled Natively) -->
+        <Grid Name="OsdOverlay" RowDefinitions="Auto, *, Auto" ZIndex="10" IsVisible="False">
 
             <!-- Top Navigation & Title Bar -->
             <Border Grid.Row="0" Padding="12,8">
@@ -37,10 +37,10 @@
                     </LinearGradientBrush>
                 </Border.Background>
                 <Grid ColumnDefinitions="Auto, *, Auto, Auto">
-                    <Button Grid.Column="0" Click="OnBackClicked" Background="Transparent" BorderThickness="0" Padding="6,4">
+                    <Button Grid.Column="0" Click="OnBackClicked" Background="#77000000" BorderThickness="0" CornerRadius="18" Padding="10,6" Margin="0,0,10,0">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <material:MaterialIcon Kind="ArrowLeft" Width="22" Height="22" Foreground="White" VerticalAlignment="Center"/>
-                            <TextBlock Text="Volver" Foreground="White" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Text="Volver" Foreground="White" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <TextBlock Name="TitleLabel" Grid.Column="1" Text="" Foreground="White" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="10,0"/>

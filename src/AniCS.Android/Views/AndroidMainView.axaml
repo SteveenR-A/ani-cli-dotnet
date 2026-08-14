@@ -12,9 +12,9 @@
 
     <Grid RowDefinitions="Auto, *, Auto">
 
-        <!-- ── 1. Barra de Navegación Superior (Top Navigation Bar igual a PC) ── -->
+        <!-- ── 1. Barra de Navegación Superior ── -->
         <Border Name="TopHeaderBorder" Grid.Row="0" Background="{DynamicResource AppSurfaceColor}" Height="56" Padding="8,0">
-            <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+            <Grid ColumnDefinitions="Auto, *, Auto">
                 <!-- Hamburger Menu Button -->
                 <Button Grid.Column="0" Name="HamburgerButton" 
                         Background="Transparent" 
@@ -32,18 +32,8 @@
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
 
-                <!-- Refresh Button -->
-                <Button Grid.Column="2" 
-                        Command="{Binding ReloadCommand}"
-                        Background="Transparent" 
-                        Foreground="{DynamicResource AppTitleColor}" 
-                        Margin="0,0,5,0"
-                        VerticalAlignment="Center">
-                    <material:MaterialIcon Kind="Refresh" Width="22" Height="22" />
-                </Button>
-
                 <!-- Toggle Anime / Donghua -->
-                <StackPanel Name="SourceTogglePanel" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Name="SourceTogglePanel" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Anime" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource AppSubtextColor}" Margin="0,0,4,0" />
                     <ToggleSwitch Name="SourceToggle" IsChecked="{Binding IsDonghuaMode}" OnContent="Donghua" OffContent="" VerticalAlignment="Center" />
                 </StackPanel>
@@ -184,6 +174,54 @@
                             Click="OnCloseModalClicked" />
                 </Grid>
             </Border>
+        </Border>
+
+        <!-- ── 3.1 Overlay Visor de Imágenes en Grande (Lightbox) ───────────── -->
+        <Border Grid.Row="0" Grid.RowSpan="3"
+                Name="ImageModalOverlay"
+                Background="#F0000000"
+                IsVisible="False"
+                ZIndex="2000">
+            <Grid RowDefinitions="Auto, *">
+                <!-- Header: Título + Botón Cerrar -->
+                <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="20,16,16,10">
+                    <TextBlock Name="ImageModalTitle"
+                               Text="Portada del Anime"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                    <Button Grid.Column="1"
+                            Click="OnCloseImageModalClicked"
+                            Background="#40FFFFFF"
+                            Foreground="White"
+                            CornerRadius="20"
+                            Padding="8">
+                        <material:MaterialIcon Kind="Close" Width="20" Height="20"/>
+                    </Button>
+                </Grid>
+
+                <!-- Fullscreen Image with touch to close background -->
+                <Button Grid.Row="1"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="16"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="OnCloseImageModalClicked">
+                    <Border CornerRadius="12"
+                            ClipToBounds="True"
+                            Background="#1AFFFFFF">
+                        <Image Name="ImageModalPicture"
+                               Stretch="Uniform"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center"/>
+                    </Border>
+                </Button>
+            </Grid>
         </Border>
 
         <!-- ── 4. Barra de Navegación Inferior Rapida (Bottom Bar) ────────── -->

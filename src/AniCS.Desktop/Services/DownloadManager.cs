@@ -51,8 +51,19 @@ public class ActiveDownload : INotifyPropertyChanged
         set { _state = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); OnPropertyChanged(nameof(PauseResumeText)); }
     }
 
-    public string PauseResumeText => State == DownloadState.Paused ? "Reanudar" : "Pausar";
-    public string PauseResumeIcon => State == DownloadState.Paused ? "Play" : "Pause";
+    public string PauseResumeText => State switch
+    {
+        DownloadState.Paused => "Reanudar",
+        DownloadState.Error => "Reintentar",
+        _ => "Pausar"
+    };
+
+    public string PauseResumeIcon => State switch
+    {
+        DownloadState.Paused => "Play",
+        DownloadState.Error => "Refresh",
+        _ => "Pause"
+    };
 
     public string StatusText => State switch
     {
@@ -229,9 +240,13 @@ public class DownloadedAnime : INotifyPropertyChanged
 
 public static class DownloadManager
 {
-    private static readonly string ConfigDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "anics");
-    private static readonly string DownloadsFile = Path.Combine(ConfigDir, "downloads.json");
+    private static string ConfigDir => ConfigManager.BaseDataPath;
+    private static string DownloadsFile => Path.Combine(ConfigManager.BaseDataPath, "downloads.json");
+
+    public static string DefaultDownloadDirectory =>
+        OperatingSystem.IsWindows()
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS")
+            : Path.Combine(ConfigManager.BaseDataPath, "Downloads");
 
     private static List<DownloadedAnime> _downloads = new();
     
@@ -331,8 +346,7 @@ public static class DownloadManager
     /// <returns>Número de episodios nuevos importados.</returns>
     public static int ScanDiskDownloads()
     {
-        var baseDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+        var baseDir = DefaultDownloadDirectory;
 
         if (!Directory.Exists(baseDir)) return 0;
 
@@ -564,6 +578,12 @@ public static class DownloadManager
             return ep != null && File.Exists(ep.FilePath);
         }
         return false;
+    }
+
+    public static DownloadedEpisode? GetDownloadedEpisode(string animeUrl, string episodeNumber)
+    {
+        var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
+        return anime?.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
     }
 
     public static void UpdateEpisodeStatus(string animeUrl, string episodeNumber, EpisodeWatchStatus status)

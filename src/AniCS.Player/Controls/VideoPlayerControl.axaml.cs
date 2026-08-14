@@ -9,6 +9,7 @@ using LibVLCSharp.Shared;
 using Material.Icons;
 using System;
 using System.Collections.Generic;
+using AniCS.Player;
 
 namespace AniCS.Player.Controls;
 
@@ -21,17 +22,30 @@ public partial class VideoPlayerControl : UserControl
 {
     // ── Estado ────────────────────────────────────────────────────────────────
     private LibVlcBackend? _backend;
+    private IAudioMixerController? _mixer;      // Controlador de volumen del sistema (Windows)
     private bool _isDraggingSlider;
+    private bool _isDraggingVolume;              // Verdadero mientras el usuario arrastra el slider de volumen
     private bool _isPlaying;
     private bool _isMuted;
     private bool _isFullscreen;
     private WindowState _previousWindowState = WindowState.Normal; // Estado antes de entrar a fullscreen
     private int  _lastVolume = 100;
 
+    // Seguimiento de posición del mouse para filtrar micro-movimientos de daemons
+    private Avalonia.Point _lastMousePos;  // última posición conocida del puntero
+    private Avalonia.Point _hideMousePos;  // posición cuando los controles se ocultaron
+    /// <summary>
+    /// Distancia mínima (píxeles) que debe moverse el puntero para revelar los controles.
+    /// Filtra micro-movimientos de 1-3 px del daemon OLED de Lenovo Vantage (modo cuidado de pantalla).
+    /// 15 px es imperceptible para el usuario pero muy superior al jitter del daemon.
+    /// </summary>
+    private const double PointerRevealThreshold = 15.0;
+
     // ── Timers ────────────────────────────────────────────────────────────────
-    private DispatcherTimer? _osdTimer;        // Oculta el OSD tras 1.5s
-    private DispatcherTimer? _controlsTimer;   // Oculta los controles principales
-    private DispatcherTimer? _volumeSaveTimer; // Debounce: guarda config en disco 400ms después del último cambio
+    private DispatcherTimer? _osdTimer;          // Oculta el OSD tras 1.5s
+    private DispatcherTimer? _controlsTimer;     // Oculta los controles principales
+    private DispatcherTimer? _volumeSaveTimer;   // Debounce: guarda config en disco 400ms después del último cambio
+    private DispatcherTimer? _deactivateTimer;   // Debounce: cierra el popup 400ms después de perder el foco
 
     // ── Velocidades disponibles ───────────────────────────────────────────────
     private static readonly List<(string Label, float Rate)> Speeds = new()
@@ -78,6 +92,7 @@ public partial class VideoPlayerControl : UserControl
         _volumeSaveTimer.Tick += (_, _) =>
         {
             _volumeSaveTimer.Stop();
+            _isDraggingVolume = false;
             int vol = (int)VolumeSlider.Value;
             try
             {
@@ -85,6 +100,21 @@ public partial class VideoPlayerControl : UserControl
                 ConfigManager.Save(ConfigManager.Current);
             }
             catch { }
+        };
+
+        // Debounce para cierre del Popup: evita que el daemon de Lenovo Vantage
+        // (u otros procesos que ciclan el foco) cause parpadeo del overlay.
+        _deactivateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+        _deactivateTimer.Tick += (_, _) =>
+        {
+            _deactivateTimer.Stop();
+            // Solo cerrar si la ventana sigue sin foco
+            if (TopLevel.GetTopLevel(this) is Window win && !win.IsActive)
+            {
+                if (OverlayPopup != null) OverlayPopup.IsOpen = false;
+                ControlsOverlay.IsVisible = false;
+                _controlsTimer?.Stop();
+            }
         };
     }
 
@@ -106,12 +136,30 @@ public partial class VideoPlayerControl : UserControl
         _backend.ErrorOccurred  += OnPlayerError;
         VideoViewControl.MediaPlayer = backend.MediaPlayer;
 
-        // Sincronizar volumen: combinar el volumen del sistema LibVLC con la config guardada
-        int startVol = SyncSystemVolume();
-        _backend.Volume    = startVol;
-        VolumeSlider.Value = startVol;
-        _lastVolume        = startVol;
-        if (VolumeLabel != null) VolumeLabel.Text = $"{startVol}%";
+        if (_mixer != null)
+        {
+            // Modo mixer: LibVLC queda al 100% (no dobla la escala);
+            // el volumen real lo controla WindowsAudioSessionController.
+            _backend.Volume    = 100;
+            int sysVol         = _mixer.Volume;
+            VolumeSlider.Value = sysVol;
+            _lastVolume        = sysVol;
+            if (VolumeLabel != null) VolumeLabel.Text = $"{sysVol}%";
+        }
+        else
+        {
+            // Fallback: usar el volumen por software de LibVLC (plataformas no-Windows)
+            int startVol = SyncSystemVolume();
+            _backend.Volume    = startVol;
+            VolumeSlider.Value = startVol;
+            _lastVolume        = startVol;
+            if (VolumeLabel != null) VolumeLabel.Text = $"{startVol}%";
+        }
+
+        // Mostrar controles brevemente al arrancar para indicar al usuario que están disponibles
+        ControlsOverlay.IsVisible = true;
+        _controlsTimer?.Stop();
+        _controlsTimer?.Start();
     }
 
     /// <summary>
@@ -135,6 +183,42 @@ public partial class VideoPlayerControl : UserControl
         _backend.ErrorOccurred  -= OnPlayerError;
         VideoViewControl.MediaPlayer = null;
         _backend = null;
+    }
+
+    /// <summary>
+    /// Inyecta el controlador de audio del sistema operativo.
+    /// Debe llamarse antes de <see cref="Attach"/> o justo después.
+    /// Pasar null deshabilita la integración (comportamiento LibVLC puro).
+    /// </summary>
+    public void SetMixer(IAudioMixerController? mixer)
+    {
+        if (_mixer != null)
+            _mixer.ExternalVolumeChanged -= OnExternalVolumeChanged;
+
+        _mixer = mixer;
+
+        if (_mixer != null)
+            _mixer.ExternalVolumeChanged += OnExternalVolumeChanged;
+    }
+
+    /// <summary>
+    /// Llamado cuando el mezclador de Windows cambia el volumen por fuera de la app
+    /// (rueda del ratón en el tray de sonido, Lenovo Vantage, etc.).
+    /// Solo actualiza la barra si el usuario no está arrastrando el slider.
+    /// </summary>
+    private void OnExternalVolumeChanged(int newVolume)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_isDraggingVolume) return;
+            VolumeSlider.Value = newVolume;
+            if (VolumeLabel != null) VolumeLabel.Text = $"{newVolume}%";
+            if (newVolume > 0) _lastVolume = newVolume;
+            if (!_isMuted)
+                MuteIcon.Kind = newVolume == 0
+                    ? MaterialIconKind.VolumeOff
+                    : (newVolume < 50 ? MaterialIconKind.VolumeMedium : MaterialIconKind.VolumeHigh);
+        });
     }
 
     public void ShowLoading(string? subtitle = null)
@@ -213,6 +297,11 @@ public partial class VideoPlayerControl : UserControl
             {
                 QualityBadge.Text = $"{session.VideoWidth}x{session.VideoHeight}";
             }
+
+            // Intentar enlazar la sesión de audio si aún no lo hemos hecho
+            // (la sesión de Core Audio aparece solo después de que LibVLC emite audio)
+            if (session.State == PlayerState.Playing)
+                _mixer?.TryAcquireSession();
         });
     }
 
@@ -232,10 +321,22 @@ public partial class VideoPlayerControl : UserControl
 
     private void OnRootPointerMoved(object? sender, PointerEventArgs e)
     {
-        // Mantener cursor visible mientras el ratón se mueve y mostrar controles
+        var pos = e.GetPosition(this);
+        _lastMousePos = pos;
+
+        if (!ControlsOverlay.IsVisible)
+        {
+            // Controles ocultos: solo revelarlos si el puntero se movió lo suficiente
+            // desde el punto donde se ocultaron. Esto filtra el jitter del daemon OLED
+            // de Lenovo Vantage (1-3 px) sin afectar al usuario (movimiento real ≥15 px).
+            var dx = pos.X - _hideMousePos.X;
+            var dy = pos.Y - _hideMousePos.Y;
+            if (Math.Sqrt(dx * dx + dy * dy) < PointerRevealThreshold)
+                return;
+        }
+
         Cursor = Cursor.Default;
         ControlsOverlay.IsVisible = true;
-        
         _controlsTimer?.Stop();
         if (_isPlaying) _controlsTimer?.Start();
     }
@@ -245,6 +346,9 @@ public partial class VideoPlayerControl : UserControl
         _controlsTimer?.Stop();
         if (_isPlaying)
         {
+            // Guardar la posición del puntero al ocultar — se usa como referencia
+            // para el umbral de revelado en OnRootPointerMoved.
+            _hideMousePos = _lastMousePos;
             Cursor = new Cursor(StandardCursorType.None);
             ControlsOverlay.IsVisible = false;
         }
@@ -295,14 +399,24 @@ public partial class VideoPlayerControl : UserControl
 
     private void OnWindowActivated(object? sender, EventArgs e)
     {
+        // Cancelar cierre pendiente del popup (daemon de Vantage u otro proceso
+        // dispara Deactivated/Activated rápidamente — el debounce lo filtra).
+        _deactivateTimer?.Stop();
+
+        // Reabrir el popup para que el overlay sea interactuable
         if (OverlayPopup != null)
             OverlayPopup.IsOpen = true;
+
+        // NO mostrar ControlsOverlay aquí: solo se muestra con movimiento de mouse
     }
 
     private void OnWindowDeactivated(object? sender, EventArgs e)
     {
-        if (OverlayPopup != null)
-            OverlayPopup.IsOpen = false;
+        // Iniciar el debounce: si Activated llega en <400ms (ciclo del daemon)
+        // se cancela y el popup no se cierra. Si el usuario cambió de ventana de
+        // verdad, el timer expira y cierra el popup.
+        _deactivateTimer?.Stop();
+        _deactivateTimer?.Start();
     }
 
     private async void OnPlayPauseClicked(object? sender, RoutedEventArgs e)
@@ -381,17 +495,25 @@ public partial class VideoPlayerControl : UserControl
         {
             VolumeSlider.Value = _lastVolume > 0 ? _lastVolume : 100;
         }
-        _backend.IsMuted  = _isMuted;
-        MuteIcon.Kind     = _isMuted ? MaterialIconKind.VolumeOff : MaterialIconKind.VolumeHigh;
+
+        if (_mixer != null)
+            _mixer.IsMuted = _isMuted;
+        else
+            _backend.IsMuted = _isMuted;
+
+        MuteIcon.Kind = _isMuted ? MaterialIconKind.VolumeOff : MaterialIconKind.VolumeHigh;
         ShowOsd(_isMuted ? "Silenciado" : "Con sonido");
     }
 
     private void OnVolumeChanged(object? sender, RangeBaseValueChangedEventArgs e)
     {
         int pct = (int)e.NewValue;
+        _isDraggingVolume = true;
 
-        // Aplicar el volumen al backend inmediatamente (sin I/O de disco)
-        if (_backend != null)
+        // Aplicar el volumen al mixer del sistema (si está disponible) o al backend
+        if (_mixer != null)
+            _mixer.Volume = pct;
+        else if (_backend != null)
             _backend.Volume = pct;
 
         // Actualizar UI

@@ -109,7 +109,7 @@
         </Border>
 
         <!-- ⑥ Controles con auto-hide (overlay completo superior + inferior) -->
-        <Grid x:Name="ControlsOverlay" RowDefinitions="Auto, *, Auto">
+        <Grid x:Name="ControlsOverlay" RowDefinitions="Auto, *, Auto" IsVisible="False">
 
             <!-- Gradiente superior + barra de título -->
             <Border Grid.Row="0">
@@ -216,10 +216,10 @@
                                 <material:MaterialIcon x:Name="MuteIcon" Kind="VolumeHigh" Width="18" Height="18" Foreground="#DDDDDD"/>
                             </Button>
                             <Slider x:Name="VolumeSlider"
-                                    Minimum="0" Maximum="200" Value="100"
+                                    Minimum="0" Maximum="100" Value="100"
                                     Width="130" VerticalAlignment="Center"
                                     ValueChanged="OnVolumeChanged"
-                                    ToolTip.Tip="Volumen (0–200%)"/>
+                                    ToolTip.Tip="Volumen (0–100%)"/>
                             <TextBlock x:Name="VolumeLabel"
                                        Text="100%"
                                        FontFamily="Segoe UI, Inter, Roboto, sans-serif"

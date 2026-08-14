@@ -39,6 +39,23 @@ public partial class MobileHistoryView : UserControl
         LoadHistory();
     }
 
+    private void OnDeleteSingleHistoryClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is WatchEntry entry)
+        {
+            _history.RemoveEntry(entry.AnimeUrl);
+            LoadHistory();
+        }
+    }
+
+    private void OnHistoryImageClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is WatchEntry entry && !string.IsNullOrEmpty(entry.AnimeThumbnailUrl))
+        {
+            AndroidMainView.Current?.ShowImageModal(entry.AnimeThumbnailUrl, entry.AnimeTitle);
+        }
+    }
+
     private void OnHistoryCardPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is Border border && border.DataContext is WatchEntry entry)
@@ -63,7 +80,7 @@ public partial class MobileHistoryView : UserControl
             {
                 Title = entry.AnimeTitle,
                 Url = entry.AnimeUrl,
-                ThumbnailUrl = entry.AnimeThumbnailUrl ?? ""
+                ThumbnailUrl = entry.AnimeThumbnailUrl
             };
             AndroidMainView.Current?.NavigateToAnimeDetails(anime);
         }

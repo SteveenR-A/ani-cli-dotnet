@@ -26,16 +26,24 @@
             <TextBlock Grid.Column="1" Name="HeaderTitleText" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="10,0,0,0"/>
         </Grid>
 
-        <!-- Main Content -->
-        <ScrollViewer Grid.Row="1">
+        <!-- Contenido Scrollable -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="14">
                 <!-- Cover + Basic Metadata Header -->
                 <Grid ColumnDefinitions="110, *" Margin="0,4">
-                    <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="110" Height="155" VerticalAlignment="Top">
-                        <Image Name="CoverImage"
-                               converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}"
-                               Stretch="UniformToFill" />
-                    </Border>
+                    <Button Grid.Column="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="0"
+                            CornerRadius="8"
+                            Click="OnCoverImageClicked"
+                            ToolTip.Tip="Ver portada en grande">
+                        <Border CornerRadius="8" ClipToBounds="True" Width="110" Height="155" VerticalAlignment="Top" Background="#20FFFFFF">
+                            <Image Name="CoverImage"
+                                   converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}"
+                                   Stretch="UniformToFill" />
+                        </Border>
+                    </Button>
                     
                     <StackPanel Grid.Column="1" Spacing="6" Margin="12,0,0,0">
                         <SelectableTextBlock Name="TitleText" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextWrapping="Wrap" />

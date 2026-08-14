@@ -8,17 +8,31 @@ namespace AniCS.Desktop;
 /// </summary>
 public static class AppInfo
 {
-    /// <summary>Version of the currently running assembly (e.g. "1.5.5.0").</summary>
+    /// <summary>Version of the currently running assembly (e.g. "1.6.1").</summary>
     public static string CurrentVersion =>
-        Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+        Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.6.1";
 
     /// <summary>Local fallback notes, shown when the GitHub release has no body.</summary>
     public static string LatestChangelog { get; set; } =
-        "¡Hola! Novedades de la versión 1.6.0:\n\n" +
-        "• 🛠️ Corrección en compilación Android: Se resolvieron problemas de compatibilidad con las directivas de Avalonia 12.0 y el espacio de nombres de AndroidX.\n" +
-        "• 🔄 Auto-Recover en Reproductor: Reconexión y reanudación automática transparente si el stream HLS o enlace de servidor se interrumpe mid-playback.\n" +
-        "• 📱 Soporte e Interfaz Móvil Android: UI rediseñada con carruseles, barra de búsqueda en vivo, estado vacío de historial y Bottom Navigation Bar.\n" +
-        "• ⚙️ Barra Sticky en Ajustes: El botón 'Guardar Cambios' permanece fijo abajo en pantalla sin importar el desplazamiento de la página.\n" +
-        "• 🚀 Integración CI/CD Multiplataforma: Compilación y distribución automatizada en GitHub Actions generando tanto instaladores MSI para Windows como paquetes APK firmados para Android.\n\n" +
-        "¡Gracias por usar AniCS!";
+        "✨ ¡Novedades y Mejoras de la versión 1.6.1!\n\n" +
+        "🔊 Sincronización de Audio (PC):\n" +
+        "• Solucionado el desajuste de sincronía entre el reproductor y el volumen del sistema mediante la integración directa con sesiones de Windows Core Audio.\n\n" +
+        "🎛️ Estabilidad del Controlador de Video (PC & Móvil):\n" +
+        "• Corregido el problema donde los controles / OSD del reproductor nativo se activaban o parpadeaban involuntariamente por pérdida de foco o eventos de ventana.\n\n" +
+        "🔙 Navegación Gestual y Botón Físico Universal (Android):\n" +
+        "• Corregido el bloqueo de eventos de retroceso mediante el nuevo servicio desacoplado MobileNavigationService y el puente con AvaloniaActivity.BackRequested y AndroidX OnBackPressedDispatcher.\n" +
+        "• Soporte completo y fluido para gestos de deslizamiento en bordes y barra de navegación de 3 botones.\n\n" +
+        "📱 Reproductor Móvil Rediseñado (Android):\n" +
+        "• Nuevos iconos vectoriales circulares con estilo 'frosted glass' (replay_10, forward_10, play, pause, chevron_left, rotación).\n" +
+        "• Detección y visualización dinámica de la resolución física real (1080p, 720p, etc.) decodificada por el procesador del teléfono.\n\n" +
+        "🧹 Pulido de Interfaz y Usabilidad (Móvil):\n" +
+        "• Eliminado el botón de recarga duplicado en la cabecera superior para una barra más limpia y ergonómica.\n" +
+        "• Ocultado reactivo inteligente de la sección 'Estrenos / Destacados' cuando no hay estrenos activos en cartelera.\n\n" +
+        "⏱️ Sincronización Inteligente de Estados (Streaming y Descargas):\n" +
+        "• Marcado automático a 'En progreso' al iniciar y a 'Visto' al superar el 85% de la reproducción (adaptado a endings largos y créditos de películas).\n\n" +
+        "📥 Filtros en Descargas y Gestión de Historial:\n" +
+        "• Filtros por estado (Todos, Sin ver, En progreso, Vistos) y badges interactivos.\n" +
+        "• Botón de eliminación individual por anime en el Historial.\n" +
+        "• Visor modal en pantalla completa para ver portadas de anime en alta definición.\n\n" +
+        "¡Gracias por disfrutar de AniCS!";
 }
