@@ -41,7 +41,7 @@ public sealed class NativeResolverBackend : IResolverBackend, IDisposable
         };
         _client = new HttpClient(_handler)
         {
-            Timeout = TimeSpan.FromSeconds(30)
+            Timeout = Timeout.InfiniteTimeSpan
         };
         ApplyDefaultHeaders();
     }
@@ -235,6 +235,17 @@ public sealed class NativeResolverBackend : IResolverBackend, IDisposable
             }
         }
 
+        // Validación estricta de integridad de la descarga directa
+        if (totalBytes > 0 && downloadedBytes < totalBytes)
+        {
+            throw new IOException($"La descarga directa se interrumpió ({downloadedBytes / (1024.0 * 1024.0):F1} MB de {totalBytes / (1024.0 * 1024.0):F1} MB).");
+        }
+
+        if (downloadedBytes < 1024 * 1024) // Menos de 1 MB
+        {
+            throw new IOException($"El archivo descargado es demasiado pequeño ({downloadedBytes / 1024} KB), es probable que el stream haya fallado.");
+        }
+
         progress?.Report(new DownloadProgress(100, "", "", IsFinished: true));
         return new DownloadResult(DownloadResultCode.Success, finalPath);
     }
@@ -381,6 +392,16 @@ public sealed class NativeResolverBackend : IResolverBackend, IDisposable
         if (!string.IsNullOrEmpty(media.Referer))
         {
             try { _client.DefaultRequestHeaders.Referrer = new Uri(media.Referer); }
+            catch { }
+        }
+        else if (!string.IsNullOrEmpty(media.DirectUrl) && (media.DirectUrl.Contains("jkanime") || media.DirectUrl.Contains("jkmedia")))
+        {
+            try { _client.DefaultRequestHeaders.Referrer = new Uri("https://jkanime.net/"); }
+            catch { }
+        }
+        else if (!string.IsNullOrEmpty(media.DirectUrl) && media.DirectUrl.Contains("mundodonghua"))
+        {
+            try { _client.DefaultRequestHeaders.Referrer = new Uri("https://www.mundodonghua.com/"); }
             catch { }
         }
     }

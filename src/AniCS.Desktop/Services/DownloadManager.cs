@@ -341,11 +341,13 @@ public static class DownloadManager
                 {
                     try
                     {
+                        var targetUrl = !string.IsNullOrEmpty(active.AnimeUrl) ? active.AnimeUrl : (!string.IsNullOrEmpty(active.EpisodeUrl) ? active.EpisodeUrl : active.ServerUrl);
+                        var extractor = ExtractorFactory.GetExtractorForUrl(targetUrl);
+
                         // Si la URL directa del video está vacía o falló en reintentos, resolverla de nuevo
                         if (string.IsNullOrEmpty(active.DirectVideoUrl) && !string.IsNullOrEmpty(active.ServerUrl))
                         {
                             active.SizeText = "Resolviendo enlace del servidor...";
-                            var extractor = ExtractorFactory.GetExtractor();
                             active.DirectVideoUrl = await extractor.ResolveVideoUrlAsync(active.ServerUrl);
                             if (string.IsNullOrEmpty(active.DirectVideoUrl))
                             {
@@ -356,7 +358,6 @@ public static class DownloadManager
                         else if (string.IsNullOrEmpty(active.DirectVideoUrl) && !string.IsNullOrEmpty(active.EpisodeUrl))
                         {
                             active.SizeText = "Obteniendo enlaces de video...";
-                            var extractor = ExtractorFactory.GetExtractor();
                             var servers = await extractor.GetVideoServersAsync(active.EpisodeUrl);
                             if (servers.Count > 0)
                             {
@@ -369,6 +370,11 @@ public static class DownloadManager
                                     if (res.Type != MediaType.Unknown) active.DirectVideoUrl = res.DirectUrl;
                                 }
                             }
+                        }
+
+                        if (!string.IsNullOrEmpty(active.DirectVideoUrl))
+                        {
+                            active.DirectVideoUrl = active.DirectVideoUrl.Replace("\\", "");
                         }
 
                         if (string.IsNullOrEmpty(active.DirectVideoUrl))

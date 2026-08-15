@@ -76,6 +76,9 @@ public sealed class HlsDownloader
         using var outputStream = new FileStream(tsPath, fileMode, FileAccess.Write,
             FileShare.None, bufferSize: 65536, useAsync: true);
 
+        int failedConsecutive = 0;
+        int failedTotal = 0;
+
         for (int i = startSegment; i < total; i++)
         {
             ct.ThrowIfCancellationRequested();
@@ -83,12 +86,21 @@ public sealed class HlsDownloader
             var segUrl = segments[i];
             var segBytes = await DownloadSegmentWithRetryAsync(segUrl, retries: 3, ct);
 
-            if (segBytes == null)
+            if (segBytes == null || segBytes.Length == 0)
             {
-                // Segmento fallido — intentar continuar (gaps menores son tolerables en TS)
+                failedConsecutive++;
+                failedTotal++;
+
+                // Si fallan 5 fragmentos seguidos o más del 15% del total, abortar con error
+                if (failedConsecutive >= 5 || (failedTotal > 5 && (double)failedTotal / (i + 1) > 0.15))
+                {
+                    throw new IOException($"Demasiados fragmentos fallidos en el stream HLS ({failedTotal} fallidos de {i + 1}). El enlace del servidor pudo haber expirado.");
+                }
+
                 continue;
             }
 
+            failedConsecutive = 0;
             await outputStream.WriteAsync(segBytes, ct);
             downloadedBytes += segBytes.Length;
 
@@ -118,6 +130,12 @@ public sealed class HlsDownloader
             }
         }
 
+        // Validación final de integridad
+        if (total > 5 && downloadedBytes < 1024 * 1024) // Menos de 1 MB con más de 5 segmentos
+        {
+            throw new IOException($"El archivo HLS descargado es demasiado pequeño ({downloadedBytes / 1024} KB), la descarga no fue exitosa.");
+        }
+
         try
         {
             if (File.Exists(idxPath)) File.Delete(idxPath);
@@ -138,15 +156,28 @@ public sealed class HlsDownloader
         {
             try
             {
-                var resp = await _client.GetAsync(url, HttpCompletionOption.ResponseContentRead, ct);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(TimeSpan.FromSeconds(25)); // 25s timeout por fragmento individual
+
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                req.Headers.UserAgent.ParseAdd(ConfigManager.Current.RandomUserAgent);
+
+                var resp = await _client.SendAsync(req, HttpCompletionOption.ResponseContentRead, cts.Token);
                 if (resp.IsSuccessStatusCode)
-                    return await resp.Content.ReadAsByteArrayAsync(ct);
+                {
+                    var data = await resp.Content.ReadAsByteArrayAsync(cts.Token);
+                    if (data != null && data.Length > 0)
+                        return data;
+                }
             }
-            catch (OperationCanceledException) { throw; }
-            catch
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception)
             {
                 if (attempt < retries - 1)
-                    await Task.Delay(500 * (attempt + 1), ct); // back-off progresivo
+                    await Task.Delay(500 * (attempt + 1), ct);
             }
         }
         return null;
