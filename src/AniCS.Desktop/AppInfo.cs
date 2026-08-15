@@ -8,31 +8,43 @@ namespace AniCS.Desktop;
 /// </summary>
 public static class AppInfo
 {
-    /// <summary>Version of the currently running assembly (e.g. "1.6.1").</summary>
+    /// <summary>Version of the currently running assembly (e.g. "1.6.2").</summary>
     public static string CurrentVersion =>
-        Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.6.1";
+        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.2";
 
     /// <summary>Local fallback notes, shown when the GitHub release has no body.</summary>
     public static string LatestChangelog { get; set; } =
-        "✨ ¡Novedades y Mejoras de la versión 1.6.1!\n\n" +
-        "🔊 Sincronización de Audio (PC):\n" +
-        "• Solucionado el desajuste de sincronía entre el reproductor y el volumen del sistema mediante la integración directa con sesiones de Windows Core Audio.\n\n" +
-        "🎛️ Estabilidad del Controlador de Video (PC & Móvil):\n" +
-        "• Corregido el problema donde los controles / OSD del reproductor nativo se activaban o parpadeaban involuntariamente por pérdida de foco o eventos de ventana.\n\n" +
-        "🔙 Navegación Gestual y Botón Físico Universal (Android):\n" +
-        "• Corregido el bloqueo de eventos de retroceso mediante el nuevo servicio desacoplado MobileNavigationService y el puente con AvaloniaActivity.BackRequested y AndroidX OnBackPressedDispatcher.\n" +
-        "• Soporte completo y fluido para gestos de deslizamiento en bordes y barra de navegación de 3 botones.\n\n" +
-        "📱 Reproductor Móvil Rediseñado (Android):\n" +
-        "• Nuevos iconos vectoriales circulares con estilo 'frosted glass' (replay_10, forward_10, play, pause, chevron_left, rotación).\n" +
-        "• Detección y visualización dinámica de la resolución física real (1080p, 720p, etc.) decodificada por el procesador del teléfono.\n\n" +
-        "🧹 Pulido de Interfaz y Usabilidad (Móvil):\n" +
-        "• Eliminado el botón de recarga duplicado en la cabecera superior para una barra más limpia y ergonómica.\n" +
-        "• Ocultado reactivo inteligente de la sección 'Estrenos / Destacados' cuando no hay estrenos activos en cartelera.\n\n" +
-        "⏱️ Sincronización Inteligente de Estados (Streaming y Descargas):\n" +
-        "• Marcado automático a 'En progreso' al iniciar y a 'Visto' al superar el 85% de la reproducción (adaptado a endings largos y créditos de películas).\n\n" +
-        "📥 Filtros en Descargas y Gestión de Historial:\n" +
-        "• Filtros por estado (Todos, Sin ver, En progreso, Vistos) y badges interactivos.\n" +
-        "• Botón de eliminación individual por anime en el Historial.\n" +
-        "• Visor modal en pantalla completa para ver portadas de anime en alta definición.\n\n" +
+        "✨ ¡Novedades y Mejoras de la versión 1.6.2!\n\n" +
+        "📁 Auto-Búsqueda y Sincronización de Animes Locales (PC & Móvil):\n" +
+        "• Al presionar 'Ver Online' en animes importados desde la carpeta de videos sin metadata previa, el sistema busca automáticamente la serie en línea por su título.\n" +
+        "• Recuperación y vinculación permanente de la portada oficial (HD), sinopsis y lista de episodios en el gestor de descargas.\n" +
+        "• Modo de respaldo local: si el anime no está en línea, la vista muestra directamente los episodios descargados para su reproducción sin pantallas en blanco.\n\n" +
+        "🎛️ Auto-Ocultado Inteligente en Pausa (PC):\n" +
+        "• Los controles y el cursor del reproductor ahora se ocultan automáticamente tras 3 segundos de inactividad incluso cuando el video está pausado.\n" +
+        "• Reaparición instantánea ante movimiento del ratón, clics en pantalla o cualquier tecla del teclado.\n\n" +
+        "📂 Blindaje, Migración y Detección de Descargas:\n" +
+        "• Garantizada la ruta oficial de descargas en PC en 'Videos\\AniCS' con reubicación inteligente ante carpetas de OneDrive o rutas movidas.\n" +
+        "• Carga persistente garantizada (EnsureLoaded) y auto-escaneo automático en disco al abrir la pestaña Descargas en PC y Móvil.\n" +
+        "• Migración automática de historiales legacy de descargas (downloads.json).\n\n" +
+        "🎬 Experiencia de Reproducción y Navegación (PC & Móvil):\n" +
+        "• Corrección de navegación móvil: al presionar 'Volver' en el reproductor regresa directamente a la lista de episodios del anime seleccionado sin saltar al Inicio.\n" +
+        "• Indicadores visuales de estado en tiempo real: nuevo badge dinámico tanto en PC como en Android para identificar claramente si el video está 'Cargando stream', 'Almacenando en búfer', 'Reproduciendo' o 'En Pausa', además del avance del búfer de red.\n" +
+        "• Eliminación del aviso flotante al rotar el dispositivo en el reproductor móvil, manteniendo la rotación y modo inmersivo 100% fluidos.\n\n" +
+        "📥 Descargas Continuas, Reanudación Granular y Control de Pausa:\n" +
+        "• Continuidad en segundo plano (Android): nuevo Foreground Service con notificación persistente de progreso y WakeLock para evitar cancelaciones al minimizar la app.\n" +
+        "• Reanudación granular por segmentos (HLS .ts con checkpointing .idx) y por bytes (MP4 con cabeceras Range): reanuda exactamente donde se pausó sin empezar desde cero.\n" +
+        "• Control de Pausar / Reanudar funcional: el botón cambia de forma instantánea a 'Reanudar' al pausar sin perder ni borrar los archivos parciales.\n" +
+        "• Sistema de reintentos automáticos con Jitter (1-3s) y renovación automática de enlaces expirados ante cortes de internet.\n" +
+        "• Corrección al iniciar descargas tras seleccionar servidor en el cuadro de diálogo.\n\n" +
+        "📡 Monitorización de Red y Banner Offline en Tiempo Real:\n" +
+        "• Detección automática del estado de conexión a Internet en PC y Android.\n" +
+        "• Banner superior de estado inmediato al perder señal ('Sin conexión a internet') y confirmación visual al restablecerse.\n\n" +
+        "🔎 Directorio y Búsqueda Avanzada:\n" +
+        "• Paginación completa del catálogo (?p=1, ?p=2, ?p=3...) con navegación de páginas y salto manual directo por número de página.\n" +
+        "• Carga dinámica de la lista completa de más de 45 géneros oficiales desde la web.\n\n" +
+        "🔙 Mejoras previas v1.6.1:\n" +
+        "• Sincronización de volumen con Windows Core Audio y estabilidad de foco.\n" +
+        "• Navegación universal por gestos y botón físico de retroceso en Android.\n" +
+        "• Rediseño estético del reproductor móvil con controles circulares translúcidos.\n\n" +
         "¡Gracias por disfrutar de AniCS!";
 }

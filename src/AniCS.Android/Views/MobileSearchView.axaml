@@ -139,6 +139,68 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </Grid>
+
+                <!-- Barra de Paginación Móvil del Directorio -->
+                <Border Name="PaginationPanel"
+                        Background="{DynamicResource AppSurfaceColor}"
+                        CornerRadius="12"
+                        Padding="12,10"
+                        Margin="0,12,0,24"
+                        HorizontalAlignment="Center"
+                        IsVisible="False">
+                    <StackPanel Orientation="Vertical" Spacing="8" HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Button Name="PrevPageBtn"
+                                    Content="‹ Anterior"
+                                    Padding="10,6"
+                                    Background="{DynamicResource AppPrimaryColor}"
+                                    Foreground="{DynamicResource AppPrimaryForegroundColor}"
+                                    FontWeight="SemiBold"
+                                    FontSize="13"
+                                    CornerRadius="6"
+                                    Click="OnPrevPageClicked"/>
+                            <Border Background="Transparent" Padding="6,4" VerticalAlignment="Center">
+                                <TextBlock Name="PageInfoText"
+                                           Text="Pág. 1 / 1"
+                                           FontSize="13"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource AppTitleColor}"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <Button Name="NextPageBtn"
+                                    Content="Siguiente ›"
+                                    Padding="10,6"
+                                    Background="{DynamicResource AppPrimaryColor}"
+                                    Foreground="{DynamicResource AppPrimaryForegroundColor}"
+                                    FontWeight="SemiBold"
+                                    FontSize="13"
+                                    CornerRadius="6"
+                                    Click="OnNextPageClicked"/>
+                        </StackPanel>
+
+                        <!-- Salto manual de página en móvil -->
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="Ir a página:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                            <TextBox Name="PageJumpInput"
+                                     Width="50"
+                                     Height="32"
+                                     CornerRadius="6"
+                                     VerticalContentAlignment="Center"
+                                     HorizontalContentAlignment="Center"
+                                     FontSize="12"
+                                     KeyDown="OnPageJumpKeyDown"/>
+                            <Button Name="PageJumpBtn"
+                                    Content="Ir"
+                                    Padding="12,5"
+                                    Background="{DynamicResource AppPrimaryColor}"
+                                    Foreground="{DynamicResource AppPrimaryForegroundColor}"
+                                    FontWeight="SemiBold"
+                                    FontSize="12"
+                                    CornerRadius="6"
+                                    Click="OnPageJumpClicked"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
 

@@ -261,12 +261,36 @@ public partial class VideoPlayerControl : UserControl
                 LoadingOverlay.IsVisible = true;
                 LoadingSubtext.Text      = "Buffering...";
                 ErrorOverlay.IsVisible   = false;
+                if (PlaybackStatusText != null) PlaybackStatusText.Text = "Almacenando búfer...";
+                if (StatusDot != null) StatusDot.Fill = Avalonia.Media.Brushes.Gold;
+            }
+            else if (session.State == PlayerState.Playing)
+            {
+                if (PlaybackStatusText != null) PlaybackStatusText.Text = "Reproduciendo";
+                if (StatusDot != null) StatusDot.Fill = Avalonia.Media.Brushes.LightGreen;
+            }
+            else if (session.State == PlayerState.Paused)
+            {
+                if (PlaybackStatusText != null) PlaybackStatusText.Text = "Pausado";
+                if (StatusDot != null) StatusDot.Fill = Avalonia.Media.Brushes.Silver;
+            }
+            else if (session.State == PlayerState.Idle)
+            {
+                if (PlaybackStatusText != null) PlaybackStatusText.Text = "Cargando stream...";
+                if (StatusDot != null) StatusDot.Fill = Avalonia.Media.Brushes.MediumPurple;
+            }
+            else if (session.State == PlayerState.Ended)
+            {
+                if (PlaybackStatusText != null) PlaybackStatusText.Text = "Finalizado";
+                if (StatusDot != null) StatusDot.Fill = Avalonia.Media.Brushes.Silver;
             }
 
             if (session.State == PlayerState.Error)
             {
                 ErrorOverlay.IsVisible   = true;
                 LoadingOverlay.IsVisible = false;
+                if (PlaybackStatusText != null) PlaybackStatusText.Text = "Error";
+                if (StatusDot != null) StatusDot.Fill = Avalonia.Media.Brushes.IndianRed;
             }
 
             // Icono play/pause
@@ -319,6 +343,14 @@ public partial class VideoPlayerControl : UserControl
     // Interacción con el área de video (click para play/pause y auto-hide)
     // ──────────────────────────────────────────────────────────────────────────
 
+    private void ShowControls()
+    {
+        Cursor = Cursor.Default;
+        ControlsOverlay.IsVisible = true;
+        _controlsTimer?.Stop();
+        _controlsTimer?.Start();
+    }
+
     private void OnRootPointerMoved(object? sender, PointerEventArgs e)
     {
         var pos = e.GetPosition(this);
@@ -335,27 +367,24 @@ public partial class VideoPlayerControl : UserControl
                 return;
         }
 
-        Cursor = Cursor.Default;
-        ControlsOverlay.IsVisible = true;
-        _controlsTimer?.Stop();
-        if (_isPlaying) _controlsTimer?.Start();
+        ShowControls();
     }
 
     private void HideControls()
     {
         _controlsTimer?.Stop();
-        if (_isPlaying)
-        {
-            // Guardar la posición del puntero al ocultar — se usa como referencia
-            // para el umbral de revelado en OnRootPointerMoved.
-            _hideMousePos = _lastMousePos;
-            Cursor = new Cursor(StandardCursorType.None);
-            ControlsOverlay.IsVisible = false;
-        }
+        if (_isDraggingSlider || _isDraggingVolume) return;
+
+        // Guardar la posición del puntero al ocultar — se usa como referencia
+        // para el umbral de revelado en OnRootPointerMoved.
+        _hideMousePos = _lastMousePos;
+        Cursor = new Cursor(StandardCursorType.None);
+        ControlsOverlay.IsVisible = false;
     }
 
     private void OnVideoAreaPressed(object? sender, PointerPressedEventArgs e)
     {
+        ShowControls();
         _ = TogglePlayPause();
     }
 
@@ -425,6 +454,7 @@ public partial class VideoPlayerControl : UserControl
     private async System.Threading.Tasks.Task TogglePlayPause()
     {
         if (_backend == null) return;
+        ShowControls();
         if (_isPlaying)
         {
             await _backend.PauseAsync();
@@ -571,6 +601,7 @@ public partial class VideoPlayerControl : UserControl
     private async void OnSliderReleased(object? sender, PointerReleasedEventArgs e)
     {
         _isDraggingSlider = false;
+        ShowControls();
         if (_backend == null) return;
 
         double dur    = _backend.Duration;
@@ -586,6 +617,7 @@ public partial class VideoPlayerControl : UserControl
     protected override async void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        ShowControls();
         switch (e.Key)
         {
             case Key.Space: await TogglePlayPause(); e.Handled = true; break;

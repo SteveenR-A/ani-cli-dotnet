@@ -30,8 +30,9 @@ Adicionalmente:
 
 1. Modificar interfaz (Desktop/CLI) -> Validar -> Construir.
 2. Si un proveedor de anime (web) cambia, actualizar ÚNICAMENTE el `Extractor` correspondiente en `AniCS.Core` y probar (selectores documentados en `.agents/scraper_logic.md`).
-3. **Actualización de Versiones (Version Bumping)**: Al generar una nueva versión pública (actual: **1.6.1**), actualizar:
+3. **Actualización de Versiones (Version Bumping)**: Al generar una nueva versión pública (actual: **1.6.2**), actualizar:
    - `src/AniCS.Desktop/AniCS.Desktop.csproj`: `<Version>`, `<AssemblyVersion>` y `<FileVersion>`.
+   - `src/AniCS.Android/AniCS.Android.csproj`: `<ApplicationDisplayVersion>`, `<Version>` y `<ApplicationVersion>`.
    - `Installer/AniCS-Installer.wxs`: atributo `Version` en el nodo `<Package>`.
    - `src/AniCS.Desktop/AppInfo.cs`: texto del `LatestChangelog` (fallback local). Las notas de la release se toman del `body` de la Release de GitHub.
 4. **Publicar una Release (para el AutoUpdate)**: El AutoUpdate lee las **Release de GitHub** (`releases/latest`): versión del tag `v*` + archivo `.msi`. Al empujar un tag `vX.Y.Z` con el workflow `.github/workflows/build-release.yml`, GitHub Actions compila el MSI y crea la release automáticamente. Sin `.msi` en la release, la app avisa de novedad pero no puede instalar.

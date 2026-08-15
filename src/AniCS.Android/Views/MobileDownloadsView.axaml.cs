@@ -29,7 +29,9 @@ public partial class MobileDownloadsView : UserControl
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        DownloadManager.DownloadsChanged -= OnDownloadsChanged;
         DownloadManager.DownloadsChanged += OnDownloadsChanged;
+        DownloadManager.ScanDiskDownloads();
         LoadDownloads();
     }
 
@@ -157,23 +159,10 @@ public partial class MobileDownloadsView : UserControl
                 active.State = DownloadState.Paused;
                 active.CancellationTokenSource?.Cancel();
             }
-            else if (active.State == DownloadState.Paused)
+            else if (active.State == DownloadState.Paused || active.State == DownloadState.Error)
             {
-                active.State = DownloadState.Downloading;
-            }
-            else if (active.State == DownloadState.Error)
-            {
-                if (!string.IsNullOrEmpty(active.AnimeUrl))
-                {
-                    var anime = new AnimeResult
-                    {
-                        Title = active.AnimeTitle,
-                        Url = active.AnimeUrl,
-                        ThumbnailUrl = active.ThumbnailUrl
-                    };
-                    DownloadManager.RemoveActiveDownload(active);
-                    AndroidMainView.Current?.NavigateToAnimeDetails(anime);
-                }
+                active.RetryAttempt = 0;
+                DownloadManager.StartOrResumeDownloadAsync(active);
             }
         }
     }

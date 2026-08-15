@@ -108,6 +108,89 @@ public partial class AnimeDetailsView : UserControl
         _playerBackend.ErrorOccurred  += OnPlayerError;
 
         AniCS.Desktop.Services.DownloadManager.DownloadsChanged += OnDownloadsChanged;
+
+        // Si la URL está vacía (ej. importado desde disco sin metadata en JSON), buscar online por título
+        if (string.IsNullOrWhiteSpace(_anime.Url) && !string.IsNullOrWhiteSpace(_anime.Title))
+        {
+            Dispatcher.UIThread.Invoke(() =>
+            {
+                StatusText.Text = $"Buscando '{_anime.Title}' en línea...";
+                StatusText.IsVisible = true;
+            });
+
+            try
+            {
+                var searchExtractor = ExtractorFactory.GetExtractor();
+                var searchResults = await searchExtractor.SearchAsync(_anime.Title);
+                if (searchResults.Count == 0)
+                {
+                    IAnimeExtractor altExtractor = searchExtractor is JKAnimeExtractor
+                        ? new MundoDonghuaExtractor(_httpClient)
+                        : new JKAnimeExtractor(_httpClient);
+                    searchResults = await altExtractor.SearchAsync(_anime.Title);
+                }
+
+                if (searchResults.Count > 0)
+                {
+                    var match = searchResults.FirstOrDefault(r => 
+                        string.Equals(r.Title, _anime.Title, StringComparison.OrdinalIgnoreCase)) ?? searchResults[0];
+
+                    _anime.Url = match.Url;
+                    if (string.IsNullOrEmpty(_anime.ThumbnailUrl)) _anime.ThumbnailUrl = match.ThumbnailUrl;
+
+                    AniCS.Desktop.Services.DownloadManager.LinkAnimeUrl(_anime.Title, _anime.Url, _anime.ThumbnailUrl);
+                }
+            }
+            catch (Exception ex)
+            {
+                AniCS.AppLogger.Error("AnimeDetailsView.SearchOnlineForUrl", ex);
+            }
+        }
+
+        // Si aún no tiene URL online, mostrar los episodios descargados localmente
+        if (string.IsNullOrWhiteSpace(_anime.Url))
+        {
+            var downloadedAnime = AniCS.Desktop.Services.DownloadManager.GetAll()
+                .FirstOrDefault(a => string.Equals(a.Title, _anime.Title, StringComparison.OrdinalIgnoreCase));
+
+            Dispatcher.UIThread.Invoke(() =>
+            {
+                if (downloadedAnime != null && downloadedAnime.Episodes.Count > 0)
+                {
+                    StatusText.IsVisible = false;
+                    var viewModels = new System.Collections.Generic.List<EpisodeViewModel>();
+                    foreach (var ep in downloadedAnime.Episodes)
+                    {
+                        var episodeModel = new Episode
+                        {
+                            EpisodeNumber = ep.EpisodeNumber,
+                            Title = ep.EpisodeTitle,
+                            Url = ep.FilePath
+                        };
+                        var vm = new EpisodeViewModel(episodeModel)
+                        {
+                            IsDownloaded = true,
+                            CanDownload = false,
+                            DownloadText = "Descargado",
+                            DownloadIcon = "Check"
+                        };
+                        viewModels.Add(vm);
+                    }
+                    EpisodesList.ItemsSource = viewModels;
+                    SynopsisText.Text = "Anime importado desde archivos locales en la carpeta de descargas.";
+                }
+                else
+                {
+                    StatusText.Text = "No se pudo encontrar información en línea para este anime.";
+                }
+            });
+
+            AniCS.Desktop.Services.DesktopPlayer.AudioStateChanged += OnAudioStateChanged;
+            OnAudioStateChanged();
+            UpdateOpeningDownloadState();
+            return;
+        }
+
         var extractor = ExtractorFactory.GetExtractorForUrl(_anime.Url);
 
         // ── Peticiones HTTP en PARALELO para velocidad instantánea ─────────
@@ -275,7 +358,7 @@ public partial class AnimeDetailsView : UserControl
                 CancelOpeningDownloadBtn.IsVisible = true;
                 DeleteOpeningDownloadBtn.IsVisible = false;
             }
-            else if (AniCS.Desktop.Services.DownloadManager.IsEpisodeDownloaded(_anime.Url, "Opening"))
+            else if (AniCS.Desktop.Services.DownloadManager.IsEpisodeDownloaded(_anime.Url, "Opening", _anime.Title))
             {
                 DownloadOpeningBtn.IsEnabled = false;
                 DownloadOpeningBtnText.Text = "Descargado";
@@ -296,7 +379,7 @@ public partial class AnimeDetailsView : UserControl
 
     private void UpdateEpisodeViewModelState(EpisodeViewModel vm)
     {
-        if (AniCS.Desktop.Services.DownloadManager.IsEpisodeDownloaded(_anime.Url, vm.EpisodeNumber))
+        if (AniCS.Desktop.Services.DownloadManager.IsEpisodeDownloaded(_anime.Url, vm.EpisodeNumber, _anime.Title))
         {
             vm.DownloadText = "Descargado";
             vm.DownloadIcon = "Check";
@@ -663,7 +746,7 @@ public partial class AnimeDetailsView : UserControl
 
     private async System.Threading.Tasks.Task ProceedWithDownload(Button btn, EpisodeViewModel vm, Window? ownerWindow, bool useHud)
     {
-        if (AniCS.Desktop.Services.DownloadManager.IsEpisodeDownloaded(_anime.Url, vm.EpisodeNumber))
+        if (AniCS.Desktop.Services.DownloadManager.IsEpisodeDownloaded(_anime.Url, vm.EpisodeNumber, _anime.Title))
         {
             StatusText.Text = "Este episodio ya está descargado.";
             StatusText.IsVisible = true;
@@ -778,7 +861,7 @@ public partial class AnimeDetailsView : UserControl
             {
                 StatusText.Text = $"¡Descarga iniciada para {vm.Title} ({resolverMethod})!";
                 StatusText.IsVisible = true;
-                var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+                var defaultDir = AniCS.Desktop.Services.DownloadManager.DefaultDownloadDirectory;
 
                 var animeTitle = string.IsNullOrWhiteSpace(_anime.Title) ? "Anime_Desconocido" : _anime.Title;
                 var activeDownload = new AniCS.Desktop.Services.ActiveDownload
@@ -789,115 +872,13 @@ public partial class AnimeDetailsView : UserControl
                     EpisodeUrl = vm.Url,
                     EpisodeNumber = vm.EpisodeNumber,
                     EpisodeTitle = vm.Title,
-                    State = AniCS.Desktop.Services.DownloadState.Downloading,
+                    ServerUrl = chosenServer.Url,
+                    DirectVideoUrl = videoUrl,
                     Progress = 0
                 };
 
-                AniCS.Desktop.Services.DownloadManager.AddActiveDownload(activeDownload);
-
-                _ = System.Threading.Tasks.Task.Run(async () =>
-                {
-                    AniCS.Desktop.Services.DownloadResult result;
-                    if (resolvedMedia != null && resolvedMedia.Type != MediaType.Unknown)
-                    {
-                        var safeTitle = string.Join("_", animeTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
-                        if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
-                        var animeDir = System.IO.Path.Combine(defaultDir, safeTitle);
-                        if (!System.IO.Directory.Exists(animeDir)) System.IO.Directory.CreateDirectory(animeDir);
-                        var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
-                        var outputPath = System.IO.Path.Combine(animeDir, $"Episodio {episodeNumStr}.mp4");
-                        
-                        var progress = new Progress<DownloadProgress>(p => 
-                        {
-                            Dispatcher.UIThread.Post(() => {
-                                activeDownload.Progress = p.Percent;
-                                if (!string.IsNullOrEmpty(p.SizeInfo)) activeDownload.SizeText = p.SizeInfo;
-                            });
-                        });
-                        
-                        var resolverResult = await _resolverBackend.DownloadAsync(resolvedMedia, outputPath, progress, activeDownload.CancellationTokenSource.Token);
-                        result = resolverResult.Code switch
-                        {
-                            DownloadResultCode.Success   => AniCS.Desktop.Services.DownloadResult.Success,
-                            DownloadResultCode.Cancelled => AniCS.Desktop.Services.DownloadResult.Cancelled,
-                            _                            => AniCS.Desktop.Services.DownloadResult.Error
-                        };
-                        // Guardar el path real devuelto por el backend (puede ser .ts para HLS)
-                        if (result == AniCS.Desktop.Services.DownloadResult.Success && resolverResult.OutputPath != null)
-                        {
-                            AniCS.Desktop.Services.DownloadManager.RecordDownload(
-                                animeTitle, _anime.Url, _anime.ThumbnailUrl,
-                                vm.EpisodeNumber, vm.Title, resolverResult.OutputPath);
-                        }
-                    }
-                    else
-                    {
-                        var safeTitle = string.Join("_", animeTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
-                        if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
-                        var animeDir = System.IO.Path.Combine(defaultDir, safeTitle);
-                        if (!System.IO.Directory.Exists(animeDir)) System.IO.Directory.CreateDirectory(animeDir);
-                        var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
-                        var outputPath = System.IO.Path.Combine(animeDir, $"Episodio {episodeNumStr}.mp4");
-
-                        var progress = new Progress<DownloadProgress>(p =>
-                        {
-                            Dispatcher.UIThread.Post(() =>
-                            {
-                                activeDownload.Progress = p.Percent;
-                                if (!string.IsNullOrEmpty(p.SizeInfo)) activeDownload.SizeText = p.SizeInfo;
-                            });
-                        });
-
-                        var fbResult = await _ytdlpFallback.DownloadAsync(
-                            new ResolvedMedia(videoUrl, videoUrl, MediaType.Unknown, chosenServer.Url),
-                            outputPath, progress, activeDownload.CancellationTokenSource.Token);
-                        result = fbResult.Code switch
-                        {
-                            DownloadResultCode.Success   => AniCS.Desktop.Services.DownloadResult.Success,
-                            DownloadResultCode.Cancelled => AniCS.Desktop.Services.DownloadResult.Cancelled,
-                            _                            => AniCS.Desktop.Services.DownloadResult.Error
-                        };
-                        // Registrar también la descarga por fallback yt-dlp
-                        if (result == AniCS.Desktop.Services.DownloadResult.Success && fbResult.OutputPath != null)
-                        {
-                            AniCS.Desktop.Services.DownloadManager.RecordDownload(
-                                animeTitle, _anime.Url, _anime.ThumbnailUrl,
-                                vm.EpisodeNumber, vm.Title, fbResult.OutputPath);
-                        }
-                    }
-
-                    if (result == AniCS.Desktop.Services.DownloadResult.Cancelled && activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
-                    {
-                        var safeTitle = string.Join("_", animeTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
-                        if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
-                        var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
-                        AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
-                    }
-
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Downloading || result == AniCS.Desktop.Services.DownloadResult.Success || result == AniCS.Desktop.Services.DownloadResult.Error)
-                        {
-                            if (result == AniCS.Desktop.Services.DownloadResult.Success)
-                            {
-                                activeDownload.State = AniCS.Desktop.Services.DownloadState.Completed;
-                                StatusText.Text = $"¡Descarga completada para {vm.Title}!";
-                            }
-                            else if (result == AniCS.Desktop.Services.DownloadResult.Error)
-                            {
-                                activeDownload.State = AniCS.Desktop.Services.DownloadState.Error;
-                                StatusText.Text = $"Error al descargar {vm.Title}. Intenta con otro servidor.";
-                                StatusText.IsVisible = true;
-                            }
-
-                            if (activeDownload.State == AniCS.Desktop.Services.DownloadState.Completed || activeDownload.State == AniCS.Desktop.Services.DownloadState.Error || activeDownload.State == AniCS.Desktop.Services.DownloadState.Cancelled)
-                            {
-                                AniCS.Desktop.Services.DownloadManager.RemoveActiveDownload(activeDownload);
-                            }
-                            UpdateEpisodeViewModelState(vm);
-                        }
-                    });
-                });
+                AniCS.Desktop.Services.DownloadManager.StartOrResumeDownloadAsync(activeDownload);
+                UpdateEpisodeViewModelState(vm);
             }
             else
             {
@@ -925,7 +906,7 @@ public partial class AnimeDetailsView : UserControl
                 
                 if (wasPaused)
                 {
-                    var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+                    var defaultDir = AniCS.Desktop.Services.DownloadManager.DefaultDownloadDirectory;
                     var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars()));
                     var episodeNumStr = string.IsNullOrWhiteSpace(vm.EpisodeNumber) ? "Desconocido" : vm.EpisodeNumber;
                     AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
@@ -998,7 +979,7 @@ public partial class AnimeDetailsView : UserControl
     {
         if (_anime == null || string.IsNullOrEmpty(_anime.OpeningUrl)) return;
 
-        var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+        var defaultDir = AniCS.Desktop.Services.DownloadManager.DefaultDownloadDirectory;
         var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
         if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
         var animeDir = System.IO.Path.Combine(defaultDir, safeTitle);
@@ -1066,7 +1047,7 @@ public partial class AnimeDetailsView : UserControl
         if (active != null)
         {
             active.Cancel();
-            var defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS");
+            var defaultDir = AniCS.Desktop.Services.DownloadManager.DefaultDownloadDirectory;
             var safeTitle = string.Join("_", _anime.Title.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
             if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
 

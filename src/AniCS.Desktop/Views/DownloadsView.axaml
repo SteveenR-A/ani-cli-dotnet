@@ -47,7 +47,7 @@
                                                     </StackPanel>
                                                     <ProgressBar Value="{Binding Progress}" Maximum="100" Height="4" Margin="0,5,10,0"/>
                                                 </StackPanel>
-                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" IsVisible="{Binding CanPauseOrCancel}">
                                                     <Button Click="OnPauseResumeActiveDownloadClicked" Tag="{Binding}" Background="{DynamicResource AppWarningColor}" Foreground="{DynamicResource AppWarningForegroundColor}">
                                                         <StackPanel Orientation="Horizontal" Spacing="5">
                                                             <material:MaterialIcon Kind="{Binding PauseResumeIcon}" Width="16" Height="16" />

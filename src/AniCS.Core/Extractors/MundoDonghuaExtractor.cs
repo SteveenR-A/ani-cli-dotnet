@@ -25,6 +25,31 @@ public class MundoDonghuaExtractor : BaseExtractor
         return AdvancedSearchAsync(new SearchFilters { Query = query });
     }
 
+    public override Task<List<GenreItem>> GetGenresAsync()
+    {
+        var genres = new List<GenreItem>
+        {
+            new("Acción", "accion"),
+            new("Aventura", "aventura"),
+            new("Fantasía", "fantasia"),
+            new("Cultivación", "cultivacion"),
+            new("Artes Marciales", "artes-marciales"),
+            new("Magia", "magia"),
+            new("Comedia", "comedia"),
+            new("Drama", "drama"),
+            new("Romance", "romance"),
+            new("Sobrenatural", "sobrenatural"),
+            new("Misterio", "misterio"),
+            new("Histórico", "historico"),
+            new("Sci-Fi", "sci-fi"),
+            new("Reencarnación", "reencarnacion"),
+            new("Isekai", "isekai"),
+            new("3D", "3d"),
+            new("2D", "2d")
+        };
+        return Task.FromResult(genres);
+    }
+
     public override async Task<List<AnimeResult>> AdvancedSearchAsync(SearchFilters filters)
     {
         var results = new List<AnimeResult>();

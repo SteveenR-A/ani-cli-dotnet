@@ -33,8 +33,11 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        DownloadManager.DownloadsChanged -= OnDownloadsChanged;
         DownloadManager.DownloadsChanged += OnDownloadsChanged;
+        _playerBackend.SessionChanged -= OnPlayerSessionChanged;
         _playerBackend.SessionChanged += OnPlayerSessionChanged;
+        DownloadManager.ScanDiskDownloads();
         LoadData();
     }
     
@@ -120,7 +123,7 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
             
             if (wasPaused)
             {
-                var defaultDir = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyVideos), "AniCS");
+                var defaultDir = DownloadManager.DefaultDownloadDirectory;
                 var rawTitle = string.IsNullOrWhiteSpace(active.AnimeTitle) ? "Anime_Desconocido" : active.AnimeTitle;
                 var safeTitle = string.Join("_", rawTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
                 if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
@@ -132,7 +135,7 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
         }
     }
 
-    private async void OnPauseResumeActiveDownloadClicked(object? sender, RoutedEventArgs e)
+    private void OnPauseResumeActiveDownloadClicked(object? sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is ActiveDownload active)
         {
@@ -140,98 +143,10 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
             {
                 active.Pause();
             }
-            else if (active.State == DownloadState.Paused)
+            else if (active.State == DownloadState.Paused || active.State == DownloadState.Error)
             {
-                active.Resume();
-                
-                try
-                {
-                    var extractor = AniCS.Extractors.ExtractorFactory.GetExtractor();
-                    var servers = await extractor.GetVideoServersAsync(active.EpisodeUrl);
-
-                    if (servers.Count > 0)
-                    {
-                        var server = servers.Find(s => s.IsDirectPlaySupported) ?? servers[0];
-                        var videoUrl = await extractor.ResolveVideoUrlAsync(server.Url);
-                        if (string.IsNullOrEmpty(videoUrl) && _ytdlpFallback.IsAvailable)
-                        {
-                            videoUrl = server.Url;
-                        }
-
-                        if (!string.IsNullOrEmpty(videoUrl))
-                        {
-                            var defaultDir = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyVideos), "AniCS");
-                            
-                            _ = System.Threading.Tasks.Task.Run(async () =>
-                            {
-                                var rawTitle = string.IsNullOrWhiteSpace(active.AnimeTitle) ? "Anime_Desconocido" : active.AnimeTitle;
-                                var safeTitle = string.Join("_", rawTitle.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
-                                if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime_Desconocido";
-                                var episodeNumStr = string.IsNullOrWhiteSpace(active.EpisodeNumber) ? "Desconocido" : active.EpisodeNumber;
-                                
-                                var animeDir = System.IO.Path.Combine(defaultDir, safeTitle);
-                                System.IO.Directory.CreateDirectory(animeDir);
-                                var outputPath = System.IO.Path.Combine(animeDir, $"Episodio {episodeNumStr}.mp4");
-
-                                var progress = new System.Progress<AniCS.Resolver.DownloadProgress>(p => {
-                                    Dispatcher.UIThread.Post(() => {
-                                        active.Progress = p.Percent;
-                                        if (!string.IsNullOrEmpty(p.SizeInfo)) active.SizeText = p.SizeInfo;
-                                    });
-                                });
-
-                                var result = await _resolverBackend.DownloadAsync(
-                                    new AniCS.Resolver.ResolvedMedia(videoUrl, videoUrl, AniCS.Resolver.MediaType.Unknown, server.Url), 
-                                    outputPath,
-                                    progress,
-                                    active.CancellationTokenSource.Token);
-
-                                // Convertir el resultado para mantener compatibilidad con el enumerador local en caso de que existiera
-                                var convertedResult = result.Code == AniCS.Resolver.DownloadResultCode.Success ? AniCS.Desktop.Services.DownloadResult.Success :
-                                                      result.Code == AniCS.Resolver.DownloadResultCode.Cancelled ? AniCS.Desktop.Services.DownloadResult.Cancelled :
-                                                      AniCS.Desktop.Services.DownloadResult.Error;
-
-                                if (convertedResult == AniCS.Desktop.Services.DownloadResult.Success && result.OutputPath != null)
-                                {
-                                    AniCS.Desktop.Services.DownloadManager.RecordDownload(active.AnimeTitle, active.AnimeUrl, active.ThumbnailUrl, active.EpisodeNumber, active.EpisodeTitle, result.OutputPath);
-                                }
-
-                                if (convertedResult == AniCS.Desktop.Services.DownloadResult.Cancelled && active.State == AniCS.Desktop.Services.DownloadState.Cancelled)
-                                {
-                                    AniCS.Desktop.Services.DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
-                                }
-
-                                await Dispatcher.UIThread.InvokeAsync(() =>
-                                {
-                                    if (active.State == AniCS.Desktop.Services.DownloadState.Downloading || convertedResult == AniCS.Desktop.Services.DownloadResult.Success || convertedResult == AniCS.Desktop.Services.DownloadResult.Error)
-                                    {
-                                        if (convertedResult == AniCS.Desktop.Services.DownloadResult.Success)
-                                            active.State = AniCS.Desktop.Services.DownloadState.Completed;
-                                        else if (convertedResult == AniCS.Desktop.Services.DownloadResult.Error)
-                                            active.State = AniCS.Desktop.Services.DownloadState.Error;
-
-                                        if (active.State == AniCS.Desktop.Services.DownloadState.Completed || active.State == AniCS.Desktop.Services.DownloadState.Error || active.State == AniCS.Desktop.Services.DownloadState.Cancelled)
-                                        {
-                                            AniCS.Desktop.Services.DownloadManager.RemoveActiveDownload(active);
-                                        }
-                                    }
-                                });
-                            });
-                        }
-                        else
-                        {
-                            active.State = DownloadState.Error;
-                        }
-                    }
-                    else
-                    {
-                        active.State = DownloadState.Error;
-                    }
-                }
-                catch
-                {
-                    active.State = DownloadState.Error;
-                }
+                active.RetryAttempt = 0;
+                DownloadManager.StartOrResumeDownloadAsync(active);
             }
         }
     }

@@ -13,4 +13,5 @@ public class SearchFilters
     public string Year { get; set; } = string.Empty;
     public string Season { get; set; } = string.Empty;
     public string Order { get; set; } = string.Empty;
+    public int Page { get; set; } = 1;
 }

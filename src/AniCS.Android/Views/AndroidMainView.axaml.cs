@@ -114,6 +114,45 @@ public partial class AndroidMainView : UserControl, INavigableHost
         {
             _ = _sharedHomeViewModel.LoadDataAsync();
         }
+
+        AniCS.Core.Services.NetworkService.StartMonitoring();
+        AniCS.Core.Services.NetworkService.ConnectivityChanged += OnConnectivityChanged;
+        UpdateOfflineBanner(AniCS.Core.Services.NetworkService.IsConnected);
+    }
+
+    private void OnConnectivityChanged(bool isConnected)
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateOfflineBanner(isConnected));
+    }
+
+    private void UpdateOfflineBanner(bool isConnected)
+    {
+        var banner = this.FindControl<Border>("OfflineBanner");
+        var text = this.FindControl<TextBlock>("OfflineBannerText");
+        var icon = this.FindControl<Material.Icons.Avalonia.MaterialIcon>("OfflineBannerIcon");
+
+        if (banner == null || text == null || icon == null) return;
+
+        if (!isConnected)
+        {
+            banner.Background = Avalonia.Media.Brush.Parse("#C62828");
+            icon.Kind = Material.Icons.MaterialIconKind.WifiOff;
+            text.Text = "Sin conexión a internet. Tus descargas están disponibles.";
+            banner.IsVisible = true;
+        }
+        else if (banner.IsVisible)
+        {
+            banner.Background = Avalonia.Media.Brush.Parse("#2E7D32");
+            icon.Kind = Material.Icons.MaterialIconKind.WifiCheck;
+            text.Text = "Conexión a internet restablecida.";
+            Avalonia.Threading.DispatcherTimer.RunOnce(() =>
+            {
+                if (AniCS.Core.Services.NetworkService.IsConnected)
+                {
+                    banner.IsVisible = false;
+                }
+            }, TimeSpan.FromSeconds(3));
+        }
     }
 
     public void SetMainContent(UserControl view)

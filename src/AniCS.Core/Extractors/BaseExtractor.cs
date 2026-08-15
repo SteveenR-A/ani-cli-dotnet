@@ -28,6 +28,18 @@ public abstract class BaseExtractor : IAnimeExtractor
     public abstract string Domain { get; }
     public abstract Task<List<AnimeResult>> SearchAsync(string query);
     public virtual Task<List<AnimeResult>> AdvancedSearchAsync(SearchFilters filters) => Task.FromResult(new List<AnimeResult>());
+    public virtual async Task<SearchResultPage> GetDirectoryPageAsync(SearchFilters filters)
+    {
+        var items = await AdvancedSearchAsync(filters);
+        return new SearchResultPage
+        {
+            Results = items,
+            CurrentPage = filters.Page > 0 ? filters.Page : 1,
+            TotalPages = items.Count > 0 ? Math.Max(1, filters.Page) : 1,
+            TotalItems = items.Count
+        };
+    }
+    public virtual Task<List<GenreItem>> GetGenresAsync() => Task.FromResult(new List<GenreItem>());
     public abstract Task<List<Episode>> GetLatestReleasesAsync();
     public abstract Task<List<ScheduleItem>> GetWeeklyScoopAsync();
     public abstract Task<List<Episode>> GetEpisodesAsync(string animeUrl);

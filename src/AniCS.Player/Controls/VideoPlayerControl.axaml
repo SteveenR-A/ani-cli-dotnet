@@ -250,9 +250,21 @@
 
                         </StackPanel>
 
-                        <!-- LADO DERECHO: Velocidad + Info + Buffer + Fullscreen -->
+                        <!-- LADO DERECHO: Estado + Velocidad + Info + Buffer + Fullscreen -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal"
                                     Spacing="4" VerticalAlignment="Center">
+
+                            <!-- Badge de Estado de Reproducción (Cargando / Buffering / Reproduciendo / Pausa) -->
+                            <Border x:Name="PlaybackStatusBorder" Background="#2222DD88" CornerRadius="4" Padding="7,3"
+                                    VerticalAlignment="Center" ToolTip.Tip="Estado de reproducción">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="#22DD88" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="PlaybackStatusText" Text="Reproduciendo"
+                                               FontFamily="Segoe UI, Inter, Roboto, sans-serif"
+                                               Foreground="#DDDDDD" FontSize="11" FontWeight="SemiBold"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
 
                             <!-- Selector de velocidad -->
                             <ComboBox x:Name="SpeedCombo"

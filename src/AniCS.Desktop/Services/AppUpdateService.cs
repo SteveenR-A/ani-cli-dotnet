@@ -1,18 +1,43 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace AniCS.Desktop.Services;
 
-public record GitHubAsset(string Name, string BrowserDownloadUrl, long Size);
+public class GitHubAsset
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
 
-public record GitHubRelease(string TagName, string Name, string Body, GitHubAsset[] Assets);
+    [JsonPropertyName("browser_download_url")]
+    public string BrowserDownloadUrl { get; set; } = string.Empty;
+
+    [JsonPropertyName("size")]
+    public long Size { get; set; }
+}
+
+public class GitHubRelease
+{
+    [JsonPropertyName("tag_name")]
+    public string TagName { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("body")]
+    public string Body { get; set; } = string.Empty;
+
+    [JsonPropertyName("assets")]
+    public GitHubAsset[] Assets { get; set; } = Array.Empty<GitHubAsset>();
+}
 
 /// <summary>
 /// Fetches the latest release from GitHub, downloads the MSI installer and
@@ -26,7 +51,7 @@ public sealed class AppUpdateService : IDisposable
     private readonly HttpClient _http = new();
 
     public string CurrentVersion =>
-        Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0";
+        AppInfo.CurrentVersion;
 
     public string UpdatesDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AniCS", "updates");
@@ -50,8 +75,9 @@ public sealed class AppUpdateService : IDisposable
                 PropertyNameCaseInsensitive = true
             });
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Error("AppUpdateService.FetchLatestReleaseAsync", ex);
             return null;
         }
     }
@@ -61,6 +87,9 @@ public sealed class AppUpdateService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(tag)) return null;
         var v = tag.Trim().TrimStart('v', 'V');
+        int dashIdx = v.IndexOf('-');
+        if (dashIdx > 0) v = v.Substring(0, dashIdx);
+        if (!v.Contains('.')) v += ".0";
         return Version.TryParse(v, out var ver) ? ver : null;
     }
 
@@ -69,7 +98,8 @@ public sealed class AppUpdateService : IDisposable
     {
         latest = release == null ? null : ParseVersion(release.TagName);
         if (latest == null) return false;
-        return latest > new Version(CurrentVersion);
+        var current = ParseVersion(CurrentVersion) ?? new Version(0, 0, 0);
+        return latest > current;
     }
 
     /// <summary>Finds the first installer asset (*.msi) in the release.</summary>

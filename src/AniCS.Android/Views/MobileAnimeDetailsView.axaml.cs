@@ -26,6 +26,7 @@ namespace AniCS.Android.Views;
 
 public partial class MobileAnimeDetailsView : UserControl
 {
+    private static readonly HttpClient _httpClient = new HttpClient();
     private AnimeResult _anime;
     private readonly IPlayerBackend _playerBackend;
     private readonly IResolverBackend _resolverBackend;
@@ -102,10 +103,90 @@ public partial class MobileAnimeDetailsView : UserControl
 
     private async Task LoadAnimeInfoAsync()
     {
-        if (_anime == null || string.IsNullOrWhiteSpace(_anime.Url))
+        if (_anime == null)
         {
-            StatusText.Text = "URL de anime no válida.";
+            StatusText.Text = "Información de anime no disponible.";
             RetryBtn.IsVisible = true;
+            return;
+        }
+
+        // Si la URL está vacía (ej. importado desde disco o scan manual), buscar online por título
+        if (string.IsNullOrWhiteSpace(_anime.Url) && !string.IsNullOrWhiteSpace(_anime.Title))
+        {
+            Dispatcher.UIThread.Invoke(() =>
+            {
+                StatusText.Text = $"Buscando '{_anime.Title}' en línea...";
+                StatusText.IsVisible = true;
+                RetryBtn.IsVisible = false;
+            });
+
+            try
+            {
+                var searchExtractor = ExtractorFactory.GetExtractor();
+                var searchResults = await searchExtractor.SearchAsync(_anime.Title);
+                if (searchResults.Count == 0)
+                {
+                    IAnimeExtractor altExtractor = searchExtractor is JKAnimeExtractor
+                        ? new MundoDonghuaExtractor(_httpClient)
+                        : new JKAnimeExtractor(_httpClient);
+                    searchResults = await altExtractor.SearchAsync(_anime.Title);
+                }
+
+                if (searchResults.Count > 0)
+                {
+                    var match = searchResults.FirstOrDefault(r => 
+                        string.Equals(r.Title, _anime.Title, StringComparison.OrdinalIgnoreCase)) ?? searchResults[0];
+
+                    _anime.Url = match.Url;
+                    if (string.IsNullOrEmpty(_anime.ThumbnailUrl)) _anime.ThumbnailUrl = match.ThumbnailUrl;
+
+                    DownloadManager.LinkAnimeUrl(_anime.Title, _anime.Url, _anime.ThumbnailUrl);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("MobileAnimeDetailsView.SearchOnlineForUrl", ex);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(_anime.Url))
+        {
+            var downloadedAnime = DownloadManager.GetAll()
+                .FirstOrDefault(a => string.Equals(a.Title, _anime.Title, StringComparison.OrdinalIgnoreCase));
+
+            Dispatcher.UIThread.Invoke(() =>
+            {
+                if (downloadedAnime != null && downloadedAnime.Episodes.Count > 0)
+                {
+                    StatusText.IsVisible = false;
+                    RetryBtn.IsVisible = false;
+                    var viewModels = new List<EpisodeViewModel>();
+                    foreach (var ep in downloadedAnime.Episodes)
+                    {
+                        var episodeModel = new Episode
+                        {
+                            EpisodeNumber = ep.EpisodeNumber,
+                            Title = ep.EpisodeTitle,
+                            Url = ep.FilePath
+                        };
+                        var vm = new EpisodeViewModel(episodeModel)
+                        {
+                            IsDownloaded = true,
+                            CanDownload = false,
+                            DownloadText = "Descargado",
+                            DownloadIcon = "Check"
+                        };
+                        viewModels.Add(vm);
+                    }
+                    EpisodesList.ItemsSource = viewModels;
+                    SynopsisText.Text = "Anime importado desde archivos locales en el dispositivo.";
+                }
+                else
+                {
+                    StatusText.Text = "No se pudo encontrar información en línea para este anime.";
+                    RetryBtn.IsVisible = true;
+                }
+            });
             return;
         }
 
@@ -524,71 +605,14 @@ public partial class MobileAnimeDetailsView : UserControl
                         EpisodeUrl = vm.Url,
                         EpisodeNumber = vm.EpisodeNumber,
                         EpisodeTitle = vm.Title,
-                        State = DownloadState.Downloading,
+                        ServerUrl = chosenServer.Url,
+                        DirectVideoUrl = videoUrl,
+                        OutputPath = outputPath,
                         Progress = 0
                     };
 
-                    DownloadManager.AddActiveDownload(activeDownload);
+                    DownloadManager.StartOrResumeDownloadAsync(activeDownload);
                     UpdateEpisodeViewModelState(vm);
-
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var progress = new Progress<DownloadProgress>(p =>
-                            {
-                                Dispatcher.UIThread.Post(() =>
-                                {
-                                    activeDownload.Progress = p.Percent;
-                                    if (!string.IsNullOrEmpty(p.SizeInfo)) activeDownload.SizeText = p.SizeInfo;
-                                });
-                            });
-
-                            var resolverResult = await _resolverBackend.DownloadAsync(
-                                resolvedMedia,
-                                outputPath,
-                                progress,
-                                activeDownload.CancellationTokenSource.Token);
-
-                            if (resolverResult.Code == DownloadResultCode.Success && resolverResult.OutputPath != null)
-                            {
-                                activeDownload.State = DownloadState.Completed;
-                                DownloadManager.RecordDownload(
-                                    _anime.Title,
-                                    _anime.Url,
-                                    _anime.ThumbnailUrl,
-                                    vm.EpisodeNumber,
-                                    vm.Title,
-                                    resolverResult.OutputPath);
-                            }
-                            else if (resolverResult.Code == DownloadResultCode.Cancelled)
-                            {
-                                activeDownload.State = DownloadState.Cancelled;
-                                DownloadManager.CleanupPartialFiles(defaultDir, safeTitle, episodeNumStr);
-                            }
-                            else
-                            {
-                                activeDownload.State = DownloadState.Error;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            AppLogger.Error("MobileAnimeDetailsView.DownloadAsync", ex);
-                            activeDownload.State = DownloadState.Error;
-                        }
-                        finally
-                        {
-                            await Dispatcher.UIThread.InvokeAsync(() =>
-                            {
-                                if (activeDownload.State == DownloadState.Completed ||
-                                    activeDownload.State == DownloadState.Cancelled)
-                                {
-                                    DownloadManager.RemoveActiveDownload(activeDownload);
-                                }
-                                UpdateEpisodeViewModelState(vm);
-                            });
-                        }
-                    });
                 }
             }
             catch (Exception ex)

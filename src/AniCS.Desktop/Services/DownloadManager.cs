@@ -8,12 +8,16 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
+using System.Threading.Tasks;
 using AniCS.Models;
+using AniCS.Resolver;
+using AniCS.Extractors;
 
 namespace AniCS.Desktop.Services;
 
 public enum DownloadState
 {
+    Pending,
     Downloading,
     Completed,
     Error,
@@ -30,6 +34,12 @@ public class ActiveDownload : INotifyPropertyChanged
     public string EpisodeNumber { get; set; } = string.Empty;
     public string EpisodeTitle { get; set; } = string.Empty;
 
+    public string ServerUrl { get; set; } = string.Empty;
+    public string DirectVideoUrl { get; set; } = string.Empty;
+    public string OutputPath { get; set; } = string.Empty;
+    public int RetryAttempt { get; set; } = 0;
+    public const int MaxRetries = 3;
+
     private double _progress;
     public double Progress
     {
@@ -44,12 +54,23 @@ public class ActiveDownload : INotifyPropertyChanged
         set { _sizeText = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); }
     }
 
-    private DownloadState _state;
+    private DownloadState _state = DownloadState.Pending;
     public DownloadState State
     {
         get => _state;
-        set { _state = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); OnPropertyChanged(nameof(PauseResumeText)); }
+        set
+        {
+            _state = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(StatusIcon));
+            OnPropertyChanged(nameof(PauseResumeText));
+            OnPropertyChanged(nameof(PauseResumeIcon));
+            OnPropertyChanged(nameof(CanPauseOrCancel));
+        }
     }
+
+    public bool CanPauseOrCancel => State != DownloadState.Completed && State != DownloadState.Cancelled;
 
     public string PauseResumeText => State switch
     {
@@ -67,6 +88,7 @@ public class ActiveDownload : INotifyPropertyChanged
 
     public string StatusText => State switch
     {
+        DownloadState.Pending => "Iniciando descarga...",
         DownloadState.Downloading => string.IsNullOrWhiteSpace(SizeText)
             ? $"Descargando... {Progress:F1}%"
             : $"Descargando... {SizeText} ({Progress:F1}%)",
@@ -243,10 +265,27 @@ public static class DownloadManager
     private static string ConfigDir => ConfigManager.BaseDataPath;
     private static string DownloadsFile => Path.Combine(ConfigManager.BaseDataPath, "downloads.json");
 
-    public static string DefaultDownloadDirectory =>
-        OperatingSystem.IsWindows()
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "AniCS")
-            : Path.Combine(ConfigManager.BaseDataPath, "Downloads");
+    public static string DefaultDownloadDirectory
+    {
+        get
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                // En Windows la ruta oficial de descargas es siempre Videos\AniCS (C:\Users\<usuario>\Videos\AniCS)
+                var userVideos = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Videos", "AniCS");
+                if (Directory.Exists(userVideos))
+                    return userVideos;
+
+                var specialVideos = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+                if (!string.IsNullOrEmpty(specialVideos))
+                    return Path.Combine(specialVideos, "AniCS");
+
+                return userVideos;
+            }
+
+            return Path.Combine(ConfigManager.BaseDataPath, "Downloads");
+        }
+    }
 
     private static List<DownloadedAnime> _downloads = new();
     
@@ -254,9 +293,228 @@ public static class DownloadManager
     
     public static event EventHandler? DownloadsChanged;
 
-    static DownloadManager()
+    public static Action<string, string, int>? OnDownloadProgressNotify { get; set; }
+    public static Action? OnDownloadsStarted { get; set; }
+    public static Action? OnDownloadsFinished { get; set; }
+
+    private static readonly object _runningLock = new();
+    private static readonly HashSet<ActiveDownload> _runningDownloads = new();
+
+    public static void StartOrResumeDownloadAsync(ActiveDownload active)
     {
-        Load();
+        lock (_runningLock)
+        {
+            if (_runningDownloads.Contains(active))
+                return;
+            _runningDownloads.Add(active);
+        }
+
+        active.State = DownloadState.Downloading;
+        active.CancellationTokenSource?.Dispose();
+        active.CancellationTokenSource = new CancellationTokenSource();
+        var token = active.CancellationTokenSource.Token;
+
+        AddActiveDownload(active);
+        OnDownloadsStarted?.Invoke();
+
+        var baseDir = DefaultDownloadDirectory;
+        var safeTitle = string.Join("_", active.AnimeTitle.Split(Path.GetInvalidFileNameChars())).Trim();
+        if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Anime";
+        var animeDir = Path.Combine(baseDir, safeTitle);
+        if (!Directory.Exists(animeDir)) Directory.CreateDirectory(animeDir);
+
+        var episodeNumStr = string.IsNullOrWhiteSpace(active.EpisodeNumber) ? "Desconocido" : active.EpisodeNumber;
+        if (string.IsNullOrEmpty(active.OutputPath))
+        {
+            active.OutputPath = Path.Combine(animeDir, $"Episodio {episodeNumStr}.mp4");
+        }
+
+        var rng = new Random();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var resolverBackend = ResolverFactory.CreateFromConfig();
+
+                while (active.RetryAttempt <= ActiveDownload.MaxRetries && !token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        // Si la URL directa del video está vacía o falló en reintentos, resolverla de nuevo
+                        if (string.IsNullOrEmpty(active.DirectVideoUrl) && !string.IsNullOrEmpty(active.ServerUrl))
+                        {
+                            active.SizeText = "Resolviendo enlace del servidor...";
+                            var extractor = ExtractorFactory.GetExtractor();
+                            active.DirectVideoUrl = await extractor.ResolveVideoUrlAsync(active.ServerUrl);
+                            if (string.IsNullOrEmpty(active.DirectVideoUrl))
+                            {
+                                var res = await resolverBackend.ResolveAsync(active.ServerUrl, new ResolveOptions { Referer = active.ServerUrl });
+                                if (res.Type != MediaType.Unknown) active.DirectVideoUrl = res.DirectUrl;
+                            }
+                        }
+                        else if (string.IsNullOrEmpty(active.DirectVideoUrl) && !string.IsNullOrEmpty(active.EpisodeUrl))
+                        {
+                            active.SizeText = "Obteniendo enlaces de video...";
+                            var extractor = ExtractorFactory.GetExtractor();
+                            var servers = await extractor.GetVideoServersAsync(active.EpisodeUrl);
+                            if (servers.Count > 0)
+                            {
+                                var chosen = servers.FirstOrDefault(s => s.IsDirectPlaySupported) ?? servers.First();
+                                active.ServerUrl = chosen.Url;
+                                active.DirectVideoUrl = await extractor.ResolveVideoUrlAsync(chosen.Url);
+                                if (string.IsNullOrEmpty(active.DirectVideoUrl))
+                                {
+                                    var res = await resolverBackend.ResolveAsync(chosen.Url, new ResolveOptions { Referer = chosen.Url });
+                                    if (res.Type != MediaType.Unknown) active.DirectVideoUrl = res.DirectUrl;
+                                }
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(active.DirectVideoUrl))
+                        {
+                            throw new InvalidOperationException("No se pudo obtener el enlace directo del video.");
+                        }
+
+                        var mediaType = active.DirectVideoUrl.Contains(".m3u8", StringComparison.OrdinalIgnoreCase)
+                            ? MediaType.Hls
+                            : MediaType.Mp4;
+
+                        var resolvedMedia = new ResolvedMedia(
+                            active.ServerUrl,
+                            active.DirectVideoUrl,
+                            mediaType,
+                            active.ServerUrl,
+                            ConfigManager.Current.RandomUserAgent);
+
+                        var progress = new Progress<DownloadProgress>(p =>
+                        {
+                            active.Progress = p.Percent;
+                            if (!string.IsNullOrEmpty(p.SizeInfo))
+                            {
+                                active.SizeText = p.SizeInfo;
+                            }
+                            OnDownloadProgressNotify?.Invoke(
+                                active.AnimeTitle,
+                                $"{active.EpisodeTitle}: {p.Percent:F0}% ({p.SizeInfo})",
+                                (int)p.Percent);
+                        });
+
+                        var result = await resolverBackend.DownloadAsync(resolvedMedia, active.OutputPath, progress, token);
+
+                        if (result.Code == DownloadResultCode.Success && result.OutputPath != null)
+                        {
+                            active.State = DownloadState.Completed;
+                            active.SizeText = "Descargado";
+                            RecordDownload(
+                                active.AnimeTitle,
+                                active.AnimeUrl,
+                                active.ThumbnailUrl,
+                                active.EpisodeNumber,
+                                active.EpisodeTitle,
+                                result.OutputPath);
+
+                            OnDownloadProgressNotify?.Invoke(
+                                active.AnimeTitle,
+                                $"{active.EpisodeTitle} descargado con éxito",
+                                100);
+
+                            // Ocultar de descargas activas tras 1.2 segundos para transición limpia
+                            _ = Task.Run(async () =>
+                            {
+                                await Task.Delay(1200);
+                                RemoveActiveDownload(active);
+                            });
+                            break;
+                        }
+                        else if (result.Code == DownloadResultCode.Cancelled)
+                        {
+                            if (active.State == DownloadState.Paused)
+                            {
+                                active.SizeText = "Pausado";
+                            }
+                            else
+                            {
+                                active.State = DownloadState.Cancelled;
+                                active.SizeText = "Cancelado";
+                                CleanupPartialFiles(baseDir, safeTitle, episodeNumStr);
+                            }
+                            break;
+                        }
+                        else
+                        {
+                            throw new Exception(result.ErrorMessage ?? "Error durante la descarga");
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (active.State == DownloadState.Paused)
+                        {
+                            active.SizeText = "Pausado";
+                        }
+                        else
+                        {
+                            active.State = DownloadState.Cancelled;
+                            active.SizeText = "Cancelado";
+                            CleanupPartialFiles(baseDir, safeTitle, episodeNumStr);
+                        }
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (token.IsCancellationRequested)
+                        {
+                            if (active.State == DownloadState.Paused)
+                            {
+                                active.SizeText = "Pausado";
+                            }
+                            else
+                            {
+                                active.State = DownloadState.Cancelled;
+                                active.SizeText = "Cancelado";
+                                CleanupPartialFiles(baseDir, safeTitle, episodeNumStr);
+                            }
+                            break;
+                        }
+
+                        active.RetryAttempt++;
+                        if (active.RetryAttempt <= ActiveDownload.MaxRetries)
+                        {
+                            // Backoff aleatorio entre 1000ms y 3000ms con jitter
+                            int minDelay = 1000 + (active.RetryAttempt - 1) * 800;
+                            int maxDelay = minDelay + 1000;
+                            int jitterMs = rng.Next(minDelay, maxDelay);
+
+                            active.SizeText = $"Reconectando ({active.RetryAttempt}/{ActiveDownload.MaxRetries}) en {(jitterMs / 1000.0):0.0}s...";
+                            AppLogger.Warn("DownloadManager", $"Download retry {active.RetryAttempt}/{ActiveDownload.MaxRetries} for {active.EpisodeTitle} in {jitterMs}ms: {ex.Message}");
+
+                            // Si el error fue por enlace expirado/403, limpiar para forzar re-resolución
+                            active.DirectVideoUrl = string.Empty;
+
+                            await Task.Delay(jitterMs, token);
+                        }
+                        else
+                        {
+                            active.State = DownloadState.Error;
+                            active.SizeText = "Error de conexión tras 3 intentos";
+                            AppLogger.Error("DownloadManager.StartOrResumeDownloadAsync", ex);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                lock (_runningLock)
+                {
+                    _runningDownloads.Remove(active);
+                }
+
+                if (ActiveDownloads.All(d => d.State != DownloadState.Downloading))
+                {
+                    OnDownloadsFinished?.Invoke();
+                }
+            }
+        });
     }
 
     public static double ParseEpisodeNumber(string epNum)
@@ -279,10 +537,38 @@ public static class DownloadManager
             .ToList();
     }
 
-    private static void Load()
+    private static bool _isLoaded = false;
+
+    public static void EnsureLoaded()
     {
+        if (!_isLoaded)
+        {
+            Load();
+        }
+    }
+
+    public static void Load()
+    {
+        _isLoaded = true;
         try
         {
+            if (!File.Exists(DownloadsFile))
+            {
+                // Migración automática de downloads.json legacy si existe en ~/.config/anics/
+                var legacyPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".config", "anics", "downloads.json");
+                if (File.Exists(legacyPath))
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(ConfigDir);
+                        File.Copy(legacyPath, DownloadsFile, true);
+                    }
+                    catch { }
+                }
+            }
+
             if (File.Exists(DownloadsFile))
             {
                 var json = File.ReadAllText(DownloadsFile);
@@ -312,15 +598,42 @@ public static class DownloadManager
     private static void CleanupMissingFiles()
     {
         bool changed = false;
+        var defaultDir = DefaultDownloadDirectory;
+
         foreach (var anime in _downloads.ToList())
         {
-            var existingEpisodes = anime.Episodes.Where(e => File.Exists(e.FilePath)).ToList();
-            if (existingEpisodes.Count != anime.Episodes.Count)
+            var validEpisodes = new List<DownloadedEpisode>();
+
+            foreach (var ep in anime.Episodes)
             {
-                anime.Episodes = existingEpisodes;
+                if (File.Exists(ep.FilePath))
+                {
+                    validEpisodes.Add(ep);
+                }
+                else
+                {
+                    // Intento de reubicación inteligente si la ruta base cambió (ej. OneDrive vs Carpeta Local de Videos)
+                    var safeTitle = string.Join("_", anime.Title.Split(Path.GetInvalidFileNameChars())).Trim();
+                    var fileName = Path.GetFileName(ep.FilePath);
+                    var candidatePath = Path.Combine(defaultDir, safeTitle, fileName);
+
+                    if (File.Exists(candidatePath))
+                    {
+                        ep.FilePath = candidatePath;
+                        validEpisodes.Add(ep);
+                        changed = true;
+                    }
+                }
+            }
+
+            if (validEpisodes.Count != anime.Episodes.Count)
+            {
+                anime.Episodes = validEpisodes;
                 changed = true;
             }
+
             SortEpisodes(anime);
+
             if (anime.Episodes.Count == 0)
             {
                 _downloads.Remove(anime);
@@ -336,16 +649,11 @@ public static class DownloadManager
     /// Escanea la carpeta base de descargas (<c>Videos\AniCS</c>) en busca de archivos
     /// de episodios que existen físicamente en disco pero <b>no están registrados</b> en
     /// <c>downloads.json</c>. Los importa automáticamente como entradas "huérfanas".
-    ///
-    /// Convención de naming asumida:
-    /// <c>Videos\AniCS\&lt;Título del anime&gt;\Episodio N.ext</c>
-    ///
-    /// Si el anime ya tiene una entrada registrada, solo se añaden los episodios faltantes;
-    /// nunca se sobreescriben datos existentes (URL, ThumbnailUrl, estado de visión).
     /// </summary>
     /// <returns>Número de episodios nuevos importados.</returns>
     public static int ScanDiskDownloads()
     {
+        EnsureLoaded();
         var baseDir = DefaultDownloadDirectory;
 
         if (!Directory.Exists(baseDir)) return 0;
@@ -354,9 +662,9 @@ public static class DownloadManager
         var videoExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { ".mp4", ".ts", ".mkv", ".avi", ".webm" };
 
-        // Patrón: "Episodio 6.mp4", "Episodio 10.ts", "Episodio 1.5.mp4", etc.
+        // Patrón: "Episodio 6.mp4", "Episodio 10.ts", "Episodio 1.5.mp4", "Episodio Opening.mp4", "1.mp4", etc.
         var episodePattern = new System.Text.RegularExpressions.Regex(
-            @"^Episodio\s+([\d]+(?:[.,][\d]+)?)\b",
+            @"^(?:Episodio\s+)?([\d]+(?:[.,][\d]+)?|Opening|Trailer)\b",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         int added = 0;
@@ -445,30 +753,38 @@ public static class DownloadManager
     
     public static void AddActiveDownload(ActiveDownload download)
     {
-        // Remove any existing active download for the same episode
-        var existing = GetActiveDownload(download.AnimeUrl, download.EpisodeNumber);
-        if (existing != null)
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            ActiveDownloads.Remove(existing);
-        }
-        
-        ActiveDownloads.Insert(0, download);
-        DownloadsChanged?.Invoke(null, EventArgs.Empty);
+            // Remove any existing active download for the same episode
+            var existing = GetActiveDownload(download.AnimeUrl, download.EpisodeNumber);
+            if (existing != null)
+            {
+                ActiveDownloads.Remove(existing);
+            }
+            
+            ActiveDownloads.Insert(0, download);
+            DownloadsChanged?.Invoke(null, EventArgs.Empty);
+        });
     }
     
     public static void RemoveActiveDownload(ActiveDownload download)
     {
-        if (ActiveDownloads.Contains(download))
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            ActiveDownloads.Remove(download);
-            DownloadsChanged?.Invoke(null, EventArgs.Empty);
-        }
+            if (ActiveDownloads.Contains(download))
+            {
+                ActiveDownloads.Remove(download);
+                DownloadsChanged?.Invoke(null, EventArgs.Empty);
+            }
+        });
     }
 
     public static void RecordDownload(string animeTitle, string animeUrl, string thumbnailUrl, string episodeNumber, string episodeTitle, string filePath)
     {
         Load(); // Reload to sync with possible other instances
-        var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
+        var anime = _downloads.FirstOrDefault(a => 
+            (!string.IsNullOrEmpty(animeUrl) && a.Url == animeUrl) ||
+            (!string.IsNullOrEmpty(animeTitle) && string.Equals(a.Title, animeTitle, StringComparison.OrdinalIgnoreCase)));
         if (anime == null)
         {
             anime = new DownloadedAnime
@@ -478,6 +794,13 @@ public static class DownloadManager
                 ThumbnailUrl = thumbnailUrl
             };
             _downloads.Insert(0, anime);
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(anime.Url) && !string.IsNullOrEmpty(animeUrl))
+                anime.Url = animeUrl;
+            if (string.IsNullOrEmpty(anime.ThumbnailUrl) && !string.IsNullOrEmpty(thumbnailUrl))
+                anime.ThumbnailUrl = thumbnailUrl;
         }
 
         var ep = anime.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
@@ -501,8 +824,26 @@ public static class DownloadManager
         DownloadsChanged?.Invoke(null, EventArgs.Empty);
     }
 
+    public static void LinkAnimeUrl(string title, string url, string thumbnailUrl)
+    {
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(url)) return;
+        Load();
+        var anime = _downloads.FirstOrDefault(a => 
+            string.Equals(a.Title, title, StringComparison.OrdinalIgnoreCase) ||
+            (!string.IsNullOrEmpty(a.Url) && a.Url == url));
+        if (anime != null)
+        {
+            anime.Url = url;
+            if (string.IsNullOrEmpty(anime.ThumbnailUrl) && !string.IsNullOrEmpty(thumbnailUrl))
+                anime.ThumbnailUrl = thumbnailUrl;
+            Save();
+            DownloadsChanged?.Invoke(null, EventArgs.Empty);
+        }
+    }
+
     public static IReadOnlyList<DownloadedAnime> GetAll()
     {
+        EnsureLoaded();
         CleanupMissingFiles();
         foreach (var anime in _downloads)
         {
@@ -511,9 +852,9 @@ public static class DownloadManager
         return _downloads.AsReadOnly();
     }
 
-
     public static void DeleteEpisode(string animeUrl, string episodeNumber)
     {
+        EnsureLoaded();
         var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
         if (anime != null)
         {
@@ -546,6 +887,7 @@ public static class DownloadManager
 
     public static void DeleteAnime(string animeUrl)
     {
+        EnsureLoaded();
         var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
         if (anime != null)
         {
@@ -568,10 +910,13 @@ public static class DownloadManager
         }
     }
 
-    public static bool IsEpisodeDownloaded(string animeUrl, string episodeNumber)
+    public static bool IsEpisodeDownloaded(string animeUrl, string episodeNumber, string? animeTitle = null)
     {
+        EnsureLoaded();
         CleanupMissingFiles();
-        var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
+        var anime = _downloads.FirstOrDefault(a => 
+            (!string.IsNullOrEmpty(animeUrl) && a.Url == animeUrl) ||
+            (!string.IsNullOrEmpty(animeTitle) && string.Equals(a.Title, animeTitle, StringComparison.OrdinalIgnoreCase)));
         if (anime != null)
         {
             var ep = anime.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
@@ -580,14 +925,18 @@ public static class DownloadManager
         return false;
     }
 
-    public static DownloadedEpisode? GetDownloadedEpisode(string animeUrl, string episodeNumber)
+    public static DownloadedEpisode? GetDownloadedEpisode(string animeUrl, string episodeNumber, string? animeTitle = null)
     {
-        var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
+        EnsureLoaded();
+        var anime = _downloads.FirstOrDefault(a => 
+            (!string.IsNullOrEmpty(animeUrl) && a.Url == animeUrl) ||
+            (!string.IsNullOrEmpty(animeTitle) && string.Equals(a.Title, animeTitle, StringComparison.OrdinalIgnoreCase)));
         return anime?.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
     }
 
     public static void UpdateEpisodeStatus(string animeUrl, string episodeNumber, EpisodeWatchStatus status)
     {
+        EnsureLoaded();
         var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
         if (anime != null)
         {
@@ -603,6 +952,7 @@ public static class DownloadManager
 
     public static DownloadedEpisode? GetNextEpisode(string animeUrl, string currentEpisodeNumber)
     {
+        EnsureLoaded();
         var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
         if (anime != null && anime.Episodes.Count > 0)
         {

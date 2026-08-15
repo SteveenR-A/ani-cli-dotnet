@@ -7,6 +7,8 @@ public interface IAnimeExtractor
     string Domain { get; }
     Task<List<AnimeResult>> SearchAsync(string query);
     Task<List<AnimeResult>> AdvancedSearchAsync(SearchFilters filters);
+    Task<SearchResultPage> GetDirectoryPageAsync(SearchFilters filters);
+    Task<List<GenreItem>> GetGenresAsync();
     Task<List<Episode>> GetLatestReleasesAsync();
     Task<List<ScheduleItem>> GetWeeklyScoopAsync();
     Task<List<Episode>> GetEpisodesAsync(string animeUrl);

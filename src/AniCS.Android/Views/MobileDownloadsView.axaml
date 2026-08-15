@@ -59,7 +59,7 @@
                                             </Grid>
 
                                             <!-- Bottom Row: Buttons (Mobile Friendly) -->
-                                            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+                                            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding CanPauseOrCancel}">
                                                 <Button Click="OnPauseResumeActiveDownloadClicked" Tag="{Binding}"
                                                         Background="{DynamicResource AppWarningColor}" Foreground="{DynamicResource AppWarningForegroundColor}"
                                                         Padding="10,4" CornerRadius="6">

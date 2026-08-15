@@ -28,6 +28,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
     // Overlay UI controls (Android Native)
     private LinearLayout? _topBar;
     private TextView? _titleText;
+    private TextView? _statusBadge;
     private TextView? _qualityText;
     private LinearLayout? _centerControls;
     private ImageView? _playPauseCenterBtn;
@@ -125,6 +126,18 @@ public class AndroidVideoPlayerControl : NativeControlHost
                     }
                 };
 
+                _mediaPlayer.Info += (s, e) =>
+                {
+                    if (e.What == MediaInfo.BufferingStart && _statusBadge != null)
+                    {
+                        _statusBadge.Text = "⏳ Buffering...";
+                    }
+                    else if (e.What == MediaInfo.BufferingEnd && _statusBadge != null)
+                    {
+                        _statusBadge.Text = _mediaPlayer.IsPlaying ? "▶ Reproduciendo" : "⏸ Pausa";
+                    }
+                };
+
                 _mediaPlayer.VideoSizeChanged += (s, e) =>
                 {
                     _videoWidth = e.Width;
@@ -156,6 +169,8 @@ public class AndroidVideoPlayerControl : NativeControlHost
             {
                 _mediaPlayer.Reset();
             }
+
+            if (_statusBadge != null) _statusBadge.Text = "⏳ Cargando...";
 
             _mediaPlayer.SetSurface(_surface);
 
@@ -390,7 +405,6 @@ public class AndroidVideoPlayerControl : NativeControlHost
         backLayout.Click += (s, e) =>
         {
             BackRequested?.Invoke(this, EventArgs.Empty);
-            AndroidMainView.Current?.HandleBackPress();
         };
         _topBar.AddView(backLayout);
 
@@ -411,6 +425,27 @@ public class AndroidVideoPlayerControl : NativeControlHost
             RightMargin = DpToPx(8)
         };
         _topBar.AddView(_titleText, titleParams);
+
+        // Status Badge (Reproduciendo / Buffering / Pausa)
+        _statusBadge = new TextView(context)
+        {
+            Text = "Cargando...",
+            TextSize = 11,
+            Typeface = Typeface.DefaultBold
+        };
+        _statusBadge.SetTextColor(Color.White);
+        var sBadge = new GradientDrawable();
+        sBadge.SetColor(Color.Argb(140, 34, 150, 243));
+        sBadge.SetStroke(DpToPx(1), Color.Argb(50, 255, 255, 255));
+        sBadge.SetCornerRadius(DpToPx(8));
+        _statusBadge.Background = sBadge;
+        _statusBadge.SetPadding(DpToPx(8), DpToPx(4), DpToPx(8), DpToPx(4));
+        var sParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent)
+        {
+            Gravity = GravityFlags.CenterVertical,
+            RightMargin = DpToPx(8)
+        };
+        _topBar.AddView(_statusBadge, sParams);
 
         // Quality Badge
         _qualityText = new TextView(context)
@@ -679,6 +714,11 @@ public class AndroidVideoPlayerControl : NativeControlHost
                 ? PlayerIconHelper.CreatePauseDrawable(32, Color.White)
                 : PlayerIconHelper.CreatePlayDrawable(32, Color.White));
         }
+
+        if (_statusBadge != null)
+        {
+            _statusBadge.Text = isPlaying ? "▶ Reproduciendo" : "⏸ Pausa";
+        }
     }
 
     private void StartProgressUpdates()
@@ -696,7 +736,17 @@ public class AndroidVideoPlayerControl : NativeControlHost
                 int pos = CurrentPosition;
                 int dur = Duration;
                 _seekBar.Progress = (int)((double)pos / dur * _seekBar.Max);
-                _timeText.Text = $"{FormatTime(pos)} / {FormatTime(dur)}";
+
+                if (_bufferPercentage > 0)
+                {
+                    _seekBar.SecondaryProgress = (int)(_bufferPercentage * (_seekBar.Max / 100.0));
+                    _timeText.Text = $"{FormatTime(pos)} / {FormatTime(dur)} · Buf: {_bufferPercentage}%";
+                }
+                else
+                {
+                    _timeText.Text = $"{FormatTime(pos)} / {FormatTime(dur)}";
+                }
+
                 ProgressChanged?.Invoke(this, (pos, dur));
             }
         }
@@ -765,12 +815,10 @@ public class AndroidVideoPlayerControl : NativeControlHost
         if (main.RequestedOrientation == global::Android.Content.PM.ScreenOrientation.SensorLandscape)
         {
             main.SetOrientationPortrait();
-            ShowToast("Modo Vertical");
         }
         else
         {
             main.SetOrientationLandscape();
-            ShowToast("Modo Horizontal");
         }
     }
 

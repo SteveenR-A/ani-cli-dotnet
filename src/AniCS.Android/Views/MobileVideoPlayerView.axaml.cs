@@ -369,12 +369,10 @@ public partial class MobileVideoPlayerView : UserControl
         if (_isLandscape)
         {
             MainActivity.Instance?.SetOrientationLandscape();
-            ShowToast("Modo Horizontal");
         }
         else
         {
             MainActivity.Instance?.SetOrientationPortrait();
-            ShowToast("Modo Vertical");
         }
         _osdTimer?.Stop();
         _osdTimer?.Start();

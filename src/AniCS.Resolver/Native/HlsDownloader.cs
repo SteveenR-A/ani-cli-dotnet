@@ -55,10 +55,28 @@ public sealed class HlsDownloader
         long downloadedBytes = 0;
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        using var outputStream = new FileStream(tsPath, FileMode.Create, FileAccess.Write,
+        var idxPath = tsPath + ".idx";
+        int startSegment = 0;
+
+        if (File.Exists(tsPath) && File.Exists(idxPath))
+        {
+            try
+            {
+                var idxText = File.ReadAllText(idxPath);
+                if (int.TryParse(idxText, out int savedIdx) && savedIdx > 0 && savedIdx < total)
+                {
+                    startSegment = savedIdx;
+                    downloadedBytes = new FileInfo(tsPath).Length;
+                }
+            }
+            catch { }
+        }
+
+        var fileMode = (startSegment > 0) ? FileMode.Append : FileMode.Create;
+        using var outputStream = new FileStream(tsPath, fileMode, FileAccess.Write,
             FileShare.None, bufferSize: 65536, useAsync: true);
 
-        for (int i = 0; i < total; i++)
+        for (int i = startSegment; i < total; i++)
         {
             ct.ThrowIfCancellationRequested();
 
@@ -73,6 +91,12 @@ public sealed class HlsDownloader
 
             await outputStream.WriteAsync(segBytes, ct);
             downloadedBytes += segBytes.Length;
+
+            try
+            {
+                File.WriteAllText(idxPath, (i + 1).ToString());
+            }
+            catch { }
 
             if (progress != null)
             {
@@ -93,6 +117,12 @@ public sealed class HlsDownloader
                 progress.Report(new DownloadProgress(pct, sizeInfo, speedStr, pct >= 100));
             }
         }
+
+        try
+        {
+            if (File.Exists(idxPath)) File.Delete(idxPath);
+        }
+        catch { }
 
         progress?.Report(new DownloadProgress(100, FormatBytes(downloadedBytes), "", IsFinished: true));
         return tsPath;

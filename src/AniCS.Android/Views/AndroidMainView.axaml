@@ -10,7 +10,7 @@
              x:Class="AniCS.Android.Views.AndroidMainView"
              x:DataType="vm:HomeViewModel">
 
-    <Grid RowDefinitions="Auto, *, Auto">
+    <Grid RowDefinitions="Auto, Auto, *, Auto">
 
         <!-- ── 1. Barra de Navegación Superior ── -->
         <Border Name="TopHeaderBorder" Grid.Row="0" Background="{DynamicResource AppSurfaceColor}" Height="56" Padding="8,0">
@@ -40,8 +40,16 @@
             </Grid>
         </Border>
 
+        <!-- ── Banner de Conectividad / Offline ── -->
+        <Border Grid.Row="1" Name="OfflineBanner" Background="#C62828" Padding="8,5" IsVisible="False">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                <material:MaterialIcon Name="OfflineBannerIcon" Kind="WifiOff" Foreground="White" Width="16" Height="16" VerticalAlignment="Center"/>
+                <TextBlock Name="OfflineBannerText" Text="Sin conexión a internet. Tus descargas están disponibles." Foreground="White" FontWeight="Medium" FontSize="12" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
         <!-- ── 2. Área de contenido principal con SplitView (Menú Lateral) ──── -->
-        <SplitView Grid.Row="1" Name="MainSplitView" 
+        <SplitView Grid.Row="2" Name="MainSplitView" 
                    IsPaneOpen="False" 
                    DisplayMode="Overlay" 
                    OpenPaneLength="260" 
@@ -225,7 +233,7 @@
         </Border>
 
         <!-- ── 4. Barra de Navegación Inferior Rapida (Bottom Bar) ────────── -->
-        <Border Name="BottomNavBar" Grid.Row="2" 
+        <Border Name="BottomNavBar" Grid.Row="3" 
                 Background="{DynamicResource AppSurfaceColor}" 
                 BorderBrush="{DynamicResource AppSubtextColor}" 
                 BorderThickness="0,1,0,0">

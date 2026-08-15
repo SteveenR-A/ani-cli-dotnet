@@ -1,4 +1,5 @@
 using AniCS.Models;
+using HtmlAgilityPack;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -98,7 +99,16 @@ public class JKAnimeExtractor : BaseExtractor
 
     public override async Task<List<AnimeResult>> AdvancedSearchAsync(SearchFilters filters)
     {
-        var results = new List<AnimeResult>();
+        var pageResult = await GetDirectoryPageAsync(filters);
+        return pageResult.Results;
+    }
+
+    public override async Task<SearchResultPage> GetDirectoryPageAsync(SearchFilters filters)
+    {
+        var pageResult = new SearchResultPage
+        {
+            CurrentPage = filters.Page > 0 ? filters.Page : 1
+        };
 
         if (string.IsNullOrWhiteSpace(filters.FilterBy) &&
             string.IsNullOrWhiteSpace(filters.Genre) &&
@@ -112,7 +122,11 @@ public class JKAnimeExtractor : BaseExtractor
             string.IsNullOrWhiteSpace(filters.Order) &&
             !string.IsNullOrWhiteSpace(filters.Query))
         {
-            return await SearchAsync(filters.Query);
+            var searchResults = await SearchAsync(filters.Query);
+            pageResult.Results = searchResults;
+            pageResult.TotalItems = searchResults.Count;
+            pageResult.TotalPages = 1;
+            return pageResult;
         }
 
         var queryParams = new List<string>();
@@ -126,6 +140,7 @@ public class JKAnimeExtractor : BaseExtractor
         if (!string.IsNullOrWhiteSpace(filters.Year)) queryParams.Add($"fecha={Uri.EscapeDataString(filters.Year)}");
         if (!string.IsNullOrWhiteSpace(filters.Season)) queryParams.Add($"temporada={Uri.EscapeDataString(filters.Season)}");
         if (!string.IsNullOrWhiteSpace(filters.Order)) queryParams.Add($"orden={Uri.EscapeDataString(filters.Order)}");
+        if (filters.Page > 1) queryParams.Add($"p={filters.Page}");
 
         var url = $"{BaseUrl}/directorio";
         if (queryParams.Count > 0)
@@ -134,7 +149,7 @@ public class JKAnimeExtractor : BaseExtractor
         }
 
         var html = await DownloadWebpageAsync(url, BaseUrl);
-        if (string.IsNullOrEmpty(html)) return results;
+        if (string.IsNullOrEmpty(html)) return pageResult;
 
         var jsonRaw = SearchRegex(@"var\s+animes\s*=\s*(\{.*?\});", html, null, RegexOptions.Singleline);
         if (!string.IsNullOrEmpty(jsonRaw))
@@ -142,7 +157,21 @@ public class JKAnimeExtractor : BaseExtractor
             try
             {
                 using var doc = JsonDocument.Parse(jsonRaw);
-                if (doc.RootElement.TryGetProperty("data", out var data))
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("current_page", out var cp) && cp.TryGetInt32(out int curPage))
+                    pageResult.CurrentPage = curPage;
+
+                if (root.TryGetProperty("last_page", out var lp) && lp.TryGetInt32(out int lastPage))
+                    pageResult.TotalPages = lastPage;
+
+                if (root.TryGetProperty("total", out var tot) && tot.TryGetInt32(out int totalCount))
+                    pageResult.TotalItems = totalCount;
+
+                if (root.TryGetProperty("per_page", out var pp) && pp.TryGetInt32(out int perPage))
+                    pageResult.ItemsPerPage = perPage;
+
+                if (root.TryGetProperty("data", out var data))
                 {
                     foreach (var item in data.EnumerateArray())
                     {
@@ -152,7 +181,7 @@ public class JKAnimeExtractor : BaseExtractor
 
                         if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(slug))
                         {
-                            results.Add(new AnimeResult
+                            pageResult.Results.Add(new AnimeResult
                             {
                                 Title = WebUtility.HtmlDecode(title),
                                 Url = $"{BaseUrl}/{slug}/",
@@ -165,7 +194,101 @@ public class JKAnimeExtractor : BaseExtractor
             catch { /* Ignore parse errors */ }
         }
 
-        return results;
+        return pageResult;
+    }
+
+    private static List<GenreItem>? _cachedGenres;
+
+    public override async Task<List<GenreItem>> GetGenresAsync()
+    {
+        if (_cachedGenres != null && _cachedGenres.Count > 0)
+            return _cachedGenres;
+
+        try
+        {
+            var html = await DownloadWebpageAsync($"{BaseUrl}/directorio", BaseUrl);
+            if (!string.IsNullOrEmpty(html))
+            {
+                var doc = new HtmlDocument();
+                doc.LoadHtml(html);
+                var genreSelect = doc.DocumentNode.SelectSingleNode("//select[@name='genero']");
+                if (genreSelect != null)
+                {
+                    var options = genreSelect.SelectNodes(".//option");
+                    if (options != null && options.Count > 1)
+                    {
+                        var genres = new List<GenreItem>();
+                        foreach (var opt in options)
+                        {
+                            var val = opt.GetAttributeValue("value", "").Trim();
+                            var name = WebUtility.HtmlDecode(opt.InnerText.Trim());
+                            if (!string.IsNullOrEmpty(val))
+                            {
+                                genres.Add(new GenreItem(name, val));
+                            }
+                        }
+                        if (genres.Count > 0)
+                        {
+                            _cachedGenres = genres;
+                            return _cachedGenres;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        // Fallback completo con los géneros oficiales de JKAnime
+        _cachedGenres = new List<GenreItem>
+        {
+            new("Accion", "accion"),
+            new("Aventura", "aventura"),
+            new("Autos", "autos"),
+            new("Comedia", "comedia"),
+            new("Dementia", "dementia"),
+            new("Demonios", "demonios"),
+            new("Misterio", "misterio"),
+            new("Drama", "drama"),
+            new("Ecchi", "ecchi"),
+            new("Fantasia", "fantasia"),
+            new("Juegos", "juegos"),
+            new("Hentai", "hentai"),
+            new("Historico", "historico"),
+            new("Terror", "terror"),
+            new("Niños", "nios"),
+            new("Magia", "magia"),
+            new("Artes Marciales", "artes-marciales"),
+            new("Mecha", "mecha"),
+            new("Musica", "musica"),
+            new("Parodia", "parodia"),
+            new("Samurai", "samurai"),
+            new("Romance", "romance"),
+            new("Colegial", "colegial"),
+            new("Sci-Fi", "sci-fi"),
+            new("Shoujo", "shoujo"),
+            new("Shoujo Ai", "shoujo-ai"),
+            new("Shounen", "shounen"),
+            new("Shounen Ai", "shounen-ai"),
+            new("Space", "space"),
+            new("Deportes", "deportes"),
+            new("Super Poderes", "super-poderes"),
+            new("Vampiros", "vampiros"),
+            new("Yaoi", "yaoi"),
+            new("Yuri", "yuri"),
+            new("Harem", "harem"),
+            new("Cosas de la vida", "cosas-de-la-vida"),
+            new("Sobrenatural", "sobrenatural"),
+            new("Militar", "militar"),
+            new("Policial", "policial"),
+            new("Psicologico", "psicologico"),
+            new("Thriller", "thriller"),
+            new("Seinen", "seinen"),
+            new("Josei", "josei"),
+            new("Español Latino", "latino"),
+            new("Isekai", "isekai")
+        };
+
+        return _cachedGenres;
     }
 
     // ── Details ────────────────────────────────────────────────────

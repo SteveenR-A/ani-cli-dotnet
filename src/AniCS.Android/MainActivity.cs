@@ -61,6 +61,26 @@ public class MainActivity : AvaloniaMainActivity
             };
         }
         catch { }
+
+        // 3. Conectar DownloadManager con Foreground Service para descargas continuas en segundo plano
+        try
+        {
+            AniCS.Desktop.Services.DownloadManager.OnDownloadsStarted = () =>
+            {
+                AndroidDownloadForegroundService.Start(this);
+            };
+
+            AniCS.Desktop.Services.DownloadManager.OnDownloadsFinished = () =>
+            {
+                AndroidDownloadForegroundService.Stop(this);
+            };
+
+            AniCS.Desktop.Services.DownloadManager.OnDownloadProgressNotify = (title, content, progress) =>
+            {
+                AndroidDownloadForegroundService.UpdateNotification(title, content, progress);
+            };
+        }
+        catch { }
     }
 
     public override void OnBackPressed()

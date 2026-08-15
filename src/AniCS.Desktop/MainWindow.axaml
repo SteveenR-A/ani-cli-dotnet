@@ -12,7 +12,7 @@
         Icon="avares://AniCS.Desktop/Assets/Incono/favicon.ico"
         WindowStartupLocation="CenterScreen">
         
-    <Grid RowDefinitions="Auto, *">
+    <Grid RowDefinitions="Auto, Auto, *">
         <!-- Top Navigation Bar -->
         <Border Grid.Row="0" Background="{DynamicResource AppSurfaceColor}" Height="60" Padding="5,0" Name="TopNavigationBar" x:DataType="vm:HomeViewModel">
             <Grid ColumnDefinitions="Auto, *, Auto, Auto">
@@ -40,8 +40,16 @@
             </Grid>
         </Border>
 
+        <!-- Offline / Network Status Banner -->
+        <Border Grid.Row="1" Name="OfflineBanner" Background="#C62828" Padding="12,7" IsVisible="False">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                <material:MaterialIcon Name="OfflineBannerIcon" Kind="WifiOff" Foreground="White" Width="18" Height="18" VerticalAlignment="Center"/>
+                <TextBlock Name="OfflineBannerText" Text="Sin conexión a internet. Los animes descargados siguen disponibles en tu biblioteca." Foreground="White" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
         <!-- Main Content with SplitView -->
-        <SplitView Grid.Row="1" Name="MainSplitView" 
+        <SplitView Grid.Row="2" Name="MainSplitView" 
                    IsPaneOpen="False" 
                    DisplayMode="Overlay" 
                    OpenPaneLength="250" 

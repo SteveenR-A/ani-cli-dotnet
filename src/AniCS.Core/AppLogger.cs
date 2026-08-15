@@ -32,6 +32,11 @@ public static class AppLogger
         Write("INFO", source, message);
     }
 
+    public static void Warn(string source, string message)
+    {
+        Write("WARN", source, message);
+    }
+
     private static void Write(string level, string source, string content)
     {
         try
