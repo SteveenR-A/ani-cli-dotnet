@@ -264,9 +264,10 @@ public class MundoDonghuaExtractor : BaseExtractor
                 {
                     string url = iframeMatch.Groups[1].Value.Replace("\\", "");
                     string name = GetServerNameFromUrl(url);
+                    bool isDirect = url.Contains(".m3u8") || url.Contains(".mp4") || url.Contains("redirector.php");
                     if (!servers.Any(s => s.Url == url))
                     {
-                        servers.Add(new VideoServer { Name = name, Url = url, IsDirectPlaySupported = true });
+                        servers.Add(new VideoServer { Name = name, Url = url, IsDirectPlaySupported = isDirect });
                     }
                 }
                 else
@@ -298,11 +299,12 @@ public class MundoDonghuaExtractor : BaseExtractor
                     if (!string.IsNullOrEmpty(src) && !src.Contains("google") && !src.Contains("facebook"))
                     {
                         string name = GetServerNameFromUrl(src);
+                        bool isDirect = src.Contains(".m3u8") || src.Contains(".mp4") || src.Contains("redirector.php");
                         servers.Add(new VideoServer
                         {
                             Name = name,
                             Url = src,
-                            IsDirectPlaySupported = true
+                            IsDirectPlaySupported = isDirect
                         });
                     }
                 }
