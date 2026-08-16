@@ -344,30 +344,45 @@ public static class DownloadManager
                         var targetUrl = !string.IsNullOrEmpty(active.AnimeUrl) ? active.AnimeUrl : (!string.IsNullOrEmpty(active.EpisodeUrl) ? active.EpisodeUrl : active.ServerUrl);
                         var extractor = ExtractorFactory.GetExtractorForUrl(targetUrl);
 
-                        // Si la URL directa del video está vacía o falló en reintentos, resolverla de nuevo
+                        // 1. Intentar resolver el ServerUrl asignado
                         if (string.IsNullOrEmpty(active.DirectVideoUrl) && !string.IsNullOrEmpty(active.ServerUrl))
                         {
                             active.SizeText = "Resolviendo enlace del servidor...";
                             active.DirectVideoUrl = await extractor.ResolveVideoUrlAsync(active.ServerUrl);
-                            if (string.IsNullOrEmpty(active.DirectVideoUrl))
+                            if (string.IsNullOrEmpty(active.DirectVideoUrl) || (!active.DirectVideoUrl.Contains(".m3u8") && !active.DirectVideoUrl.Contains(".mp4")))
                             {
                                 var res = await resolverBackend.ResolveAsync(active.ServerUrl, new ResolveOptions { Referer = active.ServerUrl });
-                                if (res.Type != MediaType.Unknown) active.DirectVideoUrl = res.DirectUrl;
+                                if (res.Type != MediaType.Unknown && !string.IsNullOrEmpty(res.DirectUrl))
+                                {
+                                    active.DirectVideoUrl = res.DirectUrl;
+                                }
                             }
                         }
-                        else if (string.IsNullOrEmpty(active.DirectVideoUrl) && !string.IsNullOrEmpty(active.EpisodeUrl))
+
+                        // 2. Si no se resolvió a un stream válido y tenemos EpisodeUrl, probar los demás servidores disponibles
+                        if ((string.IsNullOrEmpty(active.DirectVideoUrl) || (!active.DirectVideoUrl.Contains(".m3u8") && !active.DirectVideoUrl.Contains(".mp4"))) && !string.IsNullOrEmpty(active.EpisodeUrl))
                         {
-                            active.SizeText = "Obteniendo enlaces de video...";
+                            active.SizeText = "Buscando servidor disponible...";
                             var servers = await extractor.GetVideoServersAsync(active.EpisodeUrl);
-                            if (servers.Count > 0)
+                            foreach (var s in servers)
                             {
-                                var chosen = servers.FirstOrDefault(s => s.IsDirectPlaySupported) ?? servers.First();
-                                active.ServerUrl = chosen.Url;
-                                active.DirectVideoUrl = await extractor.ResolveVideoUrlAsync(chosen.Url);
-                                if (string.IsNullOrEmpty(active.DirectVideoUrl))
+                                if (s.Url == active.ServerUrl) continue; // ya probado
+
+                                var resolved = await extractor.ResolveVideoUrlAsync(s.Url);
+                                if (string.IsNullOrEmpty(resolved) || (!resolved.Contains(".m3u8") && !resolved.Contains(".mp4")))
                                 {
-                                    var res = await resolverBackend.ResolveAsync(chosen.Url, new ResolveOptions { Referer = chosen.Url });
-                                    if (res.Type != MediaType.Unknown) active.DirectVideoUrl = res.DirectUrl;
+                                    var res = await resolverBackend.ResolveAsync(s.Url, new ResolveOptions { Referer = s.Url });
+                                    if (res.Type != MediaType.Unknown && !string.IsNullOrEmpty(res.DirectUrl))
+                                    {
+                                        resolved = res.DirectUrl;
+                                    }
+                                }
+
+                                if (!string.IsNullOrEmpty(resolved) && (resolved.Contains(".m3u8") || resolved.Contains(".mp4")))
+                                {
+                                    active.ServerUrl = s.Url;
+                                    active.DirectVideoUrl = resolved;
+                                    break;
                                 }
                             }
                         }
@@ -464,6 +479,22 @@ public static class DownloadManager
                             active.SizeText = "Cancelado";
                             CleanupPartialFiles(baseDir, safeTitle, episodeNumStr);
                         }
+                        break;
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        // Error de resolución irrecuperable (servidor o enlace no disponible)
+                        active.State = DownloadState.Error;
+                        active.SizeText = "Servidor no disponible para descarga";
+                        AppLogger.Warn("DownloadManager", $"Resolution failed for {active.EpisodeTitle}: {ex.Message}");
+                        break;
+                    }
+                    catch (NotSupportedException ex)
+                    {
+                        // Servidor no compatible con descarga directa
+                        active.State = DownloadState.Error;
+                        active.SizeText = "Servidor no compatible";
+                        AppLogger.Warn("DownloadManager", $"Unsupported server for {active.EpisodeTitle}: {ex.Message}");
                         break;
                     }
                     catch (Exception ex)

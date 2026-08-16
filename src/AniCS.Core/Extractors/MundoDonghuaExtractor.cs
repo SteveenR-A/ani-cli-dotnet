@@ -264,7 +264,8 @@ public class MundoDonghuaExtractor : BaseExtractor
                 {
                     string url = iframeMatch.Groups[1].Value.Replace("\\", "");
                     string name = GetServerNameFromUrl(url);
-                    bool isDirect = url.Contains(".m3u8") || url.Contains(".mp4") || url.Contains("redirector.php") || url.Contains("mnemonicplayer");
+                    // Todos los servidores embed (VidHide, StreamWish, Bysekoze) se intentan resolver nativamente
+                    bool isDirect = true;
                     if (!servers.Any(s => s.Url == url))
                     {
                         servers.Add(new VideoServer { Name = name, Url = url, IsDirectPlaySupported = isDirect });
@@ -457,14 +458,7 @@ public class MundoDonghuaExtractor : BaseExtractor
             return url;
         }
 
-        // 3. Si es un iframe de VidHide, EmbedWish u otro servidor externo conocido, devolver la URL del iframe
-        // para que mpv / yt-dlp lo procesen con sus cookies.
-        if (url.Contains("vidhide") || url.Contains("embedwish") || url.Contains("streamwish") || 
-            url.Contains("streamhide") || url.Contains("callistanise") || url.Contains("closeload") || url.Contains("mwish"))
-        {
-            return url;
-        }
-
+        // 3. Probar reproductores con enlace indirecto
         if (url.Contains("mnemonicplayer.php") || url.Contains("mdmnemonicplayer"))
         {
             try
@@ -482,53 +476,57 @@ public class MundoDonghuaExtractor : BaseExtractor
             catch { }
         }
 
-        // 4. Descargar la página embed e intentar extraer el stream m3u8 o mp4 (desempaquetando JS si aplica)
+        // 4. Descargar la página embed (VidHide, StreamWish, EmbedWish, etc.) y extraer el stream m3u8 o mp4
         try
         {
-            var html = await DownloadWebpageAsync(url, BaseUrl);
+            var html = await DownloadWebpageAsync(url, "https://www.mundodonghua.com/");
             if (!string.IsNullOrEmpty(html))
             {
-                // Intentar desempaquetar scripts eval
-                var evalMatch = System.Text.RegularExpressions.Regex.Match(html, @"eval\(function\(p,a,c,k,e,d\).*?return p}\('(.*?)',(\d+),(\d+),'(.*?)'\.split\('\|'\)");
-                if (evalMatch.Success)
+                // A. Intentar desempaquetar scripts eval (formato Packer JS)
+                var evalMatches = System.Text.RegularExpressions.Regex.Matches(html, @"eval\(function\(p,a,c,k,e,d\).*?return p}\s*\(\s*['""](.*?)['""]\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*['""](.*?)['""]\s*\.split");
+                foreach (System.Text.RegularExpressions.Match evalMatch in evalMatches)
                 {
-                    string p = evalMatch.Groups[1].Value;
-                    int a = int.Parse(evalMatch.Groups[2].Value);
-                    int c = int.Parse(evalMatch.Groups[3].Value);
-                    string[] k = evalMatch.Groups[4].Value.Split('|');
-
-                    string unpacked = Unpack(p, a, c, k);
-
-                    var match = System.Text.RegularExpressions.Regex.Match(unpacked, @"https?://[^\s""'<>\\]+\.(?:m3u8|mp4)[^\s""'<>\\]*");
-                    if (!match.Success)
+                    try
                     {
-                        match = System.Text.RegularExpressions.Regex.Match(unpacked, @"file:\s*[""'](https?://[^""']+)[""']");
-                    }
+                        string p = evalMatch.Groups[1].Value;
+                        int a = int.Parse(evalMatch.Groups[2].Value);
+                        int c = int.Parse(evalMatch.Groups[3].Value);
+                        string[] k = evalMatch.Groups[4].Value.Split('|');
 
-                    if (match.Success)
-                    {
-                        string target = match.Groups.Count > 1 && match.Groups[1].Success ? match.Groups[1].Value : match.Value;
-                        return target.Replace("\\", "");
+                        string unpacked = Unpack(p, a, c, k);
+
+                        var match = System.Text.RegularExpressions.Regex.Match(unpacked, @"https?://[^\s""'<>\\]+\.(?:m3u8|mp4)[^\s""'<>\\]*");
+                        if (match.Success)
+                        {
+                            return match.Value.Replace("\\", "");
+                        }
+
+                        var fileMatch = System.Text.RegularExpressions.Regex.Match(unpacked, @"(?:file|source|src)\s*:\s*\\?['""]([^'""]+)");
+                        if (fileMatch.Success && (fileMatch.Groups[1].Value.Contains(".m3u8") || fileMatch.Groups[1].Value.Contains(".mp4")))
+                        {
+                            return fileMatch.Groups[1].Value.Replace("\\", "");
+                        }
                     }
+                    catch { }
                 }
 
-                // Buscar en el HTML crudo
+                // B. Buscar directamente en el HTML crudo
                 var rawMatch = System.Text.RegularExpressions.Regex.Match(html, @"https?://[^\s""'<>\\]+\.(?:m3u8|mp4)[^\s""'<>\\]*");
-                if (!rawMatch.Success)
-                {
-                    rawMatch = System.Text.RegularExpressions.Regex.Match(html, @"file:\s*[""'](https?://[^""']+)[""']");
-                }
-
                 if (rawMatch.Success)
                 {
-                    string target = rawMatch.Groups.Count > 1 && rawMatch.Groups[1].Success ? rawMatch.Groups[1].Value : rawMatch.Value;
-                    return target.Replace("\\", "");
+                    return rawMatch.Value.Replace("\\", "");
+                }
+
+                var rawFileMatch = System.Text.RegularExpressions.Regex.Match(html, @"(?:file|source|src)\s*:\s*\\?['""]([^'""]+\.(?:m3u8|mp4)[^'""]*)");
+                if (rawFileMatch.Success)
+                {
+                    return rawFileMatch.Groups[1].Value.Replace("\\", "");
                 }
             }
         }
         catch { }
 
-        // Si nada de lo anterior extrajo un m3u8 específico, devolver la URL resuelta como fallback para yt-dlp
+        // Si nada de lo anterior extrajo un m3u8 específico, devolver la URL como fallback
         return url;
     }
 
