@@ -38,7 +38,7 @@ public class ActiveDownload : INotifyPropertyChanged
     public string DirectVideoUrl { get; set; } = string.Empty;
     public string OutputPath { get; set; } = string.Empty;
     public int RetryAttempt { get; set; } = 0;
-    public const int MaxRetries = 3;
+    public const int MaxRetries = 5;
 
     private double _progress;
     public double Progress
@@ -486,23 +486,35 @@ public static class DownloadManager
                         active.RetryAttempt++;
                         if (active.RetryAttempt <= ActiveDownload.MaxRetries)
                         {
-                            // Backoff aleatorio entre 1000ms y 3000ms con jitter
-                            int minDelay = 1000 + (active.RetryAttempt - 1) * 800;
-                            int maxDelay = minDelay + 1000;
+                            // Backoff progresivo escalonado hasta ~3 minutos en 5 intentos:
+                            // Intento 1: 3-5s | Intento 2: 10-15s | Intento 3: 25-35s | Intento 4: 50-65s | Intento 5: 70-85s
+                            (int minDelay, int maxDelay) = active.RetryAttempt switch
+                            {
+                                1 => (3000, 5000),
+                                2 => (10000, 15000),
+                                3 => (25000, 35000),
+                                4 => (50000, 65000),
+                                _ => (70000, 85000)
+                            };
                             int jitterMs = rng.Next(minDelay, maxDelay);
 
-                            active.SizeText = $"Reconectando ({active.RetryAttempt}/{ActiveDownload.MaxRetries}) en {(jitterMs / 1000.0):0.0}s...";
                             AppLogger.Warn("DownloadManager", $"Download retry {active.RetryAttempt}/{ActiveDownload.MaxRetries} for {active.EpisodeTitle} in {jitterMs}ms: {ex.Message}");
 
-                            // Si el error fue por enlace expirado/403, limpiar para forzar re-resolución
+                            // Si el error fue por enlace expirado/403, limpiar para forzar re-resolución en el siguiente intento
                             active.DirectVideoUrl = string.Empty;
 
-                            await Task.Delay(jitterMs, token);
+                            int totalSeconds = (int)Math.Ceiling(jitterMs / 1000.0);
+                            for (int sec = totalSeconds; sec > 0; sec--)
+                            {
+                                if (token.IsCancellationRequested || active.State == DownloadState.Paused) break;
+                                active.SizeText = $"Reintentando ({active.RetryAttempt}/{ActiveDownload.MaxRetries}) en {sec}s...";
+                                await Task.Delay(1000, token);
+                            }
                         }
                         else
                         {
                             active.State = DownloadState.Error;
-                            active.SizeText = "Error de conexión tras 3 intentos";
+                            active.SizeText = "Error de conexión tras 3 minutos";
                             AppLogger.Error("DownloadManager.StartOrResumeDownloadAsync", ex);
                         }
                     }

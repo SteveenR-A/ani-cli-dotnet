@@ -264,8 +264,7 @@ public class MundoDonghuaExtractor : BaseExtractor
                 {
                     string url = iframeMatch.Groups[1].Value.Replace("\\", "");
                     string name = GetServerNameFromUrl(url);
-                    // VidHide y Embedwish ahora dependen de yt-dlp debido a protección Cloudflare (ya no son Nativo)
-                    bool isDirect = false;
+                    bool isDirect = url.Contains(".m3u8") || url.Contains(".mp4") || url.Contains("redirector.php") || url.Contains("mnemonicplayer");
                     if (!servers.Any(s => s.Url == url))
                     {
                         servers.Add(new VideoServer { Name = name, Url = url, IsDirectPlaySupported = isDirect });
@@ -273,8 +272,8 @@ public class MundoDonghuaExtractor : BaseExtractor
                 }
                 else
                 {
-                    // Fallback to JWPlayer file
-                    var fileMatch = System.Text.RegularExpressions.Regex.Match(unpacked, @"file:\s*\\?['""]([^'""]+)\\?['""]");
+                    // Fallback to JWPlayer / sources file
+                    var fileMatch = System.Text.RegularExpressions.Regex.Match(unpacked, @"(?:file|source|src)\s*:\s*\\?['""]([^'""]+)\\?['""]");
                     if (fileMatch.Success)
                     {
                         string url = fileMatch.Groups[1].Value.Replace("\\", "");
@@ -283,6 +282,41 @@ public class MundoDonghuaExtractor : BaseExtractor
                             servers.Add(new VideoServer { Name = "MundoDonghua HLS", Url = url, IsDirectPlaySupported = true });
                         }
                     }
+                }
+
+                // Check for api_donghua.php (Tamamo server)
+                var apiMatch = System.Text.RegularExpressions.Regex.Match(unpacked, @"api_donghua\.php.*?slug[""']?\s*:\s*[""']([^""']+)[""']");
+                if (apiMatch.Success)
+                {
+                    string slug = apiMatch.Groups[1].Value;
+                    try
+                    {
+                        var apiUrl = $"{BaseUrl}/api_donghua.php?slug={Uri.EscapeDataString(slug)}";
+                        using var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, apiUrl);
+                        req.Headers.TryAddWithoutValidation("User-Agent", AniCS.ConfigManager.Current.RandomUserAgent);
+                        req.Headers.Referrer = new Uri(episodeUrl);
+                        req.Headers.Add("X-Requested-With", "XMLHttpRequest");
+                        
+                        var apiResp = await Http.SendAsync(req);
+                        if (apiResp.IsSuccessStatusCode)
+                        {
+                            using var sr = new System.IO.StreamReader(apiResp.Content.ReadAsStream());
+                            var json = sr.ReadToEnd();
+                            var urls = System.Text.RegularExpressions.Regex.Matches(json, @"https?://[^\s""'<>\\]+");
+                            foreach (System.Text.RegularExpressions.Match u in urls)
+                            {
+                                var cleanUrl = u.Value.Replace("\\", "");
+                                if (cleanUrl.Contains(".m3u8") || cleanUrl.Contains(".mp4") || cleanUrl.Contains("mnemonicplayer") || cleanUrl.Contains("redirector.php"))
+                                {
+                                    if (!servers.Any(s => s.Url == cleanUrl))
+                                    {
+                                        servers.Add(new VideoServer { Name = "Tamamo Direct", Url = cleanUrl, IsDirectPlaySupported = true });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch { }
                 }
 
             }
@@ -429,6 +463,23 @@ public class MundoDonghuaExtractor : BaseExtractor
             url.Contains("streamhide") || url.Contains("callistanise") || url.Contains("closeload") || url.Contains("mwish"))
         {
             return url;
+        }
+
+        if (url.Contains("mnemonicplayer.php") || url.Contains("mdmnemonicplayer"))
+        {
+            try
+            {
+                var mHtml = await DownloadWebpageAsync(url, "https://www.mundodonghua.com/");
+                if (!string.IsNullOrEmpty(mHtml))
+                {
+                    var m3u8Match = System.Text.RegularExpressions.Regex.Match(mHtml, @"https?://[^\s""'<>\\]+\.(?:m3u8|mp4)[^\s""'<>\\]*");
+                    if (m3u8Match.Success) return m3u8Match.Value.Replace("\\", "");
+
+                    var fMatch = System.Text.RegularExpressions.Regex.Match(mHtml, @"(?:file|src):\s*[""'](https?://[^""']+)[""']");
+                    if (fMatch.Success) return fMatch.Groups[1].Value.Replace("\\", "");
+                }
+            }
+            catch { }
         }
 
         // 4. Descargar la página embed e intentar extraer el stream m3u8 o mp4 (desempaquetando JS si aplica)
