@@ -264,8 +264,8 @@ public class MundoDonghuaExtractor : BaseExtractor
                 {
                     string url = iframeMatch.Groups[1].Value.Replace("\\", "");
                     string name = GetServerNameFromUrl(url);
-                    // Todos los servidores embed (VidHide, StreamWish, Bysekoze) se intentan resolver nativamente
-                    bool isDirect = true;
+                    // Servidores externos protegidos (VidHide, Bysekoze, Voe) requieren yt-dlp
+                    bool isDirect = url.Contains(".m3u8") || url.Contains(".mp4");
                     if (!servers.Any(s => s.Url == url))
                     {
                         servers.Add(new VideoServer { Name = name, Url = url, IsDirectPlaySupported = isDirect });
