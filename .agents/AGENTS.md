@@ -1,55 +1,40 @@
-# Normas y Flujo de Trabajo (Rules & Workflow) - AniCS
+# Normas y Flujo de Trabajo — AniCS
 
-Este archivo (`AGENTS.md`) define las reglas globales y convenciones del proyecto `AniCS`, una aplicación multiplataforma (C#/.NET 10) para buscar, reproducir y descargar anime mediante web scraping (JKAnime, MundoDonghua), con arquitectura modular.
+AniCS: aplicación C#/.NET 10 multiplataforma (Desktop/CLI/Android) para buscar, reproducir y descargar anime vía web scraping (JKAnime, MundoDonghua).
 
-## Arquitectura y División de Proyectos (Contexto)
+## Arquitectura (`AniCS.slnx`, 6 proyectos en `src/`)
 
-La solución `AniCS.slnx` contiene **5 proyectos** (en `/src/`):
+- **AniCS.Core** — Motor central. Único lugar permitido para scraping/HTTP a fuentes: `Extractors/` (`BaseExtractor`, `JKAnimeExtractor`, `MundoDonghuaExtractor`, `ExtractorFactory`). También modelos, `ConfigManager`, `DataCache`, `WatchHistory`.
+- **AniCS.Desktop** — GUI **Avalonia 12**, MVVM (CommunityToolkit). DI raíz en `App.axaml.cs`. Referenciado también por AniCS.Android.
+- **AniCS.CLI** — Consola interactiva Spectre.Console (`PublishAot=true`). Entrada: `Program.cs`.
+- **AniCS.Player** — `IPlayerBackend`: LibVLC embebido (`LibVlcBackend`) + `MpvBackend` fallback. Selección vía `PlayerFactory` según `AppConfig.PlayerBackend`.
+- **AniCS.Resolver** — `IResolverBackend`: resolvedor nativo HLS (`Native/`) + `YtDlpResolverBackend` fallback. Selección vía `ResolverFactory` según `AppConfig.ResolverBackend`.
+- **AniCS.Android** — Avalonia/Android; comparte vistas/viewmodels con Desktop.
 
-- **AniCS.Core**: El motor central. Modelos (`AppConfig`, `AnimeResult`, `Episode`, `VideoServer`), interfaces (`IAnimeExtractor`), la lógica pesada de scraping web con `HtmlAgilityPack` (`BaseExtractor`, `JKAnimeExtractor`, `MundoDonghuaExtractor`, `AnimeAV1Extractor`). Gestiona configuración (`ConfigManager`), caché (`DataCache`) e historial (`WatchHistory`).
-- **AniCS.Desktop**: La interfaz gráfica multiplataforma en **Avalonia UI 12** (C# / XAML, MVVM con CommunityToolkit). La composición raíz de DI se hace en `App.axaml.cs`.
-- **AniCS.CLI**: Interfaz de consola interactiva con Spectre.Console (AOT).
-- **AniCS.Player**: Abstracción de reproducción `IPlayerBackend` con backends **LibVLC embebido** (`LibVlcBackend`) y **mpv externo** (`MpvBackend`). Selección vía `PlayerFactory` según `AppConfig.PlayerBackend` (`Auto`/`Native`/`Mpv`).
-- **AniCS.Resolver**: Abstracción de resolución/descarga `IResolverBackend` con **resolvedor nativo** (`NativeResolverBackend`, HLS propio) y **yt-dlp** (`YtDlpResolverBackend`). Selección vía `ResolverFactory` según `AppConfig.ResolverBackend` (`Auto`/`Native`/`YtDlp`).
+Docs de soporte en `.agents/`: `paradigmas.md` (paradigmas visuales), `scraper_logic.md` (HTTP/selectores por fuente), `estructura.md` (árbol), `tareas.md`.
 
-> **Importante**: Para entender los "Paradigmas Visuales" revisa `.agents/paradigmas.md`. La lógica HTTP/selectores de cada fuente está documentada en `.agents/scraper_logic.md`.
+## Comandos
 
-Adicionalmente:
-- **/Installer**: Definición WiX Toolset v4 (`AniCS-Installer.wxs`) para el `.msi` en Windows. Se compila con `build-msi.ps1`.
+- Construir un proyecto concreto, p. ej. `dotnet build src/AniCS.Desktop/AniCS.Desktop.csproj`. **No** construir toda la solución salvo que esté instalado el workload `android` (AniCS.Android requiere Android SDK).
+- Ejecutar CLI: `dotnet run --project src/AniCS.CLI`.
+- Smoke test de extractores: `dotnet run --project TestScraper` (proyecto de consola gitignored; ajusta la URL de prueba en `Program.cs`).
+- MSI Windows: `.\build-msi.ps1`. Requiere WiX v4 (`dotnet tool install --global wix --version 4.*` y `wix extension add -g WixToolset.UI.wixext/4.0.5`) y también compila el APK. Empaqueta mpv/yt-dlp en el instalador solo si existen en `InstallerDependencies/` (gitignored).
+- APK: `dotnet publish src/AniCS.Android -c Release -f net10.0-android` (requiere workload `android`).
+- Falsos positivos de Avalonia en `.axaml` ("el nombre no existe en el contexto"): `dotnet clean && dotnet build`.
 
-## Reglas de Desarrollo (Norms/Guidelines)
+## Reglas de Desarrollo
 
-1. **Responsabilidad Separada (SOLID)**: Bajo ninguna circunstancia se debe incluir lógica de scraping o peticiones web a las fuentes dentro de `AniCS.Desktop`, `AniCS.CLI`, `AniCS.Player` o `AniCS.Resolver`. Todo eso pertenece a `AniCS.Core/Extractors`.
-2. **Backends Player/Resolver**: `AniCS.Player` y `AniCS.Resolver` solo reproducen y resuelven/descargan URLs; NO conocen las fuentes (JKAnime/MundoDonghua). Los matices por servidor (ej. Referer/Origin de `redirector.php` de MundoDonghua) viven en los backends de Resolver o se resuelven antes en `AniCS.Core`.
-3. **Dependencias Externas**: La reproducción embebida usa **LibVLC** (bundled, no requiere VLC instalado); `mpv.exe` es el fallback clásico. La resolución usa el **resolvedor nativo .NET**; `yt-dlp.exe` es el fallback para servidores externos protegidos (Mp4upload, Streamtape, etc.). No asumas que `mpv`/`yt-dlp` están instalados; comprueba disponibilidad y guía al usuario.
-4. **Manejo de HTTP y User-Agents**: No "quemes" (hardcode) las cabeceras HTTP directamente en las peticiones de los Extractors. Utiliza siempre la configuración de `AppConfig` gestionada por `ConfigManager.Current.RandomUserAgent`.
-5. **Avalonia UI**: Al trabajar con `.axaml` en `AniCS.Desktop`, algunos editores presentan falsos positivos ("el nombre no existe en el contexto"). Se soluciona ejecutando `dotnet clean && dotnet build`.
-6. **Idioma**: Mantener el código en inglés (clases, métodos, variables) pero los textos de la interfaz al usuario final (UI) preferiblemente en Español neutro a menos que haya un sistema de localización.
+1. Scraping/peticiones HTTP a fuentes SOLO en `AniCS.Core/Extractors`. Nunca en Desktop/CLI/Player/Resolver.
+2. Player y Resolver solo manejan URLs; no conocen las fuentes (JKAnime/MundoDonghua). Matices por servidor (ej. Referer/Origin de `redirector.php` de MundoDonghua) viven en los backends de Resolver o se resuelven antes en Core.
+3. No hardcodear User-Agent en los extractores: usar `ConfigManager.Current.RandomUserAgent`.
+4. `mpv`/`yt-dlp` son fallbacks opcionales; comprobar disponibilidad antes de usarlos, nunca asumir que están instalados.
+5. Código en inglés (clases/métodos/variables); textos de UI al usuario final en español neutro.
 
-## Flujo de Trabajo (Workflow)
+## Gotchas
 
-1. Modificar interfaz (Desktop/CLI) -> Validar -> Construir.
-2. Si un proveedor de anime (web) cambia, actualizar ÚNICAMENTE el `Extractor` correspondiente en `AniCS.Core` y probar (selectores documentados en `.agents/scraper_logic.md`).
-3. **Actualización de Versiones (Version Bumping)**: Al generar una nueva versión pública (actual: **1.6.2**), actualizar:
-   - `src/AniCS.Desktop/AniCS.Desktop.csproj`: `<Version>`, `<AssemblyVersion>` y `<FileVersion>`.
-   - `src/AniCS.Android/AniCS.Android.csproj`: `<ApplicationDisplayVersion>`, `<Version>` y `<ApplicationVersion>`.
-   - `Installer/AniCS-Installer.wxs`: atributo `Version` en el nodo `<Package>`.
-   - `src/AniCS.Desktop/AppInfo.cs`: texto del `LatestChangelog` (fallback local). Las notas de la release se toman del `body` de la Release de GitHub.
-4. **Publicar una Release (para el AutoUpdate)**: El AutoUpdate lee las **Release de GitHub** (`releases/latest`): versión del tag `v*` + archivo `.msi`. Al empujar un tag `vX.Y.Z` con el workflow `.github/workflows/build-release.yml`, GitHub Actions compila el MSI y crea la release automáticamente. Sin `.msi` en la release, la app avisa de novedad pero no puede instalar.
-
-## Estado de la Migración (Player/Resolver)
-
-El proyecto está migrando del stack clásico (mpv + yt-dlp) a backends nativos .NET. Registro de lo hecho y lo pendiente:
-
-- [x] LibVLC embebido (reproducción sin VLC instalado).
-- [x] Resolvedor nativo HLS -> `.ts` (descarga secuencial con progreso).
-- [ ] `MpvBackend`: pause/resume/seek (hoy no-op, "Fase 3").
-- [ ] Remux HLS -> MP4 (hoy se guarda `.ts`, "Fase 3").
-- [ ] Resolución de páginas protegidas por JS sin depender de yt-dlp.
-
-## Tareas a Futuro (Roadmap)
-
-- **AutoUpdate (GitHub)** ✅: `AniCS.Desktop/Services/AppUpdateService.cs` consulta `releases/latest`, descarga el `.msi` y lo instala en silencio (`msiexec /qn`), relanzando la app. Botón en Ajustes + aviso de novedad al inicio. Requiere publicar releases con el workflow CI.
-- **Mejoras del Reproductor Nativo**: Corregir pequeños errores (bugs) de reproducción en LibVLC y mejorar la estabilidad de la UI del reproductor interno.
-- **Optimización General**: Continuar puliendo rendimiento y eliminando lógica redundante heredada.
-- **Soporte Móvil (Android/iOS)**: Como la aplicación ahora usa el motor nativo de descarga en .NET y LibVLC embebido, ya no depende estrictamente de los ejecutables de Windows (mpv.exe y yt-dlp.exe). Esto abre la puerta para desarrollar una versión móvil multiplataforma usando Avalonia UI o .NET MAUI en el futuro.
+- `ConfigManager.BaseDataPath` debe fijarse en el entry-point de la plataforma antes de usar cualquier código de AniCS (Android: `MainActivity.OnCreate()`).
+- AniCS.Android referencia `AniCS.Desktop` (que es `WinExe`) como librería vía `AdditionalProperties="OutputType=Library"` + `ValidateExecutableReferences=false`. No "arreglar" ese setup.
+- En Android el video se renderiza con **ExoPlayer vía `NativeControlHost`**; LibVLCSharp.Avalonia no tiene VideoView para Android.
+- `MpvBackend` aún sin pause/resume/seek (no-op); el resolvedor nativo descarga HLS a `.ts` (sin remux a MP4).
+- **Version bump** (actual: **1.6.2**) — al publicar nueva versión actualizar los 4 sitios: `src/AniCS.Desktop/AniCS.Desktop.csproj` (`Version`/`AssemblyVersion`/`FileVersion`), `src/AniCS.Android/AniCS.Android.csproj` (`ApplicationDisplayVersion`/`Version`/`ApplicationVersion`), `Installer/AniCS-Installer.wxs` (`<Package Version>`), `src/AniCS.Desktop/AppInfo.cs` (`LatestChangelog`).
+- **Release/AutoUpdate**: al empujar un tag `vX.Y.Z`, `.github/workflows/build-release.yml` compila MSI+APK y crea la Release. El AutoUpdate lee `releases/latest` y requiere un `.msi` adjunto para poder instalar (sin él solo avisa de novedad).

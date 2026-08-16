@@ -1,141 +1,86 @@
 # AniCS (Anime C#) — Cliente Multiplataforma
 
-AniCS es una aplicación multiplataforma para buscar, reproducir y descargar anime. Todo construido en C# (.NET 10).
+AniCS es una aplicación para buscar, reproducir y descargar anime. Todo construido en C# (.NET 10).
 
-El proyecto se divide en dos interfaces:
-- **AniCS Desktop**: Una interfaz gráfica (GUI) moderna y estética construida con Avalonia UI.
-- **AniCS CLI**: Una interfaz de línea de comandos rápida y elegante impulsada por Spectre.Console.
-
-Ambas versiones comparten el mismo núcleo de extracción y sincronizan tu historial de visualización.
+Tres interfaces que comparten el mismo núcleo de extracción y sincronizan el historial:
+- **AniCS Desktop** — GUI moderna con Avalonia UI (Windows, Linux y Android).
+- **AniCS CLI** — Consola interactiva con Spectre.Console.
+- **AniCS Android** — Aplicación móvil con Avalonia + ExoPlayer.
 
 ---
 
-## 🚀 Instalación (Windows & Linux)
+## 🚀 Instalación
 
-### Versión de Escritorio (Desktop)
+### Windows — Desktop (MSI)
 
-**En Windows:**
-El proyecto incluye un automatizador para generar el instalador MSI.
+```powershell
+git clone https://github.com/SteveenR-A/ani-cli-dotnet.git
+cd ani-cli-dotnet
+.\build-msi.ps1
+```
 
-1. Clona el repositorio:
-   ```powershell
-   git clone https://github.com/SteveenR-A/ani-cli-dotnet.git
-   cd ani-cli-dotnet
-   ```
-2. Ejecuta el script creador de instalador:
-   ```powershell
-   .\build-msi.ps1
-   ```
-3. El archivo `AniCS-Installer.msi` se generará en la carpeta `Installer\`. Simplemente ejecútalo para instalar la aplicación en tu sistema.
+El instalador `AniCS-Installer.msi` se genera en `Installer\`.
 
-**En Linux:** (Soporta Arch, Ubuntu, Debian, Fedora, etc.)
-El proyecto cuenta con un script instalador que verifica dependencias, compila la aplicación nativamente y crea un acceso directo en tu menú de aplicaciones.
+### Linux — Desktop
 
 ```bash
 git clone https://github.com/SteveenR-A/ani-cli-dotnet.git
 cd ani-cli-dotnet
 ./install-desktop.sh
 ```
-El script mostrará un menú interactivo. Selecciona `1) Instalar AniCS Desktop`.
 
-### Versión de Consola (CLI)
-Los scripts de instalación en bash/powershell instalan automáticamente la versión de consola en tu sistema de manera global.
+### CLI (Linux o Windows)
 
-**En Linux:** (Soporta Arch, Ubuntu, Debian, Fedora, etc.)
 ```bash
-git clone https://github.com/SteveenR-A/ani-cli-dotnet.git
-cd ani-cli-dotnet
-./install.sh
+./install.sh        # Linux
+.\install.ps1       # Windows
 ```
 
-**En Windows:**
-```powershell
-git clone https://github.com/SteveenR-A/ani-cli-dotnet.git
-cd ani-cli-dotnet
-.\install.ps1
-```
-*Ambos scripts muestran un menú interactivo para instalar, actualizar o desinstalar la CLI, y añaden el comando `anics` a tu PATH global.*
+Los scripts instaladores muestran un menú interactivo y añaden el comando `anics` al PATH global.
 
 ---
 
-## 💻 Comandos del REPL (Modo CLI)
+## 💻 Comandos del REPL (CLI)
 
-| Comando          | Alias | Descripción                                   |
-|------------------|-------|-----------------------------------------------|
-| `search <título>`| `s`   | Busca un anime en la fuente activa            |
-| `latest`         | `l`   | Muestra los últimos episodios estrenados      |
-| `scoop`          | `sc`  | Cartelera semanal de estrenos (Listado rápido)|
-| `history`        | `h`   | Historial de animes que has visto             |
-| `source <nombre>`| —     | Cambia la fuente activa                       |
-| `clear`          | `cls` | Limpia la pantalla                            |
-| `exit`           | `q`   | Salir de la aplicación                        |
-
----
-
-## 📡 Fuentes y Servidores
-
-**Fuentes de Anime:**
-- `jkanime.net` (Principal ✅, Soporte Cartelera ✅, Extracción Sinopsis ✅)
-- `animeav1.com` (Secundaria)
-
-**Servidores Soportados (Streaming y Descarga):**
-| Servidor                 | Streaming Directo (mpv) | Descarga (yt-dlp) |
-|--------------------------|-------------------------|-------------------|
-| **Desu / Magi** (Nativo) | ✅ Sí                    | ✅ Sí              |
-| **Mediafire** (Nativo)   | ✅ Sí                    | ✅ Sí              |
-| **Mp4upload / Streamtape** | ✅ Sí (vía yt-dlp)       | ✅ Sí              |
-| **Mega**                 | ❌ No (cifrado JS)       | 🟡 Enlace Directo  |
-| **VOE / Filemoon**       | ❌ Protegido por CF      | ❌ Protegido       |
+| Comando           | Alias | Descripción                              |
+|-------------------|-------|------------------------------------------|
+| `search <título>` | `s`   | Busca un anime                           |
+| `latest`          | `l`   | Últimos episodios estrenados             |
+| `scoop`           | `sc`  | Cartelera semanal de estrenos            |
+| `history`         | `h`   | Historial de animes vistos               |
+| `source <nombre>` | —     | Cambia la fuente activa                  |
+| `clear`           | `cls` | Limpia la pantalla                       |
+| `exit`            | `q`   | Salir                                    |
 
 ---
 
-## 🛠️ Requisitos del Sistema
+## 🛠️ Requisitos
 
-- **.NET 10 SDK**: Requerido para compilar el código.
-- **mpv**: Obligatorio para reproducir video nativamente.
-- **yt-dlp**: Obligatorio para resolver servidores externos y descargar capítulos.
+- **.NET 10 SDK** para compilar.
+- **mpv** y **yt-dlp**: obligatorios para reproducción y resolución/descarga de capítulos.
 
-> [!WARNING]  
-> **Usuarios de Windows:** A diferencia del instalador de Linux que hace todo automáticamente, en Windows debes instalar `mpv` y `yt-dlp` manualmente (por ejemplo, usando Scoop: `scoop install mpv yt-dlp`) y asegurarte de que estén en tus variables de entorno (PATH) para que tanto la versión Desktop como la CLI puedan encontrarlos.
-
-- **Kitty / Ghostty** (Opcional): Para renderizar imágenes de portadas nativamente en la terminal de Linux.
-
-### Dependencias de Paquetes
-- `HtmlAgilityPack` (Scraping de DOM)
-- `Spectre.Console` (CLI UI)
-- `Avalonia UI` (Desktop UI)
-
-## 👨‍💻 Para Desarrolladores: Compilación y Dependencias
-
-Si clonaste este repositorio desde GitHub, notarás que no hay carpetas `bin/`, `obj/`, ni archivos `.dll` o `.exe` pesados. Esto es **completamente normal y una buena práctica**.
-
-1. **Dependencias C# (.dll)**: No se suben a GitHub. Al ejecutar `dotnet build` o `dotnet run`, el SDK de .NET leerá los archivos `.csproj` y **descargará automáticamente** todas las librerías necesarias (Avalonia, HtmlAgilityPack, etc.) desde NuGet.
-2. **Dependencias Externas (mpv.exe / yt-dlp.exe)**: Tampoco se suben a GitHub porque harían el repositorio inmensamente pesado. Debes descargarlos por tu cuenta (ej. `scoop install mpv yt-dlp`) y asegurarte de que estén en tu PATH. Si vas a generar el instalador `.msi` usando `build-msi.ps1`, el código asumirá que el usuario final los instalará por su cuenta o deberás colocarlos en la carpeta `InstallerDependencies/` (la cual es ignorada por Git) si decides empaquetarlos tú mismo en una versión local.
+> [!WARNING]
+> En Windows debes instalar `mpv` y `yt-dlp` manualmente (p. ej. `scoop install mpv yt-dlp`) y asegurarte de que estén en el PATH. Los instaladores de Linux lo hacen automáticamente.
 
 ---
 
-## 🏗️ Arquitectura del Código
+## 🏗️ Arquitectura
 
-El proyecto sigue una arquitectura modular separando la lógica de las interfaces:
+Proyectos en `src/`:
 
-```text
-ani-cli-dotnet/
-├── src/
-│   ├── AniCS.Core/           # Núcleo: Extractores (JKAnime, etc.), Modelos, Historial interactivo, DataCache.
-│   ├── AniCS.CLI/            # Interfaz CLI: Comandos, Prompt de Detalles, Renderizado (KittyGraphics).
-│   └── AniCS.Desktop/        # Interfaz Gráfica: Ventanas (Avalonia), Descargador (DownloadManager).
-├── Installer/                # Archivos de configuración WiX (v4) para el instalador.
-├── build-msi.ps1             # Script (Windows) para compilar la GUI y generar el instalador MSI.
-├── install.ps1               # Script (Windows) para instalar/actualizar la versión CLI en el sistema.
-├── install.sh                # Script (Linux) para instalar/actualizar la versión CLI en el sistema.
-└── install-desktop.sh        # Script (Linux) para instalar/actualizar la versión Gráfica (Desktop).
-```
+- **AniCS.Core** — Núcleo: extractores, modelos, configuración, caché e historial.
+- **AniCS.Desktop** — GUI Avalonia (MVVM).
+- **AniCS.CLI** — Consola interactiva.
+- **AniCS.Player** — Backends de reproducción (LibVLC, fallback mpv).
+- **AniCS.Resolver** — Resolvedor nativo de enlaces (fallback yt-dlp).
+- **AniCS.Android** — App móvil, comparte vistas con Desktop.
 
 ---
 
-## 🛡️ Seguridad y Características Adicionales
+## 🛡️ Notas
 
-- **Sin navegadores Headless:** Todo funciona mediante peticiones HTTP estáticas rápidas.
-- **Rotación de User-Agent:** Prevención de bloqueos usando cabeceras de navegadores reales.
-- **Caché en Memoria:** Las sinopsis y portadas se guardan en memoria para evitar saturar el servidor y acelerar la navegación.
-- **Historial Binge-Watching:** Al seleccionar el historial, el sistema resalta el último episodio visto y te permite reproducir directamente el siguiente en orden cronológico.
+- AniCS accede a sitios de terceros mediante **web scraping** (sin navegadores headless). Estos sitios pueden cambiar o dejar de estar disponibles sin previo aviso.
+- El software **no aloja contenido**: únicamente facilita el acceso a enlaces públicos. El usuario es responsable del uso que haga conforme a las leyes de su país.
+- Caché en memoria para sinopsis y portadas.
+- Historial con binge-watching: resalta el último episodio visto y permite reproducir el siguiente.
+- Distribuido bajo **licencia MIT** (ver `LICENSE`).
