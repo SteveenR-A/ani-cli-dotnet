@@ -245,7 +245,7 @@ public class MundoDonghuaExtractor : BaseExtractor
         if (doc == null) return servers;
 
         var html = doc.DocumentNode.OuterHtml;
-        var evalMatches = System.Text.RegularExpressions.Regex.Matches(html, @"eval\(function\(p,a,c,k,e,d\).*?return p}\('(.*?)',(\d+),(\d+),'(.*?)'\.split\('\|'\)");
+        var evalMatches = System.Text.RegularExpressions.Regex.Matches(html, @"eval\(function\(p,a,c,k,e,d\)[\s\S]*?return\s+p}[\s\S]*?\(\s*['""]([\s\S]*?)['""]\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*['""]([\s\S]*?)['""]\s*\.split\(\s*['""]\\?\|['""]\s*\)");
 
         foreach (System.Text.RegularExpressions.Match match in evalMatches)
         {
@@ -258,17 +258,15 @@ public class MundoDonghuaExtractor : BaseExtractor
 
                 string unpacked = Unpack(p, a, c, k);
 
-                // Extract iframe src
+                // 1. Extract iframe src
                 var iframeMatch = System.Text.RegularExpressions.Regex.Match(unpacked, @"<iframe[^>]+src=\\?['""]([^'""]+?)(\\?['""])");
                 if (iframeMatch.Success)
                 {
                     string url = iframeMatch.Groups[1].Value.Replace("\\", "");
                     string name = GetServerNameFromUrl(url);
-                    // Servidores externos protegidos (VidHide, Bysekoze, Voe) requieren yt-dlp
-                    bool isDirect = url.Contains(".m3u8") || url.Contains(".mp4");
                     if (!servers.Any(s => s.Url == url))
                     {
-                        servers.Add(new VideoServer { Name = name, Url = url, IsDirectPlaySupported = isDirect });
+                        servers.Add(new VideoServer { Name = name, Url = url, IsDirectPlaySupported = true });
                     }
                 }
                 else
@@ -285,7 +283,7 @@ public class MundoDonghuaExtractor : BaseExtractor
                     }
                 }
 
-                // Check for api_donghua.php (Tamamo server)
+                // 2. Check for api_donghua.php (Tamamo server)
                 var apiMatch = System.Text.RegularExpressions.Regex.Match(unpacked, @"api_donghua\.php.*?slug[""']?\s*:\s*[""']([^""']+)[""']");
                 if (apiMatch.Success)
                 {
@@ -301,17 +299,22 @@ public class MundoDonghuaExtractor : BaseExtractor
                         var apiResp = await Http.SendAsync(req);
                         if (apiResp.IsSuccessStatusCode)
                         {
-                            using var sr = new System.IO.StreamReader(apiResp.Content.ReadAsStream());
-                            var json = sr.ReadToEnd();
-                            var urls = System.Text.RegularExpressions.Regex.Matches(json, @"https?://[^\s""'<>\\]+");
-                            foreach (System.Text.RegularExpressions.Match u in urls)
+                            var jsonStr = await apiResp.Content.ReadAsStringAsync();
+                            using var jdoc = System.Text.Json.JsonDocument.Parse(jsonStr);
+                            foreach (var item in jdoc.RootElement.EnumerateArray())
                             {
-                                var cleanUrl = u.Value.Replace("\\", "");
-                                if (cleanUrl.Contains(".m3u8") || cleanUrl.Contains(".mp4") || cleanUrl.Contains("mnemonicplayer") || cleanUrl.Contains("redirector.php"))
+                                if (item.TryGetProperty("url", out var urlProp))
                                 {
-                                    if (!servers.Any(s => s.Url == cleanUrl))
+                                    var val = urlProp.GetString();
+                                    if (!string.IsNullOrEmpty(val))
                                     {
-                                        servers.Add(new VideoServer { Name = "Tamamo Direct", Url = cleanUrl, IsDirectPlaySupported = true });
+                                        var cleanUrl = val.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                                            ? val
+                                            : $"https://www.mdplayer.xyz/nemonicplayer/dmplayer.php?key={val}";
+                                        if (!servers.Any(s => s.Url == cleanUrl))
+                                        {
+                                            servers.Add(new VideoServer { Name = "Tamamo Direct", Url = cleanUrl, IsDirectPlaySupported = true });
+                                        }
                                     }
                                 }
                             }
@@ -333,15 +336,14 @@ public class MundoDonghuaExtractor : BaseExtractor
                 foreach (var iframe in iframeNodes)
                 {
                     var src = iframe.GetAttributeValue("src", "");
-                    if (!string.IsNullOrEmpty(src))
+                    if (!string.IsNullOrEmpty(src) && !src.Contains("google") && !src.Contains("facebook"))
                     {
                         string name = GetServerNameFromUrl(src);
-                        bool isDirect = false; // VidHide/EmbedWish ya no son nativos
                         servers.Add(new VideoServer
                         {
                             Name = name,
                             Url = src,
-                            IsDirectPlaySupported = isDirect
+                            IsDirectPlaySupported = true
                         });
                     }
                 }
