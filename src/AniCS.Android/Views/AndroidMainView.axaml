@@ -41,11 +41,16 @@
         </Border>
 
         <!-- ── Banner de Conectividad / Offline ── -->
-        <Border Grid.Row="1" Name="OfflineBanner" Background="#C62828" Padding="8,5" IsVisible="False">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
-                <material:MaterialIcon Name="OfflineBannerIcon" Kind="WifiOff" Foreground="White" Width="16" Height="16" VerticalAlignment="Center"/>
-                <TextBlock Name="OfflineBannerText" Text="Sin conexión a internet. Tus descargas están disponibles." Foreground="White" FontWeight="Medium" FontSize="12" VerticalAlignment="Center"/>
-            </StackPanel>
+        <Border Grid.Row="1" Name="OfflineBanner" Background="#C62828" Padding="10,5" IsVisible="False">
+            <Grid ColumnDefinitions="*, Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                    <material:MaterialIcon Name="OfflineBannerIcon" Kind="WifiOff" Foreground="White" Width="16" Height="16" VerticalAlignment="Center"/>
+                    <TextBlock Name="OfflineBannerText" Text="Sin conexión a internet. Tus descargas están disponibles." Foreground="White" FontWeight="Medium" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="4" Margin="6,0,0,0" Click="OnDismissOfflineBannerClicked">
+                    <material:MaterialIcon Kind="Close" Foreground="White" Width="16" Height="16"/>
+                </Button>
+            </Grid>
         </Border>
 
         <!-- ── 2. Área de contenido principal con SplitView (Menú Lateral) ──── -->

@@ -54,6 +54,21 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ── Descargas y Almacenamiento ─────────────────────────────── -->
+                <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="16"
+                        BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="Descargas y Almacenamiento" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" FontSize="16"/>
+                        <TextBlock Text="Carpeta donde se guardan los episodios y animes descargados en el disco local." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+
+                        <Grid ColumnDefinitions="*, Auto, Auto">
+                            <TextBox Name="DownloadDirectoryInput" Grid.Column="0" Margin="0,0,8,0" PlaceholderText="Ruta por defecto" />
+                            <Button Name="BrowseDownloadDirBtn" Grid.Column="1" Content="Examinar..." Margin="0,0,8,0" Click="OnBrowseDownloadDirClicked"/>
+                            <Button Name="ResetDownloadDirBtn" Grid.Column="2" Content="Restablecer" Click="OnResetDownloadDirClicked"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- ── Apariencia ─────────────────────────────────────────────── -->
                 <Border Background="{DynamicResource AppSurfaceColor}" CornerRadius="12" Padding="16"
                         BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1">

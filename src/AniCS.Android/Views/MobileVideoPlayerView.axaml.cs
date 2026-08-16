@@ -82,9 +82,10 @@ public partial class MobileVideoPlayerView : UserControl
         TitleLabel.Text = _title;
         QualityBadge.Text = !string.IsNullOrEmpty(_quality) ? _quality : "Nativo";
 
-        // Abrir automáticamente en modo Horizontal al reproducir video
+        // Abrir automáticamente en modo Horizontal al reproducir video, pantalla completa inmersiva y pantalla activa
         MainActivity.Instance?.SetOrientationLandscape();
         MainActivity.Instance?.EnableImmersiveMode();
+        MainActivity.Instance?.EnableKeepScreenOn();
 
         // Timer de progreso (2x por segundo)
         _progressTimer = new DispatcherTimer
@@ -128,9 +129,10 @@ public partial class MobileVideoPlayerView : UserControl
         _nativePlayer = null;
         PlayerHostContainer.Children.Clear();
 
-        // Restablecer orientación global y barra de estado al salir
+        // Restablecer orientación global, barra de estado y pantalla activa al salir
         MainActivity.Instance?.ResetOrientation();
         MainActivity.Instance?.DisableImmersiveMode();
+        MainActivity.Instance?.DisableKeepScreenOn();
     }
 
     public void ClosePlayer()
@@ -142,6 +144,7 @@ public partial class MobileVideoPlayerView : UserControl
 
         MainActivity.Instance?.ResetOrientation();
         MainActivity.Instance?.DisableImmersiveMode();
+        MainActivity.Instance?.DisableKeepScreenOn();
 
         AndroidMainView.Current?.FinishPlayerClose(this);
     }

@@ -91,6 +91,9 @@ public class AppConfig
 
     /// <summary>Motor de resolución/descarga: Auto (detecta), Native (HLS propio), YtDlp (externo).</summary>
     public ResolverBackendMode ResolverBackend { get; set; } = ResolverBackendMode.Auto;
+
+    /// <summary>Ruta personalizada de almacenamiento y descargas (vacío = por defecto según plataforma).</summary>
+    public string CustomDownloadDirectory { get; set; } = string.Empty;
 }
 
 [System.Text.Json.Serialization.JsonSerializable(typeof(AppConfig))]

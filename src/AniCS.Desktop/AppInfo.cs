@@ -8,43 +8,33 @@ namespace AniCS.Desktop;
 /// </summary>
 public static class AppInfo
 {
-    /// <summary>Version of the currently running assembly (e.g. "1.6.2").</summary>
+    /// <summary>Version of the currently running assembly (e.g. "1.6.3").</summary>
     public static string CurrentVersion =>
-        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.2";
+        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.3";
 
     /// <summary>Local fallback notes, shown when the GitHub release has no body.</summary>
     public static string LatestChangelog { get; set; } =
-        "✨ ¡Novedades y Mejoras de la versión 1.6.2!\n\n" +
-        "📁 Auto-Búsqueda y Sincronización de Animes Locales (PC & Móvil):\n" +
-        "• Al presionar 'Ver Online' en animes importados desde la carpeta de videos sin metadata previa, el sistema busca automáticamente la serie en línea por su título.\n" +
-        "• Recuperación y vinculación permanente de la portada oficial (HD), sinopsis y lista de episodios en el gestor de descargas.\n" +
-        "• Modo de respaldo local: si el anime no está en línea, la vista muestra directamente los episodios descargados para su reproducción sin pantallas en blanco.\n\n" +
-        "🎛️ Auto-Ocultado Inteligente en Pausa (PC):\n" +
-        "• Los controles y el cursor del reproductor ahora se ocultan automáticamente tras 3 segundos de inactividad incluso cuando el video está pausado.\n" +
-        "• Reaparición instantánea ante movimiento del ratón, clics en pantalla o cualquier tecla del teclado.\n\n" +
-        "📂 Blindaje, Migración y Detección de Descargas:\n" +
-        "• Garantizada la ruta oficial de descargas en PC en 'Videos\\AniCS' con reubicación inteligente ante carpetas de OneDrive o rutas movidas.\n" +
-        "• Carga persistente garantizada (EnsureLoaded) y auto-escaneo automático en disco al abrir la pestaña Descargas en PC y Móvil.\n" +
-        "• Migración automática de historiales legacy de descargas (downloads.json).\n\n" +
-        "🎬 Experiencia de Reproducción y Navegación (PC & Móvil):\n" +
-        "• Corrección de navegación móvil: al presionar 'Volver' en el reproductor regresa directamente a la lista de episodios del anime seleccionado sin saltar al Inicio.\n" +
-        "• Indicadores visuales de estado en tiempo real: nuevo badge dinámico tanto en PC como en Android para identificar claramente si el video está 'Cargando stream', 'Almacenando en búfer', 'Reproduciendo' o 'En Pausa', además del avance del búfer de red.\n" +
-        "• Eliminación del aviso flotante al rotar el dispositivo en el reproductor móvil, manteniendo la rotación y modo inmersivo 100% fluidos.\n\n" +
-        "📥 Descargas Continuas, Reanudación Granular y Control de Pausa:\n" +
-        "• Continuidad en segundo plano (Android): nuevo Foreground Service con notificación persistente de progreso y WakeLock para evitar cancelaciones al minimizar la app.\n" +
-        "• Reanudación granular por segmentos (HLS .ts con checkpointing .idx) y por bytes (MP4 con cabeceras Range): reanuda exactamente donde se pausó sin empezar desde cero.\n" +
-        "• Control de Pausar / Reanudar funcional: el botón cambia de forma instantánea a 'Reanudar' al pausar sin perder ni borrar los archivos parciales.\n" +
-        "• Sistema de reintentos automáticos con Jitter (1-3s) y renovación automática de enlaces expirados ante cortes de internet.\n" +
-        "• Corrección al iniciar descargas tras seleccionar servidor en el cuadro de diálogo.\n\n" +
-        "📡 Monitorización de Red y Banner Offline en Tiempo Real:\n" +
-        "• Detección automática del estado de conexión a Internet en PC y Android.\n" +
-        "• Banner superior de estado inmediato al perder señal ('Sin conexión a internet') y confirmación visual al restablecerse.\n\n" +
-        "🔎 Directorio y Búsqueda Avanzada:\n" +
-        "• Paginación completa del catálogo (?p=1, ?p=2, ?p=3...) con navegación de páginas y salto manual directo por número de página.\n" +
-        "• Carga dinámica de la lista completa de más de 45 géneros oficiales desde la web.\n\n" +
-        "🔙 Mejoras previas v1.6.1:\n" +
-        "• Sincronización de volumen con Windows Core Audio y estabilidad de foco.\n" +
-        "• Navegación universal por gestos y botón físico de retroceso en Android.\n" +
-        "• Rediseño estético del reproductor móvil con controles circulares translúcidos.\n\n" +
+        "✨ ¡Novedades y Mejoras de la versión 1.6.3!\n\n" +
+        "📁 Almacenamiento en Carpeta del Sistema DCIM (Android):\n" +
+        "• Las descargas en Android ahora se guardan directamente en la carpeta pública del sistema 'DCIM/AniCS' (/storage/emulated/0/DCIM/AniCS).\n" +
+        "• Tus episodios descargados ahora son reconocidos de forma instantánea por tu galería, gestores de archivos y reproductores nativos del móvil.\n" +
+        "• Solicitud automática de permisos de almacenamiento en tiempo de ejecución (READ_MEDIA_VIDEO, WRITE_EXTERNAL_STORAGE y READ_EXTERNAL_STORAGE).\n\n" +
+        "📱 Modo Pantalla Completa Inmersivo 100% (Android):\n" +
+        "• Eliminación total de la barra de estado (señal, hora, batería, wifi y notificaciones) durante la reproducción en horizontal mediante WindowCompat y WindowInsetsController moderno.\n" +
+        "• Control de inmersión transitoria por deslizamiento para una experiencia cinemática limpia y sin distracciones.\n\n" +
+        "💡 Pantalla Siempre Activa / Wake Lock (Android):\n" +
+        "• El reproductor mantiene la pantalla encendida automáticamente durante la reproducción de videos, evitando que el dispositivo se apague o bloquee por inactividad.\n\n" +
+        "⚙️ Personalización de Ubicación de Almacenamiento (PC & Móvil):\n" +
+        "• Nueva opción en Ajustes para elegir cualquier carpeta personalizada donde se guardan las descargas y animes locales.\n" +
+        "• Selector de carpetas nativo (Examinar...) en PC y opción de restablecer a la ruta por defecto en ambas plataformas.\n\n" +
+        "🛠️ Estabilidad y Corrección de Notas de Parche en Móvil:\n" +
+        "• Corrección del cierre inesperado de la aplicación al presionar 'Ver Notas de Parche' en Ajustes de Android.\n" +
+        "• Visualización dinámica y estilizada de las notas de la versión actual con desplazamiento fluido en el modal.\n\n" +
+        "📡 Banner Offline No Intrusivo y Mejor Control de Red:\n" +
+        "• El aviso 'Sin conexión a internet' se oculta automáticamente al abrir el reproductor de video para no obstaculizar la visualización de episodios locales o remotos.\n" +
+        "• Se añade botón de descarte manual (X) y temporizador de auto-ocultado para el banner offline en PC y Móvil.\n\n" +
+        "🔙 Mejoras previas v1.6.2:\n" +
+        "• Auto-búsqueda y vinculación de metadata oficial para animes locales.\n" +
+        "• Reanudación granular por segmentos HLS y soporte de descarga continua en segundo plano con Foreground Service.\n\n" +
         "¡Gracias por disfrutar de AniCS!";
 }

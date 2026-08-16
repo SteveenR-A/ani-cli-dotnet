@@ -265,10 +265,18 @@ public static class DownloadManager
     private static string ConfigDir => ConfigManager.BaseDataPath;
     private static string DownloadsFile => Path.Combine(ConfigManager.BaseDataPath, "downloads.json");
 
-    public static string DefaultDownloadDirectory
+    /// <summary>
+    /// Ruta de descargas predeterminada provista por la plataforma en tiempo de ejecución (ej. DCIM/AniCS en Android).
+    /// </summary>
+    public static string? PlatformDefaultDownloadDirectory { get; set; }
+
+    public static string SystemDefaultDownloadDirectory
     {
         get
         {
+            if (!string.IsNullOrWhiteSpace(PlatformDefaultDownloadDirectory))
+                return PlatformDefaultDownloadDirectory;
+
             if (OperatingSystem.IsWindows())
             {
                 // En Windows la ruta oficial de descargas es siempre Videos\AniCS (C:\Users\<usuario>\Videos\AniCS)
@@ -283,8 +291,65 @@ public static class DownloadManager
                 return userVideos;
             }
 
+            if (OperatingSystem.IsAndroid())
+            {
+                return Path.Combine("/storage/emulated/0", "DCIM", "AniCS");
+            }
+
             return Path.Combine(ConfigManager.BaseDataPath, "Downloads");
         }
+    }
+
+    public static string DefaultDownloadDirectory
+    {
+        get
+        {
+            var custom = ConfigManager.Current.CustomDownloadDirectory;
+            if (!string.IsNullOrWhiteSpace(custom))
+            {
+                try
+                {
+                    if (!Directory.Exists(custom))
+                    {
+                        Directory.CreateDirectory(custom);
+                    }
+                    return custom;
+                }
+                catch
+                {
+                    // Si falla el acceso o creación de la ruta personalizada, fallback a la ruta por defecto
+                }
+            }
+
+            return SystemDefaultDownloadDirectory;
+        }
+    }
+
+    public static void SetCustomDownloadDirectory(string? newPath)
+    {
+        var cfg = ConfigManager.Current;
+        var cleanPath = newPath?.Trim() ?? string.Empty;
+
+        if (!string.IsNullOrEmpty(cleanPath))
+        {
+            try
+            {
+                if (!Directory.Exists(cleanPath))
+                {
+                    Directory.CreateDirectory(cleanPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("DownloadManager.SetCustomDownloadDirectory", ex);
+            }
+        }
+
+        cfg.CustomDownloadDirectory = cleanPath;
+        ConfigManager.Save(cfg);
+
+        // Re-escanear descargas en disco con la nueva ubicación
+        ScanDiskDownloads();
     }
 
     private static List<DownloadedAnime> _downloads = new();

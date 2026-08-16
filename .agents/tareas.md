@@ -33,3 +33,33 @@ Registro de tareas pendientes, en progreso y completadas del proyecto AniCS.
 - [x] Refactorizar los User-Agents "quemados" a la lista central de `AppConfig.cs` (`RandomUserAgent`).
 - [x] Reparar la advertencia XAML en `SettingsView.axaml` (Watermark → PlaceholderText).
 - [x] Limpiar archivos `.dll` inexistentes del instalador `.wxs` y forzar WiX `4.0.5` en el script PowerShell.
+
+## Pendientes
+
+- [ ] **Bug rotación Android**: al salir del reproductor el móvil queda en modo rotación automática (SensorLandscape/SensorPortrait forzados). Guardar RequestedOrientation previo al entrar y restaurarlo al cerrar.
+
+Contexto del bug
+
+- Al entrar al reproductor, MobileVideoPlayerView.OnLoaded (línea 86) llama SetOrientationLandscape() → RequestedOrientation = SensorLandscape (orientación por sensor).
+- Al salir, OnUnloaded (línea 132) y ClosePlayer (línea 143) llaman ResetOrientation() → fuerza FullUser.
+- FullUser respeta el toggle del sistema: si el usuario tiene rotación automática activada, al salir el teléfono queda rotando → el bug que reportas.
+Cambios
+
+1. src/AniCS.Android/MainActivity.cs — guardar y restaurar la orientación previa:
+
+- Añadir campo private ScreenOrientation? _orientationBeforePlayer;
+- Nuevo método EnterPlayerOrientation(): si _orientationBeforePlayer == null, guarda RequestedOrientation; luego llama SetOrientationLandscape(). (El guard evita que los toggles de rotación dentro del reproductor pisoteen el valor guardado.)
+- Modificar ResetOrientation(): restaura _orientationBeforePlayer ?? FullUser y lo limpia a null.
+
+1. src/AniCS.Android/Views/MobileVideoPlayerView.axaml.cs (línea 86):
+
+- Cambiar MainActivity.Instance?.SetOrientationLandscape() → MainActivity.Instance?.EnterPlayerOrientation().
+
+1. .agents/tareas.md — añadir tarea pendiente:
+
+- [ ] **Bug rotación Android**: al salir del reproductor el móvil queda en modo rotación automática (SensorLandscape/SensorPortrait forzados). Guardar RequestedOrientation previo al entrar y restaurarlo al cerrar.
+Verificación
+- dotnet build src/AniCS.Android/AniCS.Android.csproj (requiere workload android; si no está instalado, se valida sintaxis por lectura).
+Notas
+- Los toggles de rotación dentro del player (AndroidVideoPlayerControl.ToggleOrientation y OnRotateClicked) siguen usando SetOrientationPortrait/SetOrientationLandscape sin tocar el valor guardado — correcto.
+- MainActivity no se recrea en cambio de orientación (declara ConfigurationChanges.Orientation), así que el campo se conserva.

@@ -17,18 +17,49 @@ if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "AniCS.slnx"))) {
 }
 
 function Check-Dotnet {
-    try {
-        $dotnetVersion = dotnet --version
-        Write-Host "[OK] dotnet-sdk detectado ($dotnetVersion)" -ForegroundColor Green
-    } catch {
+    if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
         Write-Host "[ERROR] dotnet-sdk no está instalado o no está en el PATH." -ForegroundColor Red
         Write-Host "Por favor instala .NET 10 SDK y vuelve a intentar." -ForegroundColor Yellow
         exit 1
     }
+
+    try {
+        $dotnetVersion = & dotnet --version 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "dotnet --version falló" }
+        Write-Host "[OK] dotnet-sdk detectado ($dotnetVersion)" -ForegroundColor Green
+    } catch {
+        Write-Host "[ERROR] No se pudo verificar la versión de dotnet." -ForegroundColor Red
+        exit 1
+    }
+}
+
+function Check-Msvc {
+    # NativeAOT en Windows requiere las Build Tools de C++ (cl.exe / link.exe).
+    # Detectamos Visual Studio / Build Tools vía vswhere.
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vswhere) {
+        $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+        if ($LASTEXITCODE -eq 0 -and $vsPath) {
+            Write-Host "[OK] MSVC (Visual Studio Build Tools) detectado." -ForegroundColor Green
+            return
+        }
+    }
+
+    # Fallback: buscar cl.exe directamente en el PATH
+    if (Get-Command cl.exe -ErrorAction SilentlyContinue) {
+        Write-Host "[OK] cl.exe detectado en el PATH." -ForegroundColor Green
+        return
+    }
+
+    Write-Host "[ERROR] No se detectó MSVC (Visual Studio Build Tools con la carga de trabajo 'Desarrollo para escritorio con C++')." -ForegroundColor Red
+    Write-Host "AniCS.CLI usa NativeAOT y necesita cl.exe/link.exe para compilar." -ForegroundColor Yellow
+    Write-Host "Instala Visual Studio Build Tools (o Visual Studio 2022) y marca el componente 'Desarrollo para escritorio con C++', luego reintenta." -ForegroundColor Yellow
+    exit 1
 }
 
 function Install-AniCS {
     Check-Dotnet
+    Check-Msvc
 
     Write-Host "`n--- Paso 1: Obteniendo Código Fuente ---" -ForegroundColor Cyan
     if ($IsLocalRepo) {
@@ -86,6 +117,7 @@ function Install-AniCS {
 
 function Update-AniCS {
     Check-Dotnet
+    Check-Msvc
     Write-Host "`nActualizando AniCS CLI desde GitHub..." -ForegroundColor Cyan
 
     $TempRepoDir = $DefaultRepoDir

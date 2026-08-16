@@ -1,58 +1,49 @@
-# 🚀 AniCS v1.6.2 — Registro de Cambios
+# 🚀 AniCS v1.6.3 — Registro de Cambios
 
-¡Nueva actualización repleta de mejoras en el gestor de descargas, conectividad, reproducción y navegación!
-
----
-
-### 📁 Auto-Búsqueda y Sincronización de Animes Locales (PC & Móvil)
-- **Sincronización online:** Al pulsar *"Ver Online"* en animes importados desde la carpeta de videos sin metadata previa, el sistema busca automáticamente la serie en línea por su título.
-- **Portadas HD y Metadata:** Recuperación y vinculación permanente de la portada oficial (HD), sinopsis y lista de episodios en el gestor de descargas.
-- **Modo de respaldo local:** Si el anime no está en línea, la vista muestra directamente los episodios descargados para su reproducción sin pantallas en blanco.
+¡Nueva actualización repleta de mejoras en almacenamiento en Android, modo inmersivo completo, pantalla activa en reproducción, personalización de rutas y corrección de estabilidad!
 
 ---
 
-### 🎛️ Auto-Ocultado Inteligente en Pausa (PC)
-- Los controles y el cursor del reproductor ahora se ocultan automáticamente tras 3 segundos de inactividad incluso cuando el video está pausado.
-- Reaparición instantánea ante movimiento del ratón, clics en pantalla o cualquier tecla del teclado.
+### 📁 Almacenamiento en Carpeta Pública del Sistema DCIM (Android)
+- **Descargas en DCIM:** Las descargas en Android ahora se guardan directamente en la carpeta pública del sistema `DCIM/AniCS` (`/storage/emulated/0/DCIM/AniCS`).
+- **Compatibilidad total con apps del sistema:** Los episodios descargados son reconocidos de forma inmediata por la galería multimedia de Android, reproductores nativos y gestores de archivos.
+- **Gestión de Permisos:** Configuración automática y solicitud en tiempo de ejecución de permisos de almacenamiento (`READ_MEDIA_VIDEO`, `READ_MEDIA_IMAGES`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`) y `requestLegacyExternalStorage`.
 
 ---
 
-### 📂 Blindaje, Migración y Detección de Descargas
-- **Ruta oficial blindada:** Garantizada la ruta oficial de descargas en PC en `Videos\AniCS` con reubicación inteligente ante carpetas de OneDrive o rutas movidas.
-- **Carga garantizada (`EnsureLoaded`):** Auto-escaneo automático en disco al abrir la pestaña Descargas en PC y Móvil.
-- **Migración automática:** Detección e importación automática de historiales legacy (`downloads.json`).
+### 📱 Modo Pantalla Completa Inmersivo 100% (Android)
+- **Ocultación total de barras del sistema:** Eliminación completa de la barra de estado superior (señal, hora, batería, wifi y notificaciones) durante la reproducción en horizontal mediante `WindowCompat` y `WindowInsetsControllerCompat`.
+- **Inmersión transitoria (`BehaviorShowTransientBarsBySwipe`):** Deslizar brevemente desde los bordes muestra los controles del sistema momentáneamente sin interrumpir la experiencia cinemática.
+- **Persistencia al rotar:** El reproductor conserva la inmersión completa ante cambios de orientación o cambios de foco en la aplicación.
 
 ---
 
-### 🎬 Experiencia de Reproducción y Navegación (PC & Móvil)
-- **Navegación móvil fluida:** Al pulsar *"Volver"* en el reproductor móvil regresa directamente a la lista de episodios del anime seleccionado sin saltar al Inicio.
-- **Indicadores visuales en tiempo real:** Nuevo badge dinámico tanto en PC como en Android para identificar claramente si el video está *'Cargando stream'*, *'Almacenando en búfer'*, *'Reproduciendo'* o *'En Pausa'*, además del avance del búfer de red.
-- **Rotación sin avisos:** Eliminación del aviso flotante al rotar el dispositivo en el reproductor móvil, manteniendo la rotación y modo inmersivo 100% fluidos.
+### 💡 Pantalla Siempre Activa / Wake Lock (Android)
+- **Prevención de suspensión:** El reproductor mantiene la pantalla encendida de forma continua durante la reproducción de videos, evitando que el móvil se apague o bloquee por inactividad.
+- **Liberación automática:** El bloqueo de suspensión se desactiva al pausar o salir del reproductor de video para optimizar la batería.
 
 ---
 
-### 📥 Descargas Continuas, Reanudación Granular y Control de Pausa
-- **Continuidad en segundo plano (Android):** Nuevo *Foreground Service* con notificación persistente de progreso y *WakeLock* para evitar cancelaciones al minimizar la app.
-- **Reanudación granular:** Checkpointing por segmentos (HLS `.ts` con `.idx`) y por bytes (MP4 con cabeceras `Range`): reanuda exactamente donde se pausó sin empezar desde cero.
-- **Control de Pausar / Reanudar funcional:** El botón cambia de forma instantánea a *"▶️ Reanudar"* al pausar sin perder ni borrar los archivos parciales.
-- **Transición limpia:** Las descargas completadas se guardan en la biblioteca y se retiran de las descargas activas automáticamente.
-- **Reintentos automáticos:** Sistema de hasta 3 intentos con Jitter (1-3s) y renovación automática de enlaces expirados ante cortes de internet.
+### ⚙️ Personalización de la Carpeta de Descargas (PC & Móvil)
+- **Ubicación a medida:** Nueva sección en Ajustes para elegir cualquier carpeta personalizada donde almacenar las descargas y animes locales.
+- **Selector de carpetas nativo:** Botón *"Examinar..."* en PC para seleccionar directorios visualmente y botón *"Restablecer"* a la ruta por defecto en ambas plataformas.
 
 ---
 
-### 📡 Monitorización de Red y Banner Offline en Tiempo Real
-- Detección automática del estado de conexión a Internet en PC y Android con `NetworkService`.
-- Banner superior de aviso inmediato al perder señal (*"Sin conexión a internet"*) y confirmación visual al restablecerse.
+### 🛠️ Estabilidad y Corrección de Notas de Parche en Móvil
+- **Solución al cierre inesperado:** Corrección de la excepción de recursos al pulsar *"Ver Notas de Parche"* en Ajustes de Android.
+- **Notas dinámicas y estilizadas:** Visualización interactiva y con diseño moderno del registro de cambios completo dentro del modal.
 
 ---
 
-### 🔎 Directorio y Búsqueda Avanzada
-- Paginación completa del catálogo (`?p=1`, `?p=2`, `?p=3`...) con barra de navegación y **salto manual directo por número de página**.
-- Carga dinámica de la lista completa de más de 45 géneros oficiales desde la web.
+### 📡 Banner Offline No Intrusivo y Mejor Control de Red
+- **Ocultado en reproducción:** El banner *"Sin conexión a internet"* se oculta automáticamente al abrir el reproductor de video para disfrutar del contenido sin obstrucciones visuales.
+- **Descarte manual y auto-ocultado:** Se añade botón de descarte manual `(X)` y temporizador de auto-ocultado tras 6 segundos al perder la conexión en PC y Móvil.
 
 ---
 
-### 🔙 Mejoras previas v1.6.1
-- Sincronización de volumen con Windows Core Audio y estabilidad de foco.
-- Navegación universal por gestos y botón físico de retroceso en Android.
-- Rediseño estético del reproductor móvil con controles circulares translúcidos.
+### 🔙 Mejoras previas v1.6.2
+- Auto-búsqueda y vinculación de metadata oficial para animes locales.
+- Auto-ocultado de controles en pausa en PC.
+- Checkpointing y reanudación granular de descargas por segmentos HLS y soporte de descarga continua en segundo plano con Foreground Service.
+- Paginación completa del catálogo con salto manual a cualquier página.

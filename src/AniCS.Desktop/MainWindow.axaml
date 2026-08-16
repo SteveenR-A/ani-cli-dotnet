@@ -41,11 +41,16 @@
         </Border>
 
         <!-- Offline / Network Status Banner -->
-        <Border Grid.Row="1" Name="OfflineBanner" Background="#C62828" Padding="12,7" IsVisible="False">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                <material:MaterialIcon Name="OfflineBannerIcon" Kind="WifiOff" Foreground="White" Width="18" Height="18" VerticalAlignment="Center"/>
-                <TextBlock Name="OfflineBannerText" Text="Sin conexión a internet. Los animes descargados siguen disponibles en tu biblioteca." Foreground="White" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
-            </StackPanel>
+        <Border Grid.Row="1" Name="OfflineBanner" Background="#C62828" Padding="12,6" IsVisible="False">
+            <Grid ColumnDefinitions="*, Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                    <material:MaterialIcon Name="OfflineBannerIcon" Kind="WifiOff" Foreground="White" Width="18" Height="18" VerticalAlignment="Center"/>
+                    <TextBlock Name="OfflineBannerText" Text="Sin conexión a internet. Los animes descargados siguen disponibles en tu biblioteca." Foreground="White" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="4" Margin="8,0,4,0" Cursor="Hand" Click="OnDismissOfflineBannerClicked">
+                    <material:MaterialIcon Kind="Close" Foreground="White" Width="16" Height="16"/>
+                </Button>
+            </Grid>
         </Border>
 
         <!-- Main Content with SplitView -->

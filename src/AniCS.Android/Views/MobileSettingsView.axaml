@@ -82,6 +82,13 @@
                             <Button Content="Limpiar Caché" Background="Transparent" Foreground="{DynamicResource AppWarningColor}" BorderBrush="{DynamicResource AppWarningColor}" BorderThickness="1" Padding="10,6" Click="OnClearCacheClicked"/>
                             <Button Content="Limpiar Historial" Background="Transparent" Foreground="{DynamicResource AppDangerColor}" BorderBrush="{DynamicResource AppDangerColor}" BorderThickness="1" Padding="10,6" Click="OnClearHistoryClicked"/>
                         </StackPanel>
+
+                        <Separator Background="{DynamicResource AppSubtextColor}" Opacity="0.2"/>
+
+                        <TextBlock Text="Ubicación de Descargas" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource AppTitleColor}"/>
+                        <TextBlock Text="Carpeta donde se almacenan los animes descargados." FontSize="11" Foreground="{DynamicResource AppSubtextColor}"/>
+                        <TextBox Name="DownloadDirectoryInput" PlaceholderText="Ruta de descargas" />
+                        <Button Name="ResetDownloadDirBtn" Content="Restablecer ruta por defecto" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1" Padding="10,6" Click="OnResetDownloadDirClicked" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </Border>
 
@@ -118,7 +125,7 @@
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*, Auto">
-                            <TextBlock Name="AppVersionText" Grid.Column="0" Text="Versión: 1.6.1" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource AppSubtextColor}"/>
+                            <TextBlock Name="AppVersionText" Grid.Column="0" Text="Versión: 1.6.3" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource AppSubtextColor}"/>
                             <Button Grid.Column="1" Content="Ver Notas de Parche" Click="OnViewChangelogClicked" Padding="10,6" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1"/>
                         </Grid>
                     </StackPanel>

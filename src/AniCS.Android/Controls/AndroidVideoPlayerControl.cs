@@ -318,21 +318,24 @@ public class AndroidVideoPlayerControl : NativeControlHost
     {
         var context = global::Android.App.Application.Context;
 
-        // 1. Root FrameLayout
+        // 1. Root FrameLayout (Pantalla completa sin insets y manteniendo pantalla encendida)
         _rootLayout = new FrameLayout(context)
         {
             LayoutParameters = new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
-                ViewGroup.LayoutParams.MatchParent)
+                ViewGroup.LayoutParams.MatchParent),
+            KeepScreenOn = true
         };
+        _rootLayout.SetFitsSystemWindows(false);
         _rootLayout.SetBackgroundColor(Color.Black);
 
-        // 2. TextureView (Child 0: Video layer)
+        // 2. TextureView (Child 0: Video layer con KeepScreenOn)
         _textureView = new TextureView(context)
         {
             LayoutParameters = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
-                ViewGroup.LayoutParams.MatchParent)
+                ViewGroup.LayoutParams.MatchParent),
+            KeepScreenOn = true
         };
         _textureView.SurfaceTextureListener = new SurfaceTextureListenerHelper(this);
         _rootLayout.AddView(_textureView);
@@ -340,6 +343,8 @@ public class AndroidVideoPlayerControl : NativeControlHost
         // 3. Native Overlay FrameLayout (Child 1: Controls layer - Guaranteed 100% on top)
         _overlayLayout = BuildNativeOverlay(context);
         _rootLayout.AddView(_overlayLayout);
+
+        MainActivity.Instance?.EnableKeepScreenOn();
 
         return new AndroidPlatformHandle(_rootLayout.Handle, "AndroidView");
     }

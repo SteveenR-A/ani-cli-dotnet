@@ -1,6 +1,7 @@
 using Android.App;
 using Android.OS;
 using AndroidX.Activity;
+using AndroidX.Core.View;
 using Avalonia;
 using Avalonia.Android;
 using AniCS.Android.Services;
@@ -31,6 +32,7 @@ namespace AniCS.Android;
 public class MainActivity : AvaloniaMainActivity
 {
     public static MainActivity? Instance { get; private set; }
+    private bool _isImmersiveModeActive = false;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -81,6 +83,80 @@ public class MainActivity : AvaloniaMainActivity
             };
         }
         catch { }
+
+        // 4. Configurar la carpeta oficial de descargas en DCIM/AniCS
+        try
+        {
+            var dcimDir = global::Android.OS.Environment.GetExternalStoragePublicDirectory(global::Android.OS.Environment.DirectoryDcim);
+            if (dcimDir != null && !string.IsNullOrEmpty(dcimDir.AbsolutePath))
+            {
+                AniCS.Desktop.Services.DownloadManager.PlatformDefaultDownloadDirectory = System.IO.Path.Combine(dcimDir.AbsolutePath, "AniCS");
+            }
+            else
+            {
+                AniCS.Desktop.Services.DownloadManager.PlatformDefaultDownloadDirectory = System.IO.Path.Combine("/storage/emulated/0", "DCIM", "AniCS");
+            }
+        }
+        catch
+        {
+            AniCS.Desktop.Services.DownloadManager.PlatformDefaultDownloadDirectory = System.IO.Path.Combine("/storage/emulated/0", "DCIM", "AniCS");
+        }
+
+        // 5. Solicitar permisos de almacenamiento si no han sido concedidos
+        RequestStoragePermissions();
+    }
+
+    private void RequestStoragePermissions()
+    {
+        try
+        {
+            var permissionsToRequest = new System.Collections.Generic.List<string>();
+
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu) // API 33+ (Android 13+)
+            {
+                if (CheckSelfPermission(global::Android.Manifest.Permission.ReadMediaVideo) != global::Android.Content.PM.Permission.Granted)
+                {
+                    permissionsToRequest.Add(global::Android.Manifest.Permission.ReadMediaVideo);
+                }
+                if (CheckSelfPermission(global::Android.Manifest.Permission.ReadMediaImages) != global::Android.Content.PM.Permission.Granted)
+                {
+                    permissionsToRequest.Add(global::Android.Manifest.Permission.ReadMediaImages);
+                }
+                if (CheckSelfPermission(global::Android.Manifest.Permission.PostNotifications) != global::Android.Content.PM.Permission.Granted)
+                {
+                    permissionsToRequest.Add(global::Android.Manifest.Permission.PostNotifications);
+                }
+            }
+            else
+            {
+                if (CheckSelfPermission(global::Android.Manifest.Permission.WriteExternalStorage) != global::Android.Content.PM.Permission.Granted)
+                {
+                    permissionsToRequest.Add(global::Android.Manifest.Permission.WriteExternalStorage);
+                }
+                if (CheckSelfPermission(global::Android.Manifest.Permission.ReadExternalStorage) != global::Android.Content.PM.Permission.Granted)
+                {
+                    permissionsToRequest.Add(global::Android.Manifest.Permission.ReadExternalStorage);
+                }
+            }
+
+            if (permissionsToRequest.Count > 0)
+            {
+                RequestPermissions(permissionsToRequest.ToArray(), 1001);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            global::Android.Util.Log.Error("AniCS_Storage", $"Error requesting storage permissions: {ex}");
+        }
+    }
+
+    public override void OnWindowFocusChanged(bool hasFocus)
+    {
+        base.OnWindowFocusChanged(hasFocus);
+        if (hasFocus && _isImmersiveModeActive)
+        {
+            ApplyImmersiveMode();
+        }
     }
 
     public override void OnBackPressed()
@@ -125,12 +201,54 @@ public class MainActivity : AvaloniaMainActivity
         RequestedOrientation = global::Android.Content.PM.ScreenOrientation.FullUser;
     }
 
+    public void EnableKeepScreenOn()
+    {
+        RunOnUiThread(() =>
+        {
+            try
+            {
+                Window?.AddFlags(global::Android.Views.WindowManagerFlags.KeepScreenOn);
+            }
+            catch { }
+        });
+    }
+
+    public void DisableKeepScreenOn()
+    {
+        RunOnUiThread(() =>
+        {
+            try
+            {
+                Window?.ClearFlags(global::Android.Views.WindowManagerFlags.KeepScreenOn);
+            }
+            catch { }
+        });
+    }
+
     public void EnableImmersiveMode()
+    {
+        _isImmersiveModeActive = true;
+        RunOnUiThread(ApplyImmersiveMode);
+    }
+
+    private void ApplyImmersiveMode()
     {
         try
         {
+            if (Window == null) return;
+
+            // 1. AndroidX WindowCompat (Moderno, Android 11+ / API 30+)
+            WindowCompat.SetDecorFitsSystemWindows(Window, false);
+            var insetsController = WindowCompat.GetInsetsController(Window, Window.DecorView);
+            if (insetsController != null)
+            {
+                insetsController.Hide(WindowInsetsCompat.Type.SystemBars());
+                insetsController.SystemBarsBehavior = WindowInsetsControllerCompat.BehaviorShowTransientBarsBySwipe;
+            }
+
+            // 2. Flags clásicos como respaldo para versiones anteriores de Android
 #pragma warning disable CS0618
-            if (Window?.DecorView != null)
+            if (Window.DecorView != null)
             {
                 Window.DecorView.SystemUiVisibility = (global::Android.Views.StatusBarVisibility)(
                     global::Android.Views.SystemUiFlags.Fullscreen |
@@ -147,16 +265,31 @@ public class MainActivity : AvaloniaMainActivity
 
     public void DisableImmersiveMode()
     {
-        try
+        _isImmersiveModeActive = false;
+        RunOnUiThread(() =>
         {
-#pragma warning disable CS0618
-            if (Window?.DecorView != null)
+            try
             {
-                Window.DecorView.SystemUiVisibility = (global::Android.Views.StatusBarVisibility)global::Android.Views.SystemUiFlags.Visible;
-            }
+                if (Window == null) return;
+
+                // 1. AndroidX WindowCompat
+                WindowCompat.SetDecorFitsSystemWindows(Window, true);
+                var insetsController = WindowCompat.GetInsetsController(Window, Window.DecorView);
+                if (insetsController != null)
+                {
+                    insetsController.Show(WindowInsetsCompat.Type.SystemBars());
+                }
+
+                // 2. Flags clásicos
+#pragma warning disable CS0618
+                if (Window.DecorView != null)
+                {
+                    Window.DecorView.SystemUiVisibility = (global::Android.Views.StatusBarVisibility)global::Android.Views.SystemUiFlags.Visible;
+                }
 #pragma warning restore CS0618
-        }
-        catch { }
+            }
+            catch { }
+        });
     }
 
     private class BackPressHandler : OnBackPressedCallback

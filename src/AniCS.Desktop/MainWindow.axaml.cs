@@ -75,6 +75,12 @@ public partial class MainWindow : Window, INavigableHost
         Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateOfflineBanner(isConnected));
     }
 
+    private void OnDismissOfflineBannerClicked(object? sender, RoutedEventArgs e)
+    {
+        var banner = this.FindControl<Border>("OfflineBanner");
+        if (banner != null) banner.IsVisible = false;
+    }
+
     private void UpdateOfflineBanner(bool isConnected)
     {
         var banner = this.FindControl<Border>("OfflineBanner");
@@ -89,6 +95,15 @@ public partial class MainWindow : Window, INavigableHost
             icon.Kind = Material.Icons.MaterialIconKind.WifiOff;
             text.Text = "Sin conexión a internet. Los animes descargados siguen disponibles en tu biblioteca.";
             banner.IsVisible = true;
+
+            // Auto-ocultar tras 6 segundos para no invadir la pantalla
+            Avalonia.Threading.DispatcherTimer.RunOnce(() =>
+            {
+                if (!AniCS.Core.Services.NetworkService.IsConnected && banner.IsVisible)
+                {
+                    banner.IsVisible = false;
+                }
+            }, TimeSpan.FromSeconds(6));
         }
         else if (banner.IsVisible)
         {

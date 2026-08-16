@@ -39,8 +39,24 @@ public partial class MobileSettingsView : UserControl
         // Cache limit
         CacheLimitInput.Value = cfg.MaxImageCacheCount;
 
+        // Ubicación de descargas
+        if (DownloadDirectoryInput != null)
+        {
+            DownloadDirectoryInput.Text = !string.IsNullOrWhiteSpace(cfg.CustomDownloadDirectory)
+                ? cfg.CustomDownloadDirectory
+                : Desktop.Services.DownloadManager.SystemDefaultDownloadDirectory;
+        }
+
         // Versión
         AppVersionText.Text = $"Versión: {AppInfo.CurrentVersion}";
+    }
+
+    private void OnResetDownloadDirClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DownloadDirectoryInput != null)
+        {
+            DownloadDirectoryInput.Text = Desktop.Services.DownloadManager.SystemDefaultDownloadDirectory;
+        }
     }
 
     private void OnThemeSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -99,30 +115,30 @@ public partial class MobileSettingsView : UserControl
 
     private async void OnCheckForUpdatesClicked(object? sender, RoutedEventArgs e)
     {
-        CheckForUpdatesBtn.IsEnabled = false;
-        UpdateStatusText.Text = "Buscando actualizaciones en GitHub...";
+        UpdateStatusText.Text = "Comprobando actualizaciones...";
         UpdateStatusText.Foreground = (IBrush)this.FindResource("AppSubtextColor")!;
+        CheckForUpdatesBtn.IsEnabled = false;
+        DownloadUpdateBtn.IsVisible = false;
 
         try
         {
-            var currentVersion = AppInfo.CurrentVersion.Split('+')[0].Trim();
-            _availableUpdate = await AndroidUpdateService.CheckAsync(currentVersion);
-
-            if (_availableUpdate != null)
+            var update = await AndroidUpdateService.CheckAsync(AppInfo.CurrentVersion);
+            if (update != null)
             {
-                UpdateStatusText.Text = $"¡Nueva versión {_availableUpdate.Version} disponible!";
+                _availableUpdate = update;
+                UpdateStatusText.Text = $"¡Nueva versión disponible: v{update.Version}!\n{update.ReleaseNotes}";
                 UpdateStatusText.Foreground = Brushes.LightGreen;
                 DownloadUpdateBtn.IsVisible = true;
             }
             else
             {
-                UpdateStatusText.Text = "Tienes la versión más reciente.";
-                DownloadUpdateBtn.IsVisible = false;
+                UpdateStatusText.Text = "Estás utilizando la versión más reciente.";
+                UpdateStatusText.Foreground = (IBrush)this.FindResource("AppSubtextColor")!;
             }
         }
         catch (Exception ex)
         {
-            UpdateStatusText.Text = $"Error al buscar actualización: {ex.Message}";
+            UpdateStatusText.Text = $"Error al buscar: {ex.Message}";
             UpdateStatusText.Foreground = Brushes.Salmon;
         }
         finally
@@ -138,23 +154,21 @@ public partial class MobileSettingsView : UserControl
         DownloadUpdateBtn.IsEnabled = false;
         UpdateProgress.IsVisible = true;
         UpdateProgressText.IsVisible = true;
-        UpdateStatusText.Text = "Descargando paquete APK...";
+        UpdateStatusText.Text = "Descargando e instalando APK...";
 
         try
         {
             await AndroidUpdateService.DownloadAndInstallAsync(
                 MainActivity.Instance,
                 _availableUpdate.ApkUrl,
-                progress =>
+                pct =>
                 {
                     Dispatcher.UIThread.Post(() =>
                     {
-                        UpdateProgress.Value = progress * 100;
-                        UpdateProgressText.Text = $"{progress * 100:F0}%";
+                        UpdateProgress.Value = pct * 100;
+                        UpdateProgressText.Text = $"{pct * 100:F0}%";
                     });
                 });
-
-            UpdateStatusText.Text = "Instalador iniciado. Sigue las instrucciones del sistema.";
         }
         catch (Exception ex)
         {
@@ -169,87 +183,57 @@ public partial class MobileSettingsView : UserControl
 
     private void OnViewChangelogClicked(object? sender, RoutedEventArgs e)
     {
-        var panel = new StackPanel { Spacing = 10 };
-
-        var versionHeader = new Border
+        try
         {
-            Background = (IBrush)this.FindResource("AppPrimaryColor")!,
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12, 6),
-            Margin = new Thickness(0, 0, 0, 6)
-        };
-        versionHeader.Child = new TextBlock
-        {
-            Text = $"Versión {AppInfo.CurrentVersion} — Registro de Cambios",
-            FontWeight = FontWeight.Bold,
-            FontSize = 13,
-            Foreground = Brushes.White,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
-        };
-        panel.Children.Add(versionHeader);
+            var panel = new StackPanel { Spacing = 10 };
 
-        var items = new (Material.Icons.MaterialIconKind icon, string title, string description)[]
-        {
-            (Material.Icons.MaterialIconKind.VolumeHigh, "[Audio & Sincronía]", "Corrección del problema de desincronización de audio y mixer en el reproductor."),
-            (Material.Icons.MaterialIconKind.PlayBoxMultipleOutline, "[Reproductor & OSD]", "Migración a TextureView nativo con aspecto centrado y controles al frente."),
-            (Material.Icons.MaterialIconKind.DownloadNetworkOutline, "[Descargas]", "Sincronización en tiempo real de episodios descargados y soporte Mediafire/HLS."),
-            (Material.Icons.MaterialIconKind.Cellphone, "[Navegación]", "Navegación con historial y confirmación de doble toque para salir."),
-            (Material.Icons.MaterialIconKind.History, "[Historial]", "Visualización de portadas y reanudación de animes vistos.")
-        };
+            var primaryBrush = (IBrush)(this.TryFindResource("AppPrimaryColor", out var pBrush) ? pBrush! : Brushes.Purple);
+            var cardBrush = (IBrush)(this.TryFindResource("AppCardBg", out var cBrush) ? cBrush! : (this.TryFindResource("AppSurfaceColor", out var sBrush) ? sBrush! : Brushes.DarkSlateGray));
+            var textBrush = (IBrush)(this.TryFindResource("AppTextColor", out var tBrush) ? tBrush! : Brushes.White);
 
-        var primaryBrush = (IBrush)this.FindResource("AppPrimaryColor")!;
-        var titleBrush = (IBrush)this.FindResource("AppTitleColor")!;
-        var subtextBrush = (IBrush)this.FindResource("AppSubtextColor")!;
-
-        foreach (var (icon, title, desc) in items)
-        {
-            var itemBorder = new Border
+            var versionHeader = new Border
             {
-                Background = (IBrush)this.FindResource("AppCardBg")!,
+                Background = primaryBrush,
                 CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(10, 8),
-                Margin = new Thickness(0, 0, 0, 4)
+                Padding = new Thickness(12, 8),
+                Margin = new Thickness(0, 0, 0, 6)
             };
-
-            var grid = new Grid
+            versionHeader.Child = new TextBlock
             {
-                ColumnDefinitions = new ColumnDefinitions("36, *")
-            };
-
-            var mIcon = new Material.Icons.Avalonia.MaterialIcon
-            {
-                Kind = icon,
-                Width = 22,
-                Height = 22,
-                Foreground = primaryBrush,
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-            };
-            Grid.SetColumn(mIcon, 0);
-
-            var textStack = new StackPanel { Spacing = 2 };
-            textStack.Children.Add(new TextBlock
-            {
-                Text = title,
+                Text = $"Versión {AppInfo.CurrentVersion} — Registro de Cambios",
                 FontWeight = FontWeight.Bold,
                 FontSize = 13,
-                Foreground = titleBrush
-            });
-            textStack.Children.Add(new TextBlock
+                Foreground = Brushes.White,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
+            };
+            panel.Children.Add(versionHeader);
+
+            var notesBorder = new Border
             {
-                Text = desc,
-                FontSize = 11,
+                Background = cardBrush,
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(14, 12),
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+
+            var changelogText = new TextBlock
+            {
+                Text = AppInfo.LatestChangelog,
+                FontSize = 12,
+                LineHeight = 18,
                 TextWrapping = TextWrapping.Wrap,
-                Foreground = subtextBrush
-            });
-            Grid.SetColumn(textStack, 1);
+                Foreground = textBrush
+            };
+            notesBorder.Child = changelogText;
+            panel.Children.Add(notesBorder);
 
-            grid.Children.Add(mIcon);
-            grid.Children.Add(textStack);
-            itemBorder.Child = grid;
-            panel.Children.Add(itemBorder);
+            AndroidMainView.Current?.ShowModal("Notas de la Versión", panel);
         }
-
-        AndroidMainView.Current?.ShowModal("Notas de la Versión", panel);
+        catch (Exception ex)
+        {
+            AppLogger.Error("MobileSettingsView.OnViewChangelogClicked", ex);
+            ShowStatus($"Error al abrir notas: {ex.Message}", Brushes.Salmon);
+        }
     }
 
     private void OnSaveClicked(object? sender, RoutedEventArgs e)
@@ -264,6 +248,17 @@ public partial class MobileSettingsView : UserControl
 
         cfg.CustomJkAnimeBaseUrl = CustomJkAnimeUrlInput.Text?.Trim() ?? "https://jkanime.net";
         cfg.MaxImageCacheCount = (int)(CacheLimitInput.Value ?? 100);
+
+        if (DownloadDirectoryInput != null)
+        {
+            var customDir = DownloadDirectoryInput.Text?.Trim() ?? string.Empty;
+            if (customDir.Equals(Desktop.Services.DownloadManager.SystemDefaultDownloadDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                customDir = string.Empty;
+            }
+            cfg.CustomDownloadDirectory = customDir;
+            Desktop.Services.DownloadManager.SetCustomDownloadDirectory(customDir);
+        }
 
         ConfigManager.Save(cfg);
         ShowStatus("¡Configuración guardada correctamente!", Brushes.LightGreen);

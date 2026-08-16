@@ -39,6 +39,13 @@ public partial class SettingsView : UserControl
 
         CustomPlayerPathInput.Text = config.CustomPlayerExePath;
 
+        if (DownloadDirectoryInput != null)
+        {
+            DownloadDirectoryInput.Text = !string.IsNullOrWhiteSpace(config.CustomDownloadDirectory)
+                ? config.CustomDownloadDirectory
+                : Services.DownloadManager.SystemDefaultDownloadDirectory;
+        }
+
         RefreshThemeList(config);
         RefreshParadigmList(config);
 
@@ -52,6 +59,32 @@ public partial class SettingsView : UserControl
         StatusMessage.IsVisible = false;
 
         ResetUpdateSection();
+    }
+
+    private async void OnBrowseDownloadDirClicked(object? sender, RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider == null) return;
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions
+        {
+            Title = "Seleccionar carpeta de descargas de AniCS",
+            AllowMultiple = false
+        });
+
+        if (folders.Count > 0)
+        {
+            var localPath = folders[0].Path.LocalPath;
+            if (!string.IsNullOrWhiteSpace(localPath))
+            {
+                DownloadDirectoryInput.Text = localPath;
+            }
+        }
+    }
+
+    private void OnResetDownloadDirClicked(object? sender, RoutedEventArgs e)
+    {
+        DownloadDirectoryInput.Text = Services.DownloadManager.SystemDefaultDownloadDirectory;
     }
 
     private void ResetUpdateSection()
@@ -115,6 +148,16 @@ public partial class SettingsView : UserControl
         };
 
         config.CustomPlayerExePath = CustomPlayerPathInput.Text ?? string.Empty;
+
+        if (DownloadDirectoryInput != null)
+        {
+            var customDir = DownloadDirectoryInput.Text?.Trim() ?? string.Empty;
+            if (customDir.Equals(Services.DownloadManager.SystemDefaultDownloadDirectory, System.StringComparison.OrdinalIgnoreCase))
+            {
+                customDir = string.Empty;
+            }
+            Services.DownloadManager.SetCustomDownloadDirectory(customDir);
+        }
 
         if (ParadigmComboBox != null && ParadigmComboBox.SelectedItem is Avalonia.Controls.ComboBoxItem paradigmItem && paradigmItem.Tag != null)
         {

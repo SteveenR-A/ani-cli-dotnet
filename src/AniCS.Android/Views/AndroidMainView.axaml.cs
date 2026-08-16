@@ -125,6 +125,12 @@ public partial class AndroidMainView : UserControl, INavigableHost
         Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateOfflineBanner(isConnected));
     }
 
+    private void OnDismissOfflineBannerClicked(object? sender, RoutedEventArgs e)
+    {
+        var banner = this.FindControl<Border>("OfflineBanner");
+        if (banner != null) banner.IsVisible = false;
+    }
+
     private void UpdateOfflineBanner(bool isConnected)
     {
         var banner = this.FindControl<Border>("OfflineBanner");
@@ -133,12 +139,28 @@ public partial class AndroidMainView : UserControl, INavigableHost
 
         if (banner == null || text == null || icon == null) return;
 
+        // Si el reproductor de video está activo, nunca mostrar el banner encima
+        if (MainContent.Content is MobileVideoPlayerView)
+        {
+            banner.IsVisible = false;
+            return;
+        }
+
         if (!isConnected)
         {
             banner.Background = Avalonia.Media.Brush.Parse("#C62828");
             icon.Kind = Material.Icons.MaterialIconKind.WifiOff;
             text.Text = "Sin conexión a internet. Tus descargas están disponibles.";
             banner.IsVisible = true;
+
+            // Auto-ocultar tras 6 segundos para no obstaculizar la navegación
+            Avalonia.Threading.DispatcherTimer.RunOnce(() =>
+            {
+                if (!AniCS.Core.Services.NetworkService.IsConnected && banner.IsVisible)
+                {
+                    banner.IsVisible = false;
+                }
+            }, TimeSpan.FromSeconds(6));
         }
         else if (banner.IsVisible)
         {
@@ -164,13 +186,17 @@ public partial class AndroidMainView : UserControl, INavigableHost
         {
             TopHeaderBorder.IsVisible = false;
             BottomNavBar.IsVisible = false;
+            var banner = this.FindControl<Border>("OfflineBanner");
+            if (banner != null) banner.IsVisible = false;
             MainActivity.Instance?.EnableImmersiveMode();
+            MainActivity.Instance?.EnableKeepScreenOn();
         }
         else
         {
             TopHeaderBorder.IsVisible = true;
             BottomNavBar.IsVisible = true;
             MainActivity.Instance?.DisableImmersiveMode();
+            MainActivity.Instance?.DisableKeepScreenOn();
         }
 
         var isMainView = view is DesktopViews.HomeView || view is DesktopViews.SearchView || view is DesktopViews.TopAnimesView ||

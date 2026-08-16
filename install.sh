@@ -42,8 +42,16 @@ else
     echo -e "${YELLOW}Advertencia: Gestor de paquetes no soportado nativamente. Tendrás que instalar dependencias a mano.${NC}"
 fi
 
+# Paquetes necesarios para NativeAOT en Linux (clang + zlib).
+# Referencia: https://learn.microsoft.com/en-us/dotnet/core/native-aot/prerequisites
+# Formato: "comando|paquete-pacman|paquete-apt|paquete-dnf"
+aot_prereqs=(
+    "clang|clang|clang|clang"
+    "zlib|zlib|zlib1g-dev|zlib-devel"
+)
+
 check_and_install_deps() {
-    deps=("mpv" "yt-dlp" "kitty")
+    deps=("mpv" "yt-dlp")
     missing=()
     
     # Check dotnet SDK separately
@@ -78,6 +86,25 @@ check_and_install_deps() {
         echo -e "${GREEN}✓ dotnet-sdk detectado.${NC}"
     fi
 
+    # Prerrequisitos de NativeAOT (clang y zlib). Sin ellos, dotnet publish -r linux-x64 falla.
+    for entry in "${aot_prereqs[@]}"; do
+        IFS='|' read -r cmd pacman_pkg apt_pkg dnf_pkg <<< "$entry"
+        if ! command -v "$cmd" &> /dev/null; then
+            echo -e "${RED}x $cmd no encontrado (necesario para compilar con NativeAOT).${NC}"
+            if command -v pacman &> /dev/null; then
+                missing+=("$pacman_pkg")
+            elif command -v apt &> /dev/null; then
+                missing+=("$apt_pkg")
+            elif command -v dnf &> /dev/null; then
+                missing+=("$dnf_pkg")
+            else
+                missing+=("$cmd")
+            fi
+        else
+            echo -e "${GREEN}✓ $cmd detectado.${NC}"
+        fi
+    done
+
     for dep in "${deps[@]}"; do
         if ! command -v $dep &> /dev/null; then
             echo -e "${RED}x $dep no encontrado.${NC}"
@@ -87,6 +114,13 @@ check_and_install_deps() {
         fi
     done
 
+    # kitty es OPCIONAL (solo para renderizar portadas en la terminal)
+    if ! command -v kitty &> /dev/null; then
+        echo -e "${YELLOW}• kitty no encontrado (opcional: solo para mostrar portadas en la terminal).${NC}"
+    else
+        echo -e "${GREEN}✓ kitty detectado.${NC}"
+    fi
+
     if [ ${#missing[@]} -ne 0 ]; then
         if [ -n "$PM" ]; then
             read -p "¿Deseas instalar las dependencias faltantes ahora? (${missing[*]}) [S/n]: " resp
@@ -94,7 +128,10 @@ check_and_install_deps() {
                 echo -e "${BLUE}Instalando dependencias...${NC}"
                 $PM "${missing[@]}"
             else
-                echo -e "${YELLOW}Continuando sin dependencias (AniCS podría fallar al reproducir).${NC}"
+                echo -e "${YELLOW}Continuando sin dependencias.${NC}"
+                if [[ " ${missing[*]} " == *" clang "* ]] || [[ " ${missing[*]} " == *" zlib"* ]]; then
+                    echo -e "${RED}ADVERTENCIA: Sin clang/zlib el publish con NativeAOT fallará al compilar.${NC}"
+                fi
             fi
         else
             echo -e "${YELLOW}Por favor, instala manualmente: ${missing[*]}${NC}"
