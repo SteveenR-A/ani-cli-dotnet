@@ -176,7 +176,12 @@ public class AndroidVideoPlayerControl : NativeControlHost
 
             var context = global::Android.App.Application.Context;
             var headers = new Dictionary<string, string>();
-            if (!string.IsNullOrEmpty(referer))
+            if (url.Contains("mundodonghua") || url.Contains("mdplayer") || url.Contains("mdmnemonicplayer") || (referer != null && referer.Contains("mundodonghua")))
+            {
+                headers["Referer"] = "https://www.mundodonghua.com/";
+                headers["Origin"] = "https://www.mundodonghua.com";
+            }
+            else if (!string.IsNullOrEmpty(referer))
             {
                 headers["Referer"] = referer;
             }

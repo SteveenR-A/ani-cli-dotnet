@@ -271,58 +271,17 @@ public class MundoDonghuaExtractor : BaseExtractor
                 }
                 else
                 {
-                    // Fallback to JWPlayer / sources file
+                    // Fallback to JWPlayer / sources file (MundoDonghua HLS)
                     var fileMatch = System.Text.RegularExpressions.Regex.Match(unpacked, @"(?:file|source|src)\s*:\s*\\?['""]([^'""]+)\\?['""]");
                     if (fileMatch.Success)
                     {
                         string url = fileMatch.Groups[1].Value.Replace("\\", "");
                         if (!servers.Any(s => s.Url == url))
                         {
-                            servers.Add(new VideoServer { Name = "MundoDonghua HLS", Url = url, IsDirectPlaySupported = true });
+                            servers.Insert(0, new VideoServer { Name = "MundoDonghua HLS", Url = url, IsDirectPlaySupported = true });
                         }
                     }
                 }
-
-                // 2. Check for api_donghua.php (Tamamo server)
-                var apiMatch = System.Text.RegularExpressions.Regex.Match(unpacked, @"api_donghua\.php.*?slug[""']?\s*:\s*[""']([^""']+)[""']");
-                if (apiMatch.Success)
-                {
-                    string slug = apiMatch.Groups[1].Value;
-                    try
-                    {
-                        var apiUrl = $"{BaseUrl}/api_donghua.php?slug={Uri.EscapeDataString(slug)}";
-                        using var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, apiUrl);
-                        req.Headers.TryAddWithoutValidation("User-Agent", AniCS.ConfigManager.Current.RandomUserAgent);
-                        req.Headers.Referrer = new Uri(episodeUrl);
-                        req.Headers.Add("X-Requested-With", "XMLHttpRequest");
-                        
-                        var apiResp = await Http.SendAsync(req);
-                        if (apiResp.IsSuccessStatusCode)
-                        {
-                            var jsonStr = await apiResp.Content.ReadAsStringAsync();
-                            using var jdoc = System.Text.Json.JsonDocument.Parse(jsonStr);
-                            foreach (var item in jdoc.RootElement.EnumerateArray())
-                            {
-                                if (item.TryGetProperty("url", out var urlProp))
-                                {
-                                    var val = urlProp.GetString();
-                                    if (!string.IsNullOrEmpty(val))
-                                    {
-                                        var cleanUrl = val.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                                            ? val
-                                            : $"https://www.mdplayer.xyz/nemonicplayer/dmplayer.php?key={val}";
-                                        if (!servers.Any(s => s.Url == cleanUrl))
-                                        {
-                                            servers.Add(new VideoServer { Name = "Tamamo Direct", Url = cleanUrl, IsDirectPlaySupported = true });
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch { }
-                }
-
             }
             catch { }
         }

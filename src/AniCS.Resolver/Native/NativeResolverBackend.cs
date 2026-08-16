@@ -399,7 +399,7 @@ public sealed class NativeResolverBackend : IResolverBackend, IDisposable
             try { _client.DefaultRequestHeaders.Referrer = new Uri("https://jkanime.net/"); }
             catch { }
         }
-        else if (!string.IsNullOrEmpty(media.DirectUrl) && media.DirectUrl.Contains("mundodonghua"))
+        else if (!string.IsNullOrEmpty(media.DirectUrl) && (media.DirectUrl.Contains("mundodonghua") || media.DirectUrl.Contains("mdplayer") || media.DirectUrl.Contains("mdmnemonicplayer")))
         {
             try { _client.DefaultRequestHeaders.Referrer = new Uri("https://www.mundodonghua.com/"); }
             catch { }
