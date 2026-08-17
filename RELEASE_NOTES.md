@@ -1,6 +1,12 @@
-# 🚀 AniCS v1.6.3 — Registro de Cambios
+# 🚀 AniCS v1.6.4 — Registro de Cambios
 
-¡Nueva actualización repleta de mejoras en almacenamiento en Android, modo inmersivo completo, pantalla activa en reproducción, personalización de rutas y corrección de estabilidad!
+¡Nueva actualización v1.6.4 con la nueva identidad visual e iconos oficiales de AniCS, además de las mejoras integrales de almacenamiento, reproducción inmersiva y estabilidad!
+
+---
+
+### 🎨 Nueva Identidad Visual e Iconos Oficiales
+- **Iconografía renovada:** Actualización de los iconos de la aplicación e instalador con el diseño visual oficial de AniCS.
+- **Consistencia visual:** Integración optimizada de recursos gráficos para accesos directos, barra de tareas y empaquetado del instalador MSI.
 
 ---
 

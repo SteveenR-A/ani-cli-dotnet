@@ -125,7 +125,7 @@
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*, Auto">
-                            <TextBlock Name="AppVersionText" Grid.Column="0" Text="Versión: 1.6.3" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource AppSubtextColor}"/>
+                            <TextBlock Name="AppVersionText" Grid.Column="0" Text="Versión: 1.6.4" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource AppSubtextColor}"/>
                             <Button Grid.Column="1" Content="Ver Notas de Parche" Click="OnViewChangelogClicked" Padding="10,6" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" BorderBrush="{DynamicResource AppPrimaryColor}" BorderThickness="1"/>
                         </Grid>
                     </StackPanel>
