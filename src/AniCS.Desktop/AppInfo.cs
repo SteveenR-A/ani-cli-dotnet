@@ -8,6 +8,12 @@ namespace AniCS.Desktop;
 /// </summary>
 public static class AppInfo
 {
+    /// <summary>Official organization / studio name.</summary>
+    public static string Brand => "YumeWorks";
+
+    /// <summary>Official project slogan.</summary>
+    public static string Slogan => "Siente la fluidez hacia tus historias favoritas";
+
     /// <summary>Version of the currently running assembly (e.g. "1.6.3").</summary>
     public static string CurrentVersion =>
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.3";

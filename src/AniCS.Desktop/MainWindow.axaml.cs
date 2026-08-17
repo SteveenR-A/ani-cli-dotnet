@@ -10,14 +10,13 @@ namespace AniCS.Desktop;
 public partial class MainWindow : Window, INavigableHost
 {
     private readonly ViewModels.HomeViewModel _sharedHomeViewModel;
-    private HomeView _homeView = new HomeView();
-    private SearchView _searchView = new SearchView();
-
-    private CalendarView _calendarView = new CalendarView();
-    private TopAnimesView _topAnimesView = new TopAnimesView();
-    private DownloadsView _downloadsView = new DownloadsView();
-    private HistoryView _historyView = new HistoryView();
-    private SettingsView _settingsView = new SettingsView();
+    private HomeView? _homeView;
+    private SearchView? _searchView;
+    private CalendarView? _calendarView;
+    private TopAnimesView? _topAnimesView;
+    private DownloadsView? _downloadsView;
+    private HistoryView? _historyView;
+    private SettingsView? _settingsView;
     private UserControl? _previousView;
 
     public MainWindow()
@@ -49,8 +48,8 @@ public partial class MainWindow : Window, INavigableHost
                 }
                 else
                 {
-                    _searchView.ReloadConfig();
-                    _topAnimesView.ReloadConfig();
+                    _searchView?.ReloadConfig();
+                    _topAnimesView?.ReloadConfig();
                 }
             }
         };
@@ -171,7 +170,10 @@ public partial class MainWindow : Window, INavigableHost
             case "Kinetic": targetView = new Views.Paradigms.Kinetic.KineticView(); break;
             case "ASCII": targetView = new Views.Paradigms.ASCII.ASCIIView(); break;
             case "AndroidApp": targetView = new Views.Paradigms.AndroidApp.AndroidAppView(); break;
-            default: targetView = _homeView; break;
+            default: 
+                _homeView ??= new HomeView();
+                targetView = _homeView; 
+                break;
         }
 
         targetView.DataContext = _sharedHomeViewModel;
@@ -316,6 +318,7 @@ public partial class MainWindow : Window, INavigableHost
 
     private void OnSearchClicked(object? sender, RoutedEventArgs e)
     {
+        _searchView ??= new SearchView();
         SetMainContent(_searchView);
         PageTitleText.Text = "Buscar Anime";
         MainSplitView.IsPaneOpen = false;
@@ -323,6 +326,7 @@ public partial class MainWindow : Window, INavigableHost
 
     private void OnCalendarClicked(object? sender, RoutedEventArgs e)
     {
+        _calendarView ??= new CalendarView();
         SetMainContent(_calendarView);
         PageTitleText.Text = "Horarios";
         MainSplitView.IsPaneOpen = false;
@@ -330,6 +334,7 @@ public partial class MainWindow : Window, INavigableHost
 
     private void OnTopAnimesClicked(object? sender, RoutedEventArgs e)
     {
+        _topAnimesView ??= new TopAnimesView();
         SetMainContent(_topAnimesView);
         PageTitleText.Text = "Top Animes";
         MainSplitView.IsPaneOpen = false;
@@ -337,6 +342,7 @@ public partial class MainWindow : Window, INavigableHost
 
     private void OnDownloadsClicked(object? sender, RoutedEventArgs e)
     {
+        _downloadsView ??= new DownloadsView();
         SetMainContent(_downloadsView);
         PageTitleText.Text = "Descargas";
         MainSplitView.IsPaneOpen = false;
@@ -344,6 +350,7 @@ public partial class MainWindow : Window, INavigableHost
 
     private void OnHistoryClicked(object? sender, RoutedEventArgs e)
     {
+        _historyView ??= new HistoryView();
         _historyView.Reload(); // Refrescar el historial al abrirlo
         SetMainContent(_historyView);
         PageTitleText.Text = "Historial";
@@ -352,6 +359,7 @@ public partial class MainWindow : Window, INavigableHost
 
     private void OnSettingsClicked(object? sender, RoutedEventArgs e)
     {
+        _settingsView ??= new SettingsView();
         _settingsView.LoadConfig(); // Refrescar por si se cambió desde otro lado
         SetMainContent(_settingsView);
         PageTitleText.Text = "Configuración";

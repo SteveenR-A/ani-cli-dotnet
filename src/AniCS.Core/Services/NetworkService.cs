@@ -51,8 +51,8 @@ public static class NetworkService
 
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
         
-        // Verificación inicial rápida
-        _ = CheckConnectivityAsync();
+        // Verificación inicial rápida en segundo plano
+        _ = Task.Run(CheckConnectivityAsync);
 
         // Sondeo periódico cada 10 segundos
         _monitorTimer = new Timer(async _ =>

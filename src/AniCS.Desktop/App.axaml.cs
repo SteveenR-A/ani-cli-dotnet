@@ -31,7 +31,10 @@ public partial class App : Application
             AppLogger.Error("UnobservedTaskException", e.Exception);
         };
 
-        try { LibVLCSharp.Shared.Core.Initialize(); } catch { }
+        _ = System.Threading.Tasks.Task.Run(() =>
+        {
+            try { LibVLCSharp.Shared.Core.Initialize(); } catch { }
+        });
 
         var services = new ServiceCollection();
         

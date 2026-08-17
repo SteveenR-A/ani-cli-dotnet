@@ -13,7 +13,15 @@ public partial class TopAnimesView : UserControl
     public TopAnimesView()
     {
         InitializeComponent();
-        ReloadConfig();
+        Loaded += OnLoaded;
+    }
+
+    private void OnLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (TopList.ItemsSource == null)
+        {
+            LoadTopAnimes();
+        }
     }
 
     public void ReloadConfig()

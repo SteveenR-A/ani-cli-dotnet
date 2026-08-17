@@ -1,4 +1,6 @@
-# AniCS (Anime C#) — Cliente Multiplataforma
+# AniCS (Anime C#) — by YumeWorks
+
+> *Siente la fluidez hacia tus historias favoritas.*
 
 AniCS es una aplicación para buscar, reproducir y descargar anime. Todo construido en C# (.NET 10).
 
