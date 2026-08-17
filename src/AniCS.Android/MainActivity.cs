@@ -81,6 +81,25 @@ public class MainActivity : AvaloniaMainActivity
             {
                 AndroidDownloadForegroundService.UpdateNotification(title, content, progress);
             };
+
+            AniCS.Desktop.Services.DownloadManager.OnFileDownloaded = (filePath) =>
+            {
+                try
+                {
+                    if (System.IO.File.Exists(filePath))
+                    {
+                        global::Android.Media.MediaScannerConnection.ScanFile(
+                            this,
+                            new[] { filePath },
+                            new[] { "video/mp4", "video/mp2t", "video/*" },
+                            null);
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    global::Android.Util.Log.Error("AniCS_Scanner", $"Error scanning file {filePath}: {ex}");
+                }
+            };
         }
         catch { }
 
@@ -110,6 +129,24 @@ public class MainActivity : AvaloniaMainActivity
     {
         try
         {
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.R) // Android 11+ (API 30+)
+            {
+                if (!global::Android.OS.Environment.IsExternalStorageManager)
+                {
+                    try
+                    {
+                        var uri = global::Android.Net.Uri.Parse($"package:{PackageName}");
+                        var intent = new global::Android.Content.Intent(global::Android.Provider.Settings.ActionManageAppAllFilesAccessPermission, uri);
+                        StartActivity(intent);
+                    }
+                    catch
+                    {
+                        var intent = new global::Android.Content.Intent(global::Android.Provider.Settings.ActionManageAllFilesAccessPermission);
+                        StartActivity(intent);
+                    }
+                }
+            }
+
             var permissionsToRequest = new System.Collections.Generic.List<string>();
 
             if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu) // API 33+ (Android 13+)

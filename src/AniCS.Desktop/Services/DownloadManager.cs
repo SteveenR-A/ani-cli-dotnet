@@ -361,6 +361,7 @@ public static class DownloadManager
     public static Action<string, string, int>? OnDownloadProgressNotify { get; set; }
     public static Action? OnDownloadsStarted { get; set; }
     public static Action? OnDownloadsFinished { get; set; }
+    public static Action<string>? OnFileDownloaded { get; set; }
 
     private static readonly object _runningLock = new();
     private static readonly HashSet<ActiveDownload> _runningDownloads = new();
@@ -499,6 +500,12 @@ public static class DownloadManager
                                 active.EpisodeNumber,
                                 active.EpisodeTitle,
                                 result.OutputPath);
+
+                            try
+                            {
+                                OnFileDownloaded?.Invoke(result.OutputPath);
+                            }
+                            catch { }
 
                             OnDownloadProgressNotify?.Invoke(
                                 active.AnimeTitle,
