@@ -38,9 +38,8 @@ public sealed class HlsDownloader
         IProgress<DownloadProgress>? progress = null,
         CancellationToken ct = default)
     {
-        // Siempre guardamos como .ts (contenedor nativo de HLS)
-        // En Fase 3, AniCS.Player usará LibVLC.sout para remuxear a .mp4
-        var tsPath = Path.ChangeExtension(outputPath, ".ts");
+        // Guardar como .mp4 para máxima compatibilidad con Galerías, Administradores de Archivos y MTP
+        var targetPath = Path.ChangeExtension(outputPath, ".mp4");
 
         var segments = parseResult.SegmentUrls;
         int total = segments.Count;
@@ -48,17 +47,17 @@ public sealed class HlsDownloader
             throw new InvalidOperationException("El manifiesto HLS no contiene segmentos.");
 
         // Asegurar que el directorio existe
-        var dir = Path.GetDirectoryName(tsPath);
+        var dir = Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
         long downloadedBytes = 0;
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var idxPath = tsPath + ".idx";
+        var idxPath = targetPath + ".idx";
         int startSegment = 0;
 
-        if (File.Exists(tsPath) && File.Exists(idxPath))
+        if (File.Exists(targetPath) && File.Exists(idxPath))
         {
             try
             {
@@ -66,14 +65,14 @@ public sealed class HlsDownloader
                 if (int.TryParse(idxText, out int savedIdx) && savedIdx > 0 && savedIdx < total)
                 {
                     startSegment = savedIdx;
-                    downloadedBytes = new FileInfo(tsPath).Length;
+                    downloadedBytes = new FileInfo(targetPath).Length;
                 }
             }
             catch { }
         }
 
         var fileMode = (startSegment > 0) ? FileMode.Append : FileMode.Create;
-        using var outputStream = new FileStream(tsPath, fileMode, FileAccess.Write,
+        using var outputStream = new FileStream(targetPath, fileMode, FileAccess.Write,
             FileShare.None, bufferSize: 65536, useAsync: true);
 
         int failedConsecutive = 0;
@@ -143,7 +142,7 @@ public sealed class HlsDownloader
         catch { }
 
         progress?.Report(new DownloadProgress(100, FormatBytes(downloadedBytes), "", IsFinished: true));
-        return tsPath;
+        return targetPath;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
