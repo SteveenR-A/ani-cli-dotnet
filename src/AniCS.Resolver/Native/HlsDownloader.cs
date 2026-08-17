@@ -38,8 +38,8 @@ public sealed class HlsDownloader
         IProgress<DownloadProgress>? progress = null,
         CancellationToken ct = default)
     {
-        // Guardar como .mp4 para máxima compatibilidad con Galerías, Administradores de Archivos y MTP
-        var targetPath = Path.ChangeExtension(outputPath, ".mp4");
+        // Contenedor nativo de HLS (MPEG-2 Transport Stream)
+        var targetPath = Path.ChangeExtension(outputPath, ".ts");
 
         var segments = parseResult.SegmentUrls;
         int total = segments.Count;
