@@ -148,21 +148,52 @@ public sealed class AppUpdateService : IDisposable
     }
 
     /// <summary>
-    /// Starts the silent MSI install in a detached process, waits for it to finish
-    /// and relaunches the app. The current process exits immediately so that
-    /// Windows Installer can replace the files that are in use.
+    /// Inicia la instalación del MSI en un proceso desacoplado, espera a que finalice y relanza la aplicación.
+    /// Utiliza /passive para permitir la elevación de permisos (UAC) requerida por Program Files y mostrar el progreso.
     /// </summary>
     public void ApplyAndRelaunch(string msiPath)
     {
-        var exe = Environment.ProcessPath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AniCS.Desktop.exe");
-        var cmd = $"/c start /wait msiexec /i \"{msiPath}\" /qn /norestart & start \"\" \"{exe}\"";
-        var psi = new ProcessStartInfo("cmd.exe", cmd)
+        try
         {
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        Process.Start(psi);
-        Environment.Exit(0);
+            var programFilesExe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "AniCS", "AniCS.Desktop.exe");
+            var currentExe = Environment.ProcessPath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AniCS.Desktop.exe");
+            var logPath = Path.Combine(UpdatesDir, "msi_install.log");
+            var scriptPath = Path.Combine(UpdatesDir, "apply_update.cmd");
+
+            Directory.CreateDirectory(UpdatesDir);
+
+            // Script para esperar cierre, ejecutar msiexec con elevación UAC permitida (/passive) y abrir la versión actualizada
+            var scriptLines = new[]
+            {
+                "@echo off",
+                "timeout /t 2 /nobreak >nul",
+                $"msiexec.exe /i \"{msiPath}\" /passive /norestart /lv \"{logPath}\"",
+                "timeout /t 1 /nobreak >nul",
+                $"if exist \"{programFilesExe}\" (",
+                $"    start \"\" \"{programFilesExe}\"",
+                ") else (",
+                $"    start \"\" \"{currentExe}\"",
+                ")"
+            };
+
+            File.WriteAllLines(scriptPath, scriptLines);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c \"{scriptPath}\"",
+                UseShellExecute = true,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+
+            Process.Start(psi);
+            Environment.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AppUpdateService.ApplyAndRelaunch", ex);
+        }
     }
 
     public void Dispose() => _http.Dispose();
