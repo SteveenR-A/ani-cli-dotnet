@@ -75,46 +75,57 @@ jobs:
             -p:BuildInParallel=false \
             -p:UseSharedCompilation=false \
             -p:EmbedAssembliesIntoApk=true \
-            -p:AndroidEnableFastDeployment=false
+            -p:AndroidEnableFastDeployment=false \
+            -p:AndroidKeyStore=false
 
       # ── APK Signing (only runs when keystore secrets are set) ──────────
       - name: Process & Sign APK
         run: |
-          # Find the generated APK in the bin directory
-          APK=$(find src/AniCS.Android/bin/Release/net10.0-android -name "*-Signed.apk" | head -n 1)
-          if [ -z "$APK" ]; then
-             APK=$(find src/AniCS.Android/bin/Release/net10.0-android -name "*.apk" | head -n 1)
+          # Prioritize the unsigned APK to prevent conflicting double-signatures
+          UNSIGNED_APK=$(find src/AniCS.Android/bin/Release/net10.0-android -name "*.apk" ! -name "*-Signed.apk" | head -n 1)
+          if [ -z "$UNSIGNED_APK" ]; then
+             UNSIGNED_APK=$(find src/AniCS.Android/bin/Release/net10.0-android -name "*.apk" | head -n 1)
           fi
 
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+
+          # 1. Zipalign the APK (4-byte alignment required by Android Package Manager)
+          $BUILD_TOOLS_DIR/zipalign -p -f -v 4 "$UNSIGNED_APK" ./aligned.apk
+
+          # 2. Sign the aligned APK with official Keystore and v1/v2/v3 schemes
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "Signing APK with repository keystore secret..."
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > anics-release.keystore
             
-            BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
             $BUILD_TOOLS_DIR/apksigner sign \
               --ks anics-release.keystore \
               --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
               --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
               --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
+              --v1-signing-enabled true \
+              --v2-signing-enabled true \
+              --v3-signing-enabled true \
               --out ./AniCS-${{ github.ref_name }}-signed.apk \
-              "$APK"
-            
-            echo "APK_PATH=./AniCS-${{ github.ref_name }}-signed.apk" >> $GITHUB_ENV
+              ./aligned.apk
           else
             echo "No KEYSTORE_BASE64 secret found; generating temporary debug keystore..."
             keytool -genkey -v -keystore temp.keystore -alias anics -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=AniCS, OU=AniCS, O=AniCS, L=Unknown, S=Unknown, C=Unknown"
             
-            BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
             $BUILD_TOOLS_DIR/apksigner sign \
               --ks temp.keystore \
               --ks-pass pass:password \
               --ks-key-alias anics \
               --key-pass pass:password \
+              --v1-signing-enabled true \
+              --v2-signing-enabled true \
+              --v3-signing-enabled true \
               --out ./AniCS-${{ github.ref_name }}-signed.apk \
-              "$APK"
-            
-            echo "APK_PATH=./AniCS-${{ github.ref_name }}-signed.apk" >> $GITHUB_ENV
+              ./aligned.apk
           fi
+
+          # 3. Verify the generated signature
+          $BUILD_TOOLS_DIR/apksigner verify --verbose ./AniCS-${{ github.ref_name }}-signed.apk
+          echo "APK_PATH=./AniCS-${{ github.ref_name }}-signed.apk" >> $GITHUB_ENV
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
