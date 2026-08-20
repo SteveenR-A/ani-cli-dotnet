@@ -1,6 +1,4 @@
 using AniCS.Models;
-using AniCS.Resolver.Native;
-
 namespace AniCS.Resolver;
 
 /// <summary>
@@ -14,7 +12,7 @@ public static class ResolverFactory
     /// <param name="mode">Modo seleccionado en Ajustes.</param>
     public static IResolverBackend Create(ResolverBackendMode mode)
     {
-        if (System.OperatingSystem.IsAndroid())
+        if (OperatingSystem.IsAndroid())
         {
             return new NativeResolverBackend();
         }
@@ -37,5 +35,5 @@ public static class ResolverFactory
     /// Crea el backend según la configuración actual del usuario.
     /// </summary>
     public static IResolverBackend CreateFromConfig()
-        => Create(AniCS.ConfigManager.Current.ResolverBackend);
+        => Create(ConfigManager.Current.ResolverBackend);
 }

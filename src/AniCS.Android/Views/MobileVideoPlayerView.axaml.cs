@@ -1,18 +1,15 @@
-using System;
-using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using AniCS.Android.Controls;
 using AniCS.Desktop.Services;
-using AniCS.Player;
+using DownloadManager = AniCS.Desktop.Services.DownloadManager;
 
 namespace AniCS.Android.Views;
 
 public partial class MobileVideoPlayerView : UserControl
 {
-    private readonly IPlayerBackend? _playerBackend;
     private readonly Func<Task<string>>? _urlResolver;
     private readonly string _title;
     private readonly string _serverUrl;
@@ -34,7 +31,11 @@ public partial class MobileVideoPlayerView : UserControl
     private bool _isRecovering;
     private int _recoverAttempts;
     private const int MaxRecoverAttempts = 3;
-    private bool _hasMarkedCompleted = false;
+    private bool _hasMarkedCompleted;
+
+    public bool IsPlaying => _nativePlayer?.IsPlaying ?? false;
+    public void Pause() => _nativePlayer?.Pause();
+    public void Resume() => _nativePlayer?.Resume();
 
     public MobileVideoPlayerView()
     {
@@ -50,7 +51,6 @@ public partial class MobileVideoPlayerView : UserControl
     }
 
     public MobileVideoPlayerView(
-        IPlayerBackend playerBackend,
         Func<Task<string>> urlResolver,
         string title,
         string serverUrl,
@@ -62,7 +62,6 @@ public partial class MobileVideoPlayerView : UserControl
         string episodeUrl = "")
     {
         InitializeComponent();
-        _playerBackend = playerBackend;
         _urlResolver = urlResolver;
         _title = title;
         _serverUrl = serverUrl;
@@ -82,10 +81,9 @@ public partial class MobileVideoPlayerView : UserControl
         TitleLabel.Text = _title;
         QualityBadge.Text = !string.IsNullOrEmpty(_quality) ? _quality : "Nativo";
 
-        // Abrir automáticamente en modo Horizontal al reproducir video, pantalla completa inmersiva y pantalla activa
+        // Abrir automáticamente en modo Horizontal al reproducir video y pantalla completa inmersiva
         MainActivity.Instance?.SetOrientationLandscape();
         MainActivity.Instance?.EnableImmersiveMode();
-        MainActivity.Instance?.EnableKeepScreenOn();
 
         // Timer de progreso (2x por segundo)
         _progressTimer = new DispatcherTimer
@@ -99,7 +97,7 @@ public partial class MobileVideoPlayerView : UserControl
         {
             Interval = TimeSpan.FromSeconds(4)
         };
-        _osdTimer.Tick += (s, ev) =>
+        _osdTimer.Tick += (_, _) =>
         {
             _osdTimer.Stop();
             OsdOverlay.IsVisible = false;
@@ -110,7 +108,7 @@ public partial class MobileVideoPlayerView : UserControl
         {
             Interval = TimeSpan.FromMilliseconds(1500)
         };
-        _toastTimer.Tick += (s, ev) =>
+        _toastTimer.Tick += (_, _) =>
         {
             _toastTimer.Stop();
             OsdToastPanel.IsVisible = false;
@@ -159,7 +157,7 @@ public partial class MobileVideoPlayerView : UserControl
             : "Obteniendo enlace de video...";
         LoadingPanel.IsVisible = true;
 
-        string? url = null;
+        string url;
         try
         {
             url = await _urlResolver();
@@ -185,10 +183,11 @@ public partial class MobileVideoPlayerView : UserControl
             {
                 _nativePlayer = new AndroidVideoPlayerControl();
                 _nativePlayer.SetInfo(_title, !string.IsNullOrEmpty(_quality) ? _quality : "Nativo");
-                _nativePlayer.BackRequested += (s, e) => ClosePlayer();
+                _nativePlayer.BackRequested += (_, _) => ClosePlayer();
                 _nativePlayer.PlaybackError += OnNativePlaybackError;
-                _nativePlayer.ProgressChanged += (s, ev) => UpdatePlaybackWatchHistory(ev.Position, ev.Duration);
-                _nativePlayer.PlaybackCompleted += (s, e) =>
+                _nativePlayer.PlaybackStateChanged += OnNativePlaybackStateChanged;
+                _nativePlayer.ProgressChanged += (_, ev) => UpdatePlaybackWatchHistory(ev.Position, ev.Duration);
+                _nativePlayer.PlaybackCompleted += (_, _) =>
                 {
                     UpdatePlaybackWatchHistory(1, 1, isCompleted: true);
                     ClosePlayer();
@@ -224,6 +223,26 @@ public partial class MobileVideoPlayerView : UserControl
                     _isRecovering = false;
                 });
             });
+        });
+    }
+
+    private void OnNativePlaybackStateChanged(object? sender, bool isPlaying)
+    {
+        Dispatcher.UIThread.Invoke(() =>
+        {
+            CenterPlayPauseIcon.Kind = isPlaying 
+                ? Material.Icons.MaterialIconKind.Pause 
+                : Material.Icons.MaterialIconKind.Play;
+
+            if (isPlaying)
+            {
+                _progressTimer?.Start();
+                _osdTimer?.Start();
+            }
+            else
+            {
+                _osdTimer?.Stop();
+            }
         });
     }
 
@@ -428,10 +447,10 @@ public partial class MobileVideoPlayerView : UserControl
 
         if (currentPosMs > 1000 || completed)
         {
-            var history = new AniCS.History.WatchHistory();
+            var history = new History.WatchHistory();
             history.Record(_animeTitle, _animeUrl, _thumbnailUrl, _episodeNumber, _episodeUrl, posSec, durSec, completed);
 
-            AniCS.Desktop.Services.DownloadManager.UpdateEpisodeStatus(
+            DownloadManager.UpdateEpisodeStatus(
                 _animeUrl,
                 _episodeNumber,
                 completed ? EpisodeWatchStatus.Completed : EpisodeWatchStatus.InProgress);

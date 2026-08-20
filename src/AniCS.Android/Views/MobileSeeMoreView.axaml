@@ -28,43 +28,36 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="models:AnimeResult">
-                        <Button Background="Transparent"
-                                BorderThickness="0"
+                        <Border Background="{DynamicResource AppCardBg}"
+                                CornerRadius="10"
                                 Padding="0"
                                 Margin="4,6"
-                                CornerRadius="10"
-                                HorizontalContentAlignment="Stretch"
-                                VerticalContentAlignment="Stretch"
-                                Click="OnAnimeCardClicked"
-                                Tag="{Binding}">
-                            <Border Background="{DynamicResource AppCardBg}"
-                                    CornerRadius="10"
-                                    Padding="0"
-                                    ClipToBounds="True">
-                                <Grid RowDefinitions="190, Auto">
-                                    <!-- Anime Poster Image -->
-                                    <Border Grid.Row="0" ClipToBounds="True" Background="#20FFFFFF">
-                                        <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
-                                    </Border>
+                                ClipToBounds="True"
+                                Cursor="Hand"
+                                Tapped="OnAnimeCardTapped">
+                            <Grid RowDefinitions="190, Auto">
+                                <!-- Anime Poster Image -->
+                                <Border Grid.Row="0" ClipToBounds="True" Background="#20FFFFFF">
+                                    <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
+                                </Border>
 
-                                    <!-- Title and Subtitle Info -->
-                                    <StackPanel Grid.Row="1" Margin="8,6" Spacing="2">
-                                        <TextBlock Text="{Binding Title}"
-                                                   FontSize="13"
-                                                   FontWeight="Bold"
-                                                   Foreground="{DynamicResource AppTitleColor}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   MaxLines="2"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Text="{Binding Description}"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource AppSubtextColor}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   MaxLines="1" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </Button>
+                                <!-- Title and Subtitle Info -->
+                                <StackPanel Grid.Row="1" Margin="8,6" Spacing="2">
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="13"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource AppTitleColor}"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="2"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Description}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource AppSubtextColor}"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="1" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

@@ -28,23 +28,31 @@
             <ItemsControl Name="HistoryItemsControl">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="history:WatchEntry">
-                        <Border Background="{DynamicResource AppCardBg}" CornerRadius="10" Margin="0,0,0,10" Padding="10" PointerPressed="OnHistoryCardPressed">
+                        <Border Background="{DynamicResource AppCardBg}" CornerRadius="10" Margin="0,0,0,10" Padding="10">
                             <Grid ColumnDefinitions="52, *, Auto">
                                 <!-- Anime Cover Image (Clickable for full image) -->
-                                <Button Grid.Column="0"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Padding="0"
+                                <Border Grid.Column="0"
                                         CornerRadius="8"
-                                        Click="OnHistoryImageClicked"
+                                        ClipToBounds="True"
+                                        Height="68"
+                                        Width="48"
+                                        Margin="0,0,10,0"
+                                        Background="#20FFFFFF"
+                                        Cursor="Hand"
+                                        Tapped="OnHistoryImageTapped"
                                         Tag="{Binding}"
                                         ToolTip.Tip="Ver portada en grande">
-                                    <Border CornerRadius="8" ClipToBounds="True" Height="68" Width="48" Margin="0,0,10,0" Background="#20FFFFFF">
-                                        <Image converters:AsyncImageLoader.SourceUrl="{Binding AnimeThumbnailUrl}" Stretch="UniformToFill"/>
-                                    </Border>
-                                </Button>
+                                    <Image converters:AsyncImageLoader.SourceUrl="{Binding AnimeThumbnailUrl}" Stretch="UniformToFill"/>
+                                </Border>
 
-                                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                <!-- Anime Info (Clickable to navigate to anime details) -->
+                                <StackPanel Grid.Column="1"
+                                            Spacing="4"
+                                            VerticalAlignment="Center"
+                                            Cursor="Hand"
+                                            Background="Transparent"
+                                            Tapped="OnHistoryCardTapped"
+                                            Tag="{Binding}">
                                     <TextBlock Text="{Binding AnimeTitle}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}" TextTrimming="CharacterEllipsis"/>
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <TextBlock Text="{Binding LastEpisodeNumber, StringFormat='Episodio {0}'}" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>

@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Threading.Tasks;
-using AniCS;
+using System.IO.Pipes;
+using System.Text.Json;
 
 namespace AniCS.Player;
 
@@ -28,8 +25,11 @@ public sealed class MpvBackend : IPlayerBackend
 
     public MpvBackend()
     {
-        try { AppDomain.CurrentDomain.ProcessExit += (_, _) => KillAll(); } catch { }
-        try { Console.CancelKeyPress += (_, _) => KillAll(); } catch { }
+        try { AppDomain.CurrentDomain.ProcessExit += (_, _) => KillAll(); }
+        catch (Exception ex) { AppLogger.Error("MpvBackend.ProcessExitRegistration", ex); }
+
+        try { Console.CancelKeyPress += (_, _) => KillAll(); }
+        catch (Exception ex) { AppLogger.Error("MpvBackend.CancelKeyPressRegistration", ex); }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -46,7 +46,6 @@ public sealed class MpvBackend : IPlayerBackend
     public Task PauseAsync()
     {
         // mpv no tiene IPC de pausa en el MpvBackend básico (el IPC lo hace DesktopPlayer).
-        // En Fase 3 LibVlcBackend tendrá control completo.
         return Task.CompletedTask;
     }
 
@@ -79,7 +78,7 @@ public sealed class MpvBackend : IPlayerBackend
             return;
         }
 
-        var args = BuildMpvArgs(url, title, referer, quality, exe);
+        var args = BuildMpvArgs(url, referer, quality);
 
         var pipeName = "anics_mpv_" + Guid.NewGuid().ToString("N");
         args.Add("--save-position-on-quit");
@@ -97,7 +96,8 @@ public sealed class MpvBackend : IPlayerBackend
             };
             foreach (var arg in args) si.ArgumentList.Add(arg);
 
-            var p = new Process { StartInfo = si };
+            var p = new Process();
+            p.StartInfo = si;
             p.EnableRaisingEvents = true;
             p.Exited += (_, _) =>
             {
@@ -111,7 +111,10 @@ public sealed class MpvBackend : IPlayerBackend
                             ErrorOccurred?.Invoke($"El reproductor falló (Código: {p.ExitCode}). El video podría no estar disponible.");
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("MpvBackend.ExitedHandler", ex);
+                }
             };
             lock (_activeProcesses) _activeProcesses.Add(p);
             p.Start();
@@ -125,7 +128,7 @@ public sealed class MpvBackend : IPlayerBackend
         }
     }
 
-    private List<string> BuildMpvArgs(string url, string title, string? referer, string quality, string exe)
+    private static List<string> BuildMpvArgs(string url, string? referer, string quality)
     {
         var args = new List<string>
         {
@@ -170,12 +173,10 @@ public sealed class MpvBackend : IPlayerBackend
         if (!string.IsNullOrEmpty(referer))
         {
             headerList.Add($"Referer: {referer}");
-            try
+            if (Uri.TryCreate(referer, UriKind.Absolute, out var uri))
             {
-                var uri = new Uri(referer);
                 headerList.Add($"Origin: {uri.GetLeftPart(UriPartial.Authority)}");
             }
-            catch { }
         }
 
         args.Add($"--http-header-fields={string.Join(",", headerList)}");
@@ -193,11 +194,12 @@ public sealed class MpvBackend : IPlayerBackend
         {
             try
             {
-                using var pipe = new System.IO.Pipes.NamedPipeClientStream(".", pipeName, System.IO.Pipes.PipeDirection.InOut);
+                using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut);
                 await pipe.ConnectAsync(1000);
 
-                using var writer = new System.IO.StreamWriter(pipe, System.Text.Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
-                using var reader = new System.IO.StreamReader(pipe, System.Text.Encoding.UTF8, leaveOpen: true);
+                using var writer = new StreamWriter(pipe, System.Text.Encoding.UTF8, leaveOpen: true);
+                writer.AutoFlush = true;
+                using var reader = new StreamReader(pipe, System.Text.Encoding.UTF8, leaveOpen: true);
 
                 await writer.WriteLineAsync("{\"command\": [\"get_property\", \"time-pos\"]}");
                 var posResp = await reader.ReadLineAsync();
@@ -223,13 +225,20 @@ public sealed class MpvBackend : IPlayerBackend
 
                     try
                     {
-                        var history = new AniCS.History.WatchHistory();
+                        var history = new History.WatchHistory();
                         history.UpdateProgress(mediaUrl, lastPosition, lastDuration, isCompleted);
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Error("MpvBackend.WatchHistoryUpdate", ex);
+                    }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Conexión IPC transitoria mientras mpv arranca o cierra
+                AppLogger.Warn("MpvBackend.Ipc", ex.Message);
+            }
 
             await Task.Delay(2500);
         }
@@ -247,10 +256,13 @@ public sealed class MpvBackend : IPlayerBackend
 
             try
             {
-                var history = new AniCS.History.WatchHistory();
+                var history = new History.WatchHistory();
                 history.UpdateProgress(mediaUrl, lastPosition, lastDuration, isCompleted);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Error("MpvBackend.FinalWatchHistoryUpdate", ex);
+            }
         }
     }
 
@@ -259,12 +271,15 @@ public sealed class MpvBackend : IPlayerBackend
         if (string.IsNullOrEmpty(json)) return 0;
         try
         {
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            using var doc = JsonDocument.Parse(json);
             if (doc.RootElement.TryGetProperty("data", out var dataEl) &&
-                dataEl.ValueKind == System.Text.Json.JsonValueKind.Number)
+                dataEl.ValueKind == JsonValueKind.Number)
                 return dataEl.GetDouble();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("MpvBackend.ParseMpvNumber", ex.Message);
+        }
         return 0;
     }
 
@@ -305,7 +320,14 @@ public sealed class MpvBackend : IPlayerBackend
         {
             foreach (var p in _activeProcesses.ToList())
             {
-                try { if (!p.HasExited) p.Kill(true); } catch { }
+                try
+                {
+                    if (!p.HasExited) p.Kill(true);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("MpvBackend.KillAll", ex);
+                }
             }
             _activeProcesses.Clear();
         }

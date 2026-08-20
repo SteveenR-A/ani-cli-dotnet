@@ -14,22 +14,39 @@
                 <material:MaterialIcon Kind="Trophy" Width="22" Height="22" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
                 <TextBlock Text="Top Animes Más Populares" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
             </StackPanel>
-            
+
+            <TextBlock Name="StatusText" Text="Cargando top animes..." FontSize="15" Foreground="{DynamicResource AppSubtextColor}" HorizontalAlignment="Center" Margin="0,20,0,0" IsVisible="True"/>
+
             <ItemsControl Name="TopAnimesItemsControl">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="models:AnimeResult">
-                        <Border Background="{DynamicResource AppCardBg}" CornerRadius="10" Margin="0,0,0,10" Padding="10" ClipToBounds="True" PointerPressed="OnAnimeCardPressed">
+                        <Border Background="{DynamicResource AppCardBg}"
+                                CornerRadius="10"
+                                Padding="10"
+                                ClipToBounds="True"
+                                Margin="0,0,0,10"
+                                Cursor="Hand"
+                                Tapped="OnAnimeCardTapped">
                             <Grid ColumnDefinitions="70, *, Auto">
                                 <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="70" Height="100" Background="#20FFFFFF">
-                                    <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill"/>
+                                    <Grid>
+                                        <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill"/>
+                                        <!-- Rank Badge -->
+                                        <Border Background="#E53935" CornerRadius="4" Padding="4,2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4" IsVisible="{Binding !!Rank}">
+                                            <TextBlock Text="{Binding Rank, StringFormat='#{0}'}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                        </Border>
+                                    </Grid>
                                 </Border>
                                 <StackPanel Grid.Column="1" Margin="10,0,6,0" VerticalAlignment="Center" Spacing="4">
                                     <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AppPrimaryColor}" TextTrimming="CharacterEllipsis" MaxLines="2"/>
                                     <TextBlock Text="{Binding Type}" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                                    <!-- Votes -->
+                                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,2,0,0" IsVisible="{Binding Votes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                        <material:MaterialIcon Kind="ThumbUp" Width="12" Height="12" Foreground="{DynamicResource AppSubtextColor}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Votes}" FontSize="11" Foreground="{DynamicResource AppSubtextColor}" VerticalAlignment="Center"/>
+                                    </StackPanel>
                                 </StackPanel>
-                                <Button Grid.Column="2" Click="OnSeeAnimeClicked" Background="Transparent" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center">
-                                    <material:MaterialIcon Kind="ChevronRight" Width="24" Height="24"/>
-                                </Button>
+                                <material:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="24" Height="24" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
                     </DataTemplate>

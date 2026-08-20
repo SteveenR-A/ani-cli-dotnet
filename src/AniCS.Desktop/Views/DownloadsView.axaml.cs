@@ -3,6 +3,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AniCS.Desktop.Services;
 using AniCS.Models;
@@ -97,21 +98,82 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
     {
         var downloads = DownloadManager.GetAll().ToList();
         
-        ActiveDownloadsList.ItemsSource = null;
-        ActiveDownloadsList.ItemsSource = DownloadManager.ActiveDownloads;
+        if (ActiveDownloadsList.ItemsSource != DownloadManager.ActiveDownloads)
+        {
+            ActiveDownloadsList.ItemsSource = DownloadManager.ActiveDownloads;
+        }
         
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasActiveDownloads)));
 
-        AnimeList.ItemsSource = null;
         if (downloads.Count == 0)
         {
             StatusText.IsVisible = true;
+            AnimeList.ItemsSource = null;
         }
         else
         {
             StatusText.IsVisible = false;
-            AnimeList.ItemsSource = downloads;
+
+            // Si la lista de animes y episodios ya es idéntica en estructura,
+            // no reasignamos ItemsSource para evitar recrear los Expanders y reiniciar el scroll.
+            if (!AreDownloadsListsIdentical(AnimeList.ItemsSource as IEnumerable<DownloadedAnime>, downloads))
+            {
+                var scrollOffset = DownloadsScrollViewer?.Offset ?? default;
+
+                // Preservar estado IsExpanded de los animes existentes
+                if (AnimeList.ItemsSource is IEnumerable<DownloadedAnime> existing)
+                {
+                    var map = existing.ToDictionary(a => a.Url, a => a.IsExpanded);
+                    foreach (var d in downloads)
+                    {
+                        if (map.TryGetValue(d.Url, out bool expanded))
+                        {
+                            d.IsExpanded = expanded;
+                        }
+                    }
+                }
+
+                AnimeList.ItemsSource = downloads;
+
+                if (scrollOffset != default)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (DownloadsScrollViewer != null)
+                        {
+                            DownloadsScrollViewer.Offset = scrollOffset;
+                        }
+                    }, DispatcherPriority.Loaded);
+                }
+            }
         }
+    }
+
+    private static bool AreDownloadsListsIdentical(IEnumerable<DownloadedAnime>? current, List<DownloadedAnime> updated)
+    {
+        if (current == null) return false;
+        var curList = current as IReadOnlyList<DownloadedAnime> ?? current.ToList();
+
+        if (curList.Count != updated.Count) return false;
+
+        for (int i = 0; i < curList.Count; i++)
+        {
+            var a = curList[i];
+            var b = updated[i];
+            if (a.Url != b.Url || a.Title != b.Title || a.Episodes.Count != b.Episodes.Count)
+                return false;
+
+            for (int j = 0; j < a.Episodes.Count; j++)
+            {
+                if (a.Episodes[j].EpisodeNumber != b.Episodes[j].EpisodeNumber ||
+                    a.Episodes[j].FilePath != b.Episodes[j].FilePath)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private void OnCancelActiveDownloadClicked(object? sender, RoutedEventArgs e)

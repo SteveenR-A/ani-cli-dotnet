@@ -90,7 +90,36 @@ public partial class MobileDownloadsView : UserControl
         {
             EmptyDownloadsText.IsVisible = false;
             DownloadedAnimeList.IsVisible = true;
-            DownloadedAnimeList.ItemsSource = filteredList;
+
+            if (!AreDownloadsListsIdentical(DownloadedAnimeList.ItemsSource as IEnumerable<DownloadedAnime>, filteredList))
+            {
+                var scrollOffset = MobileDownloadsScrollViewer?.Offset ?? default;
+
+                if (DownloadedAnimeList.ItemsSource is IEnumerable<DownloadedAnime> existing)
+                {
+                    var map = existing.ToDictionary(a => a.Url, a => a.IsExpanded);
+                    foreach (var d in filteredList)
+                    {
+                        if (map.TryGetValue(d.Url, out bool expanded))
+                        {
+                            d.IsExpanded = expanded;
+                        }
+                    }
+                }
+
+                DownloadedAnimeList.ItemsSource = filteredList;
+
+                if (scrollOffset != default)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (MobileDownloadsScrollViewer != null)
+                        {
+                            MobileDownloadsScrollViewer.Offset = scrollOffset;
+                        }
+                    }, DispatcherPriority.Loaded);
+                }
+            }
         }
         else
         {
@@ -101,6 +130,33 @@ public partial class MobileDownloadsView : UserControl
             DownloadedAnimeList.IsVisible = false;
             DownloadedAnimeList.ItemsSource = null;
         }
+    }
+
+    private static bool AreDownloadsListsIdentical(IEnumerable<DownloadedAnime>? current, List<DownloadedAnime> updated)
+    {
+        if (current == null) return false;
+        var curList = current as IReadOnlyList<DownloadedAnime> ?? current.ToList();
+
+        if (curList.Count != updated.Count) return false;
+
+        for (int i = 0; i < curList.Count; i++)
+        {
+            var a = curList[i];
+            var b = updated[i];
+            if (a.Url != b.Url || a.Title != b.Title || a.Episodes.Count != b.Episodes.Count)
+                return false;
+
+            for (int j = 0; j < a.Episodes.Count; j++)
+            {
+                if (a.Episodes[j].EpisodeNumber != b.Episodes[j].EpisodeNumber ||
+                    a.Episodes[j].FilePath != b.Episodes[j].FilePath)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private void OnFilterAllClicked(object? sender, RoutedEventArgs e) => SetFilter(DownloadFilter.All, FilterAllBtn);
@@ -196,7 +252,6 @@ public partial class MobileDownloadsView : UserControl
             var title = anime != null ? $"{anime.Title} — {episode.EpisodeTitle}" : episode.EpisodeTitle;
 
             var playerView = new MobileVideoPlayerView(
-                new LibVlcBackend(),
                 () => Task.FromResult(episode.FilePath),
                 title,
                 episode.FilePath,

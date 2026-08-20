@@ -12,14 +12,14 @@
         <converters:BadgeColorConverter x:Key="BadgeColorConverter"/>
     </UserControl.Resources>
 
-    <Button Background="{DynamicResource AppSurfaceColor}" 
+    <Border Background="{DynamicResource AppSurfaceColor}" 
             CornerRadius="8" 
             Padding="0" 
             HorizontalAlignment="Stretch"
-            HorizontalContentAlignment="Left"
             BorderThickness="1"
             BorderBrush="#333333"
-            Click="OnBlockClicked">
+            Cursor="Hand"
+            Tapped="OnBlockTapped">
         
         <Grid ColumnDefinitions="Auto, *">
             <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True" Width="120" Height="170" VerticalAlignment="Top">
@@ -48,16 +48,16 @@
                            FontWeight="Bold" 
                            Foreground="{DynamicResource AppTitleColor}" 
                            TextTrimming="CharacterEllipsis"
-                           TextWrapping="NoWrap"
+                           TextWrapping="NoWrap" 
                            Margin="0,0,0,8" />
                 
                 <TextBlock Text="{Binding Description}" 
                            FontSize="14" 
-                           Foreground="{DynamicResource AppSubtextColor}"
+                           Foreground="{DynamicResource AppSubtextColor}" 
                            TextTrimming="CharacterEllipsis"
                            MaxLines="4"
                            TextWrapping="Wrap" />
             </StackPanel>
         </Grid>
-    </Button>
+    </Border>
 </UserControl>

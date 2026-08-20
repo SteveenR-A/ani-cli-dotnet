@@ -1,10 +1,8 @@
-using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using AniCS.Models;
 using AniCS.History;
-using AniCS.Desktop.Services;
 using Button = Avalonia.Controls.Button;
 
 namespace AniCS.Android.Views;
@@ -27,19 +25,18 @@ public partial class MobileHistoryView : UserControl
 
     public void LoadHistory()
     {
-        var history = new WatchHistory();
-        var entries = history.GetAll();
-        EmptyHistoryText.IsVisible = entries == null || entries.Count == 0;
+        var entries = _history.GetAll();
+        EmptyHistoryText.IsVisible = entries.Count == 0;
         HistoryItemsControl.ItemsSource = entries;
     }
 
-    private void OnClearHistoryClicked(object? sender, RoutedEventArgs e)
+    public void OnClearHistoryClicked(object? sender, RoutedEventArgs e)
     {
         _history.Clear();
         LoadHistory();
     }
 
-    private void OnDeleteSingleHistoryClicked(object? sender, RoutedEventArgs e)
+    private void OnDeleteSingleHistoryClicked(object? sender, RoutedEventArgs _)
     {
         if (sender is Button btn && btn.Tag is WatchEntry entry)
         {
@@ -48,23 +45,23 @@ public partial class MobileHistoryView : UserControl
         }
     }
 
-    private void OnHistoryImageClicked(object? sender, RoutedEventArgs e)
+    private void OnHistoryImageTapped(object? sender, TappedEventArgs _)
     {
-        if (sender is Button btn && btn.Tag is WatchEntry entry && !string.IsNullOrEmpty(entry.AnimeThumbnailUrl))
+        if (sender is Control ctrl && (ctrl.Tag is WatchEntry entry || ctrl.DataContext is WatchEntry entryDc && (entry = entryDc) != null) && !string.IsNullOrEmpty(entry.AnimeThumbnailUrl))
         {
             AndroidMainView.Current?.ShowImageModal(entry.AnimeThumbnailUrl, entry.AnimeTitle);
         }
     }
 
-    private void OnHistoryCardPressed(object? sender, PointerPressedEventArgs e)
+    private void OnHistoryCardTapped(object? sender, TappedEventArgs _)
     {
-        if (sender is Border border && border.DataContext is WatchEntry entry)
+        if (sender is Control ctrl && (ctrl.Tag is WatchEntry entry || ctrl.DataContext is WatchEntry entryDc && (entry = entryDc) != null))
         {
             NavigateToEntry(entry);
         }
     }
 
-    private void OnPlayHistoryClicked(object? sender, RoutedEventArgs e)
+    private void OnPlayHistoryClicked(object? sender, RoutedEventArgs _)
     {
         if (sender is Button btn && btn.DataContext is WatchEntry entry)
         {

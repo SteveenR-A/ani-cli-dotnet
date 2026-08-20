@@ -407,7 +407,6 @@ public partial class MobileAnimeDetailsView : UserControl
         {
             StatusText.IsVisible = false;
             var playerView = new MobileVideoPlayerView(
-                _playerBackend,
                 urlResolver,
                 $"{_anime.Title} — {vm.Title}",
                 chosenServer.Url,

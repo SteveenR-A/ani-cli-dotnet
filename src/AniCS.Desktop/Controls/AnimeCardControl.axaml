@@ -9,17 +9,16 @@
         <converters:AsyncImageLoader x:Key="AsyncImageLoader"/>
     </UserControl.Resources>
 
-    <Button Background="{DynamicResource AppSurfaceColor}" 
+    <Border Background="{DynamicResource AppSurfaceColor}" 
             CornerRadius="8" 
             Padding="0" 
             Width="160"
             Height="270"
             VerticalAlignment="Top"
-            HorizontalContentAlignment="Stretch"
-            VerticalContentAlignment="Stretch"
             BorderThickness="1"
             BorderBrush="#333333"
-            Click="OnCardClicked">
+            Cursor="Hand"
+            Tapped="OnCardTapped">
         
         <Grid RowDefinitions="*, Auto">
             <Border Grid.Row="0" CornerRadius="8,8,0,0" ClipToBounds="True">
@@ -43,5 +42,5 @@
                            Margin="0,4,0,0"/>
             </StackPanel>
         </Grid>
-    </Button>
+    </Border>
 </UserControl>

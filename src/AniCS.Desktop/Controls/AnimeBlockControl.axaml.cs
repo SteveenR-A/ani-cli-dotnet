@@ -1,7 +1,6 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
+using Avalonia.Input;
 using AniCS.Models;
-using AniCS.Desktop.Views;
 
 namespace AniCS.Desktop.Controls;
 
@@ -12,7 +11,7 @@ public partial class AnimeBlockControl : UserControl
         InitializeComponent();
     }
 
-    private void OnBlockClicked(object? sender, RoutedEventArgs e)
+    private void OnBlockTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is AnimeResult anime)
         {

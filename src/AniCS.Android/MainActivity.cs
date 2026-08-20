@@ -238,6 +238,26 @@ public class MainActivity : AvaloniaMainActivity
         RequestedOrientation = global::Android.Content.PM.ScreenOrientation.FullUser;
     }
 
+    protected override void OnPause()
+    {
+        base.OnPause();
+        try
+        {
+            if (Views.AndroidMainView.Current?.MainContent.Content is Views.MobileVideoPlayerView player && player.IsPlaying)
+            {
+                player.Pause();
+            }
+        }
+        catch { }
+        DisableKeepScreenOn();
+    }
+
+    protected override void OnStop()
+    {
+        base.OnStop();
+        DisableKeepScreenOn();
+    }
+
     public void EnableKeepScreenOn()
     {
         RunOnUiThread(() =>
@@ -257,6 +277,10 @@ public class MainActivity : AvaloniaMainActivity
             try
             {
                 Window?.ClearFlags(global::Android.Views.WindowManagerFlags.KeepScreenOn);
+                if (Window?.DecorView != null)
+                {
+                    Window.DecorView.KeepScreenOn = false;
+                }
             }
             catch { }
         });

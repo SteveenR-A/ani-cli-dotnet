@@ -1,19 +1,38 @@
-# 🚀 AniCS v1.6.4 — Registro de Cambios
+# 🚀 AniCS v1.6.5 — Registro de Cambios
 
-¡Nueva actualización v1.6.4 con la nueva identidad visual e iconos oficiales de AniCS, además de las mejoras integrales de almacenamiento, reproducción inmersiva y estabilidad!
-
----
-
-### 🎨 Nueva Identidad Visual e Iconos Oficiales
-- **Iconografía renovada:** Actualización de los iconos de la aplicación e instalador con el diseño visual oficial de AniCS.
-- **Consistencia visual:** Integración optimizada de recursos gráficos para accesos directos, barra de tareas y empaquetado del instalador MSI.
+¡Nueva actualización v1.6.5 con sincronización inteligente de pantalla activa en Android, corrección de gestos y desplazamiento táctil en Top Animes y Ver Más, y sincronización en tiempo real del reproductor!
 
 ---
 
-### 📁 Almacenamiento en Carpeta Pública del Sistema DCIM (Android)
-- **Descargas en DCIM:** Las descargas en Android ahora se guardan directamente en la carpeta pública del sistema `DCIM/AniCS` (`/storage/emulated/0/DCIM/AniCS`).
-- **Compatibilidad total con apps del sistema:** Los episodios descargados son reconocidos de forma inmediata por la galería multimedia de Android, reproductores nativos y gestores de archivos.
-- **Gestión de Permisos:** Configuración automática y solicitud en tiempo de ejecución de permisos de almacenamiento (`READ_MEDIA_VIDEO`, `READ_MEDIA_IMAGES`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`) y `requestLegacyExternalStorage`.
+### 💡 Sincronización Inteligente de Pantalla Activa (Android)
+- **Pantalla activa por reproducción:** La pantalla se mantiene encendida de forma automática exclusivamente mientras el video se encuentra en reproducción activa (`IsPlaying == true`).
+- **Atenuación y suspensión en pausa:** Al pausar el video, el sistema libera la bandera de pantalla activa permitiendo que el móvil se atenúe y apague según el tiempo de inactividad configurado por el usuario.
+- **Gestión del ciclo de vida (`OnPause`/`OnStop`):** Al minimizar la aplicación o bloquear la pantalla, la reproducción se pausa automáticamente y se liberan de inmediato las banderas de pantalla activa.
+
+---
+
+### 📥 Corrección de Scroll y Estado en Descargas (PC & Móvil)
+- **Scroll fluido y sin reinicios:** Cambiar manualmente el estado de progreso de un episodio (Sin ver / En progreso / Terminado) ya no recarga la vista completa ni envía la barra de desplazamiento a la parte superior.
+- **Actualización reactiva en tiempo real:** Los badges, iconos y textos de estado se actualizan instantáneamente sin colapsar los animes desplegados.
+
+---
+
+### 👆 Corrección de Desplazamiento y Gestos en Top Animes y Ver Más (Android)
+- **Scroll táctil sin clics accidentales:** Se eliminó el conflicto donde arrastrar o deslizar para hacer scroll sobre la lista de Top Animes y Ver Más activaba el clic de la tarjeta.
+- **Gestos `Tapped`:** Implementación del reconocedor de gestos de Avalonia que cancela la selección cuando se detecta un deslizamiento, garantizando un desplazamiento suave y natural.
+
+---
+
+### ⚡ Sincronización en Tiempo Real del Reproductor
+- **Evento de estado de reproducción:** Integración del evento `PlaybackStateChanged` para sincronizar en tiempo real el botón central de Play/Pausa y la visibilidad de los controles OSD.
+
+---
+
+### 🎨 Mejoras Previas v1.6.4
+- **Nueva identidad visual e iconos oficiales:** Actualización completa de la iconografía de AniCS en todas las plataformas e instaladores.
+- **Descargas en carpeta pública DCIM/AniCS:** Reconocimiento inmediato por galería y apps del sistema en Android.
+- **Modo pantalla completa inmersivo 100%:** Ocultación total de la barra de estado en reproducción horizontal.
+- **Personalización de la carpeta de descargas:** Selector de carpetas en Ajustes para PC y Móvil.
 
 ---
 

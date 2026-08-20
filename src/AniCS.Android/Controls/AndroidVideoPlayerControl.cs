@@ -1,15 +1,11 @@
-using System;
-using System.Collections.Generic;
+using System.Runtime.Versioning;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Android.Views;
 using Android.Media;
 using Android.Graphics;
 using Android.Graphics.Drawables;
-using Android.Widget;
 using Android.OS;
-using AniCS;
-using AniCS.Android.Views;
 using Button = Android.Widget.Button;
 using Orientation = Android.Widget.Orientation;
 using Canvas = Android.Graphics.Canvas;
@@ -17,6 +13,7 @@ using Path = Android.Graphics.Path;
 
 namespace AniCS.Android.Controls;
 
+[SupportedOSPlatform("android23.0")]
 public class AndroidVideoPlayerControl : NativeControlHost
 {
     private FrameLayout? _rootLayout;
@@ -46,22 +43,23 @@ public class AndroidVideoPlayerControl : NativeControlHost
     private string _title = "";
     private string _quality = "720p";
 
-    private int _videoWidth = 0;
-    private int _videoHeight = 0;
-    private int _bufferPercentage = 0;
-    private bool _isPrepared = false;
+    private int _videoWidth;
+    private int _videoHeight;
+    private int _bufferPercentage;
+    private bool _isPrepared;
     private bool _isControlsVisible = true;
-    private bool _isUserSeeking = false;
+    private bool _isUserSeeking;
     private float _currentSpeed = 1.0f;
 
     private readonly Handler _handler = new(Looper.MainLooper!);
-    private Action? _autoHideAction;
-    private Action? _progressUpdateAction;
+    private readonly Action _autoHideAction;
+    private readonly Action _progressUpdateAction;
 
     public event EventHandler? PlaybackCompleted;
     public event EventHandler<string>? PlaybackError;
     public event EventHandler? BackRequested;
     public event EventHandler<(int Position, int Duration)>? ProgressChanged;
+    public event EventHandler<bool>? PlaybackStateChanged;
 
     public AndroidVideoPlayerControl()
     {
@@ -105,19 +103,30 @@ public class AndroidVideoPlayerControl : NativeControlHost
                     .SetUsage(AudioUsageKind.Media)!
                     .Build()!);
 
-                _mediaPlayer.Completion += (s, e) =>
+                _mediaPlayer.Completion += (_, _) =>
                 {
+                    _isPrepared = false;
+                    _handler.RemoveCallbacks(_progressUpdateAction);
+                    SetKeepScreenOnState(false);
+                    PlaybackStateChanged?.Invoke(this, false);
                     PlaybackCompleted?.Invoke(this, EventArgs.Empty);
                     UpdatePlayPauseUi(false);
+                    ShowControls();
                 };
 
-                _mediaPlayer.Error += (s, e) =>
+                _mediaPlayer.Error += (_, e) =>
                 {
+                    _isPrepared = false;
+                    _handler.RemoveCallbacks(_progressUpdateAction);
+                    SetKeepScreenOnState(false);
+                    PlaybackStateChanged?.Invoke(this, false);
                     PlaybackError?.Invoke(this, $"Error de reproducción ({e.What})");
                     e.Handled = true;
+                    UpdatePlayPauseUi(false);
+                    ShowControls();
                 };
 
-                _mediaPlayer.BufferingUpdate += (s, e) =>
+                _mediaPlayer.BufferingUpdate += (_, e) =>
                 {
                     _bufferPercentage = e.Percent;
                     if (_seekBar != null && !_isUserSeeking)
@@ -126,7 +135,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
                     }
                 };
 
-                _mediaPlayer.Info += (s, e) =>
+                _mediaPlayer.Info += (_, e) =>
                 {
                     if (e.What == MediaInfo.BufferingStart && _statusBadge != null)
                     {
@@ -138,7 +147,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
                     }
                 };
 
-                _mediaPlayer.VideoSizeChanged += (s, e) =>
+                _mediaPlayer.VideoSizeChanged += (_, e) =>
                 {
                     _videoWidth = e.Width;
                     _videoHeight = e.Height;
@@ -149,7 +158,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
                     AdjustAspectRatio();
                 };
 
-                _mediaPlayer.Prepared += (s, e) =>
+                _mediaPlayer.Prepared += (_, _) =>
                 {
                     _isPrepared = true;
                     _videoWidth = _mediaPlayer.VideoWidth;
@@ -160,9 +169,11 @@ public class AndroidVideoPlayerControl : NativeControlHost
                     }
                     AdjustAspectRatio();
                     _mediaPlayer.Start();
+                    SetKeepScreenOnState(true);
                     UpdatePlayPauseUi(true);
                     StartProgressUpdates();
                     ScheduleAutoHide();
+                    PlaybackStateChanged?.Invoke(this, true);
                 };
             }
             else
@@ -174,7 +185,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
 
             _mediaPlayer.SetSurface(_surface);
 
-            var context = global::Android.App.Application.Context;
+            var context = Application.Context;
             var headers = new Dictionary<string, string>();
             if (url.Contains("mundodonghua") || url.Contains("mdplayer") || url.Contains("mdmnemonicplayer") || (referer != null && referer.Contains("mundodonghua")))
             {
@@ -246,6 +257,38 @@ public class AndroidVideoPlayerControl : NativeControlHost
     public int BufferPercentage => _bufferPercentage;
     public bool IsPlaying => _isPrepared && _mediaPlayer != null && _mediaPlayer.IsPlaying;
 
+    private void SetKeepScreenOnState(bool keepOn)
+    {
+        try
+        {
+            _handler.Post(() =>
+            {
+                try
+                {
+                    if (_rootLayout != null) _rootLayout.KeepScreenOn = keepOn;
+                    if (_textureView != null) _textureView.KeepScreenOn = keepOn;
+                    if (_overlayLayout != null) _overlayLayout.KeepScreenOn = keepOn;
+                    if (keepOn)
+                    {
+                        MainActivity.Instance?.EnableKeepScreenOn();
+                    }
+                    else
+                    {
+                        MainActivity.Instance?.DisableKeepScreenOn();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("AndroidVideoPlayerControl.SetKeepScreenOnState.Inner", ex);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AndroidVideoPlayerControl.SetKeepScreenOnState", ex);
+        }
+    }
+
     public void Pause()
     {
         try
@@ -253,11 +296,16 @@ public class AndroidVideoPlayerControl : NativeControlHost
             if (_isPrepared && _mediaPlayer != null)
             {
                 _mediaPlayer.Pause();
+                SetKeepScreenOnState(false);
                 UpdatePlayPauseUi(false);
                 ShowControls();
+                PlaybackStateChanged?.Invoke(this, false);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AndroidVideoPlayerControl.Pause", ex);
+        }
     }
 
     public void Resume()
@@ -267,11 +315,16 @@ public class AndroidVideoPlayerControl : NativeControlHost
             if (_isPrepared && _mediaPlayer != null)
             {
                 _mediaPlayer.Start();
+                SetKeepScreenOnState(true);
                 UpdatePlayPauseUi(true);
                 ScheduleAutoHide();
+                PlaybackStateChanged?.Invoke(this, true);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AndroidVideoPlayerControl.Resume", ex);
+        }
     }
 
     public void SeekTo(int msec)
@@ -283,7 +336,10 @@ public class AndroidVideoPlayerControl : NativeControlHost
                 _mediaPlayer.SeekTo(msec);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AndroidVideoPlayerControl.SeekTo", ex);
+        }
     }
 
     public void SetSpeed(float speed)
@@ -291,51 +347,63 @@ public class AndroidVideoPlayerControl : NativeControlHost
         _currentSpeed = speed;
         try
         {
-            if (_isPrepared && _mediaPlayer != null && Build.VERSION.SdkInt >= BuildVersionCodes.M)
+            if (_isPrepared && _mediaPlayer != null && OperatingSystem.IsAndroidVersionAtLeast(23))
             {
-                _mediaPlayer.PlaybackParams = new PlaybackParams().SetSpeed(speed);
+                var p = new PlaybackParams().SetSpeed(speed);
+                if (p != null)
+                {
+                    _mediaPlayer.PlaybackParams = p;
+                }
             }
             if (_speedBtn != null) _speedBtn.Text = $"{speed:F1}x";
             ShowToast($"{speed:F2}x Velocidad");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AndroidVideoPlayerControl.SetSpeed", ex);
+        }
     }
 
     public void Stop()
     {
         try
         {
+            SetKeepScreenOnState(false);
+            PlaybackStateChanged?.Invoke(this, false);
             _mediaPlayer?.Stop();
             _isPrepared = false;
             _handler.RemoveCallbacksAndMessages(null);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AndroidVideoPlayerControl.Stop", ex);
+        }
     }
 
     // ── Native View Hierarchy Creation (FrameLayout with video + controls on top) ──
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
-        var context = global::Android.App.Application.Context;
+        var context = Application.Context;
 
-        // 1. Root FrameLayout (Pantalla completa sin insets y manteniendo pantalla encendida)
+        // 1. Root FrameLayout (Pantalla completa sin insets)
         _rootLayout = new FrameLayout(context)
         {
             LayoutParameters = new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.MatchParent),
-            KeepScreenOn = true
+            KeepScreenOn = false
         };
         _rootLayout.SetFitsSystemWindows(false);
         _rootLayout.SetBackgroundColor(Color.Black);
 
-        // 2. TextureView (Child 0: Video layer con KeepScreenOn)
+        // 2. TextureView (Child 0: Video layer)
         _textureView = new TextureView(context)
         {
             LayoutParameters = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.MatchParent),
-            KeepScreenOn = true
+            KeepScreenOn = false
         };
         _textureView.SurfaceTextureListener = new SurfaceTextureListenerHelper(this);
         _rootLayout.AddView(_textureView);
@@ -343,8 +411,6 @@ public class AndroidVideoPlayerControl : NativeControlHost
         // 3. Native Overlay FrameLayout (Child 1: Controls layer - Guaranteed 100% on top)
         _overlayLayout = BuildNativeOverlay(context);
         _rootLayout.AddView(_overlayLayout);
-
-        MainActivity.Instance?.EnableKeepScreenOn();
 
         return new AndroidPlatformHandle(_rootLayout.Handle, "AndroidView");
     }
@@ -359,12 +425,13 @@ public class AndroidVideoPlayerControl : NativeControlHost
         };
 
         // Touch Listener to Toggle Controls
-        overlay.Click += (s, e) => ToggleControls();
+        overlay.Click += (_, _) => ToggleControls();
 
         // ── A. Top Bar (Gradient Background) ─────────────────────────
         _topBar = new LinearLayout(context)
         {
             Orientation = Orientation.Horizontal,
+            Clickable = true,
             LayoutParameters = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.WrapContent)
@@ -412,7 +479,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
         backLabel.SetTextColor(Color.White);
         backLayout.AddView(backLabel);
 
-        backLayout.Click += (s, e) =>
+        backLayout.Click += (_, _) =>
         {
             BackRequested?.Invoke(this, EventArgs.Empty);
         };
@@ -493,7 +560,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
         rotateBtn.Background = rotateBg;
         rotateBtn.SetPadding(DpToPx(7), DpToPx(7), DpToPx(7), DpToPx(7));
         rotateBtn.SetImageDrawable(PlayerIconHelper.CreateRotateDrawable(20, Color.White));
-        rotateBtn.Click += (s, e) => ToggleOrientation();
+        rotateBtn.Click += (_, _) => ToggleOrientation();
         _topBar.AddView(rotateBtn);
 
         overlay.AddView(_topBar);
@@ -523,7 +590,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
         _rewindBtn.Background = rewindBg;
         _rewindBtn.SetPadding(DpToPx(11), DpToPx(11), DpToPx(11), DpToPx(11));
         _rewindBtn.SetImageDrawable(PlayerIconHelper.CreateReplay10Drawable(30, Color.White));
-        _rewindBtn.Click += (s, e) =>
+        _rewindBtn.Click += (_, _) =>
         {
             int target = Math.Max(0, CurrentPosition - 10000);
             SeekTo(target);
@@ -546,7 +613,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
         _playPauseCenterBtn.Background = playBtnBg;
         _playPauseCenterBtn.SetPadding(DpToPx(16), DpToPx(16), DpToPx(16), DpToPx(16));
         _playPauseCenterBtn.SetImageDrawable(PlayerIconHelper.CreatePauseDrawable(32, Color.White));
-        _playPauseCenterBtn.Click += (s, e) =>
+        _playPauseCenterBtn.Click += (_, _) =>
         {
             if (IsPlaying) Pause(); else Resume();
         };
@@ -564,7 +631,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
         _forwardBtn.Background = forwardBg;
         _forwardBtn.SetPadding(DpToPx(11), DpToPx(11), DpToPx(11), DpToPx(11));
         _forwardBtn.SetImageDrawable(PlayerIconHelper.CreateForward10Drawable(30, Color.White));
-        _forwardBtn.Click += (s, e) =>
+        _forwardBtn.Click += (_, _) =>
         {
             int target = Math.Min(Duration, CurrentPosition + 10000);
             SeekTo(target);
@@ -579,6 +646,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
         _bottomBar = new LinearLayout(context)
         {
             Orientation = Orientation.Vertical,
+            Clickable = true,
             LayoutParameters = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.WrapContent)
@@ -604,13 +672,13 @@ public class AndroidVideoPlayerControl : NativeControlHost
         _seekBar.Progress = 0;
         _seekBar.SetPadding(DpToPx(8), DpToPx(4), DpToPx(8), DpToPx(4));
 
-        _seekBar.StartTrackingTouch += (s, e) =>
+        _seekBar.StartTrackingTouch += (_, _) =>
         {
             _isUserSeeking = true;
-            _handler.RemoveCallbacks(_autoHideAction!);
+            _handler.RemoveCallbacks(_autoHideAction);
         };
 
-        _seekBar.StopTrackingTouch += (s, e) =>
+        _seekBar.StopTrackingTouch += (_, _) =>
         {
             _isUserSeeking = false;
             if (Duration > 0 && _seekBar != null)
@@ -621,11 +689,11 @@ public class AndroidVideoPlayerControl : NativeControlHost
             ScheduleAutoHide();
         };
 
-        _seekBar.ProgressChanged += (s, e) =>
+        _seekBar.ProgressChanged += (_, e) =>
         {
             if (e.FromUser && Duration > 0 && _timeText != null)
             {
-                int targetMs = (int)((double)e.Progress / 1000.0 * Duration);
+                int targetMs = (int)(e.Progress / 1000.0 * Duration);
                 _timeText.Text = $"{FormatTime(targetMs)} / {FormatTime(Duration)}";
             }
         };
@@ -669,7 +737,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
         speedBg.SetCornerRadius(DpToPx(10));
         _speedBtn.Background = speedBg;
         _speedBtn.SetPadding(DpToPx(12), DpToPx(4), DpToPx(12), DpToPx(4));
-        _speedBtn.Click += (s, e) =>
+        _speedBtn.Click += (_, _) =>
         {
             float nextSpeed = _currentSpeed switch
             {
@@ -794,10 +862,10 @@ public class AndroidVideoPlayerControl : NativeControlHost
 
     private void ScheduleAutoHide()
     {
-        _handler.RemoveCallbacks(_autoHideAction!);
+        _handler.RemoveCallbacks(_autoHideAction);
         if (IsPlaying)
         {
-            _handler.PostDelayed(_autoHideAction!, 3500);
+            _handler.PostDelayed(_autoHideAction, 3500);
         }
     }
 
@@ -842,12 +910,14 @@ public class AndroidVideoPlayerControl : NativeControlHost
 
     public static int DpToPx(float dp)
     {
-        float density = global::Android.App.Application.Context.Resources?.DisplayMetrics?.Density ?? 1.0f;
+        float density = Application.Context.Resources?.DisplayMetrics?.Density ?? 1.0f;
         return (int)(dp * density + 0.5f);
     }
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
     {
+        SetKeepScreenOnState(false);
+        PlaybackStateChanged?.Invoke(this, false);
         try
         {
             _handler.RemoveCallbacksAndMessages(null);
@@ -867,7 +937,10 @@ public class AndroidVideoPlayerControl : NativeControlHost
             _rootLayout?.Dispose();
             _rootLayout = null;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AndroidVideoPlayerControl.DestroyNativeControlCore", ex);
+        }
         base.DestroyNativeControlCore(control);
     }
 
@@ -881,9 +954,9 @@ public class AndroidVideoPlayerControl : NativeControlHost
         if (_mediaPlayer != null)
         {
             _mediaPlayer.SetSurface(_surface);
+            AdjustAspectRatio();
         }
-
-        if (!string.IsNullOrEmpty(_pendingUrl))
+        else if (!string.IsNullOrEmpty(_pendingUrl))
         {
             StartPlaybackInternal(_pendingUrl, _pendingReferer);
         }
@@ -903,7 +976,10 @@ public class AndroidVideoPlayerControl : NativeControlHost
             _surface?.Dispose();
             _surface = null;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AndroidVideoPlayerControl.OnSurfaceTextureDestroyed", ex);
+        }
         return true;
     }
 
@@ -929,6 +1005,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
     #endregion
 }
 
+[SupportedOSPlatform("android23.0")]
 public static class PlayerIconHelper
 {
     public static Drawable CreateChevronLeftDrawable(int sizeDp, Color color)
@@ -956,7 +1033,7 @@ public static class PlayerIconHelper
         path.LineTo(cx + w * 0.5f, cy + h);
 
         canvas.DrawPath(path, paint);
-        return new BitmapDrawable(global::Android.App.Application.Context.Resources, bitmap);
+        return new BitmapDrawable(Application.Context.Resources, bitmap);
     }
 
     public static Drawable CreateReplay10Drawable(int sizeDp, Color color)
@@ -1000,7 +1077,7 @@ public static class PlayerIconHelper
         paint.GetTextBounds("10", 0, 2, textBounds);
         canvas.DrawText("10", cx, cy + textBounds.Height() / 2f, paint);
 
-        return new BitmapDrawable(global::Android.App.Application.Context.Resources, bitmap);
+        return new BitmapDrawable(Application.Context.Resources, bitmap);
     }
 
     public static Drawable CreateForward10Drawable(int sizeDp, Color color)
@@ -1044,7 +1121,7 @@ public static class PlayerIconHelper
         paint.GetTextBounds("10", 0, 2, textBounds);
         canvas.DrawText("10", cx, cy + textBounds.Height() / 2f, paint);
 
-        return new BitmapDrawable(global::Android.App.Application.Context.Resources, bitmap);
+        return new BitmapDrawable(Application.Context.Resources, bitmap);
     }
 
     public static Drawable CreatePlayDrawable(int sizeDp, Color color)
@@ -1072,7 +1149,7 @@ public static class PlayerIconHelper
         paint.SetPathEffect(cornerPathEffect);
         canvas.DrawPath(path, paint);
 
-        return new BitmapDrawable(global::Android.App.Application.Context.Resources, bitmap);
+        return new BitmapDrawable(Application.Context.Resources, bitmap);
     }
 
     public static Drawable CreatePauseDrawable(int sizeDp, Color color)
@@ -1098,7 +1175,7 @@ public static class PlayerIconHelper
         canvas.DrawRoundRect(rectLeft, AndroidVideoPlayerControl.DpToPx(2.5f), AndroidVideoPlayerControl.DpToPx(2.5f), paint);
         canvas.DrawRoundRect(rectRight, AndroidVideoPlayerControl.DpToPx(2.5f), AndroidVideoPlayerControl.DpToPx(2.5f), paint);
 
-        return new BitmapDrawable(global::Android.App.Application.Context.Resources, bitmap);
+        return new BitmapDrawable(Application.Context.Resources, bitmap);
     }
 
     public static Drawable CreateRotateDrawable(int sizeDp, Color color)
@@ -1139,10 +1216,11 @@ public static class PlayerIconHelper
         p2.Close();
         canvas.DrawPath(p2, paint);
 
-        return new BitmapDrawable(global::Android.App.Application.Context.Resources, bitmap);
+        return new BitmapDrawable(Application.Context.Resources, bitmap);
     }
 }
 
+[SupportedOSPlatform("android23.0")]
 public class AndroidPlatformHandle : IPlatformHandle
 {
     public IntPtr Handle { get; }

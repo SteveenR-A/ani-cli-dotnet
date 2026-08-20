@@ -1,5 +1,5 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
+using Avalonia.Input;
 using AniCS.Models;
 
 namespace AniCS.Desktop.Controls;
@@ -11,7 +11,7 @@ public partial class AnimeCardControl : UserControl
         InitializeComponent();
     }
 
-    private void OnCardClicked(object? sender, RoutedEventArgs e)
+    private void OnCardTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is AnimeResult anime)
         {

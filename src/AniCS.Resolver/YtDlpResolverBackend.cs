@@ -1,12 +1,5 @@
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using AniCS;
 
 namespace AniCS.Resolver;
 
@@ -16,6 +9,7 @@ namespace AniCS.Resolver;
 /// </summary>
 public sealed class YtDlpResolverBackend : IResolverBackend
 {
+    private static readonly HttpClient HttpClient = new(new HttpClientHandler { AllowAutoRedirect = true });
     private string? _cachedPath;
 
     public string BackendName => "yt-dlp";
@@ -68,15 +62,16 @@ public sealed class YtDlpResolverBackend : IResolverBackend
 
             si.ArgumentList.Add(url);
 
-            using var p = new Process { StartInfo = si };
+            using var p = new Process();
+            p.StartInfo = si;
             p.Start();
 
             var outputTask = p.StandardOutput.ReadToEndAsync(ct);
             var errorTask = p.StandardError.ReadToEndAsync(ct);
-            
+
             await Task.WhenAll(outputTask, errorTask);
             var output = outputTask.Result;
-            
+
             await p.WaitForExitAsync(ct);
 
             if (p.ExitCode == 0)
@@ -90,8 +85,15 @@ public sealed class YtDlpResolverBackend : IResolverBackend
                     return new ResolvedMedia(url, directUrl, DetectMediaType(directUrl), referer);
             }
         }
-        catch (OperationCanceledException) { throw; }
-        catch { }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("YtDlpResolverBackend.ResolveAsync", ex);
+            return new ResolvedMedia(url, url, MediaType.Unknown, referer);
+        }
 
         return new ResolvedMedia(url, url, MediaType.Unknown, referer);
     }
@@ -143,13 +145,13 @@ public sealed class YtDlpResolverBackend : IResolverBackend
 
             if (!string.IsNullOrEmpty(media.Referer))
             {
-                si.ArgumentList.Add("--add-header"); si.ArgumentList.Add($"Referer:{media.Referer}");
-                try
+                si.ArgumentList.Add("--add-header");
+                si.ArgumentList.Add($"Referer:{media.Referer}");
+                if (Uri.TryCreate(media.Referer, UriKind.Absolute, out var uri))
                 {
-                    var uri = new Uri(media.Referer);
-                    si.ArgumentList.Add("--add-header"); si.ArgumentList.Add($"Origin:{uri.GetLeftPart(UriPartial.Authority)}");
+                    si.ArgumentList.Add("--add-header");
+                    si.ArgumentList.Add($"Origin:{uri.GetLeftPart(UriPartial.Authority)}");
                 }
-                catch { }
             }
 
             si.ArgumentList.Add("-o"); si.ArgumentList.Add(pattern);
@@ -161,7 +163,14 @@ public sealed class YtDlpResolverBackend : IResolverBackend
 
             using var reg = ct.Register(() =>
             {
-                try { if (!p.HasExited) p.Kill(true); } catch { }
+                try
+                {
+                    if (!p.HasExited) p.Kill(true);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("YtDlpResolverBackend.KillProcess", ex);
+                }
             });
 
             while (true)
@@ -195,7 +204,15 @@ public sealed class YtDlpResolverBackend : IResolverBackend
         }
         catch (OperationCanceledException)
         {
-            try { p?.Kill(true); p?.WaitForExit(2000); } catch { }
+            try
+            {
+                p?.Kill(true);
+                p?.WaitForExit(2000);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("YtDlpResolverBackend.Cancel", ex);
+            }
             return new DownloadResult(DownloadResultCode.Cancelled);
         }
         catch (Exception ex)
@@ -255,9 +272,7 @@ public sealed class YtDlpResolverBackend : IResolverBackend
             request.Headers.Referrer = new Uri("https://www.mundodonghua.com/");
             request.Headers.Add("Origin", "https://www.mundodonghua.com");
 
-            using var handler = new HttpClientHandler { AllowAutoRedirect = true };
-            using var client = new HttpClient(handler);
-            using var response = await client.SendAsync(request);
+            using var response = await HttpClient.SendAsync(request);
 
             if (response.RequestMessage?.RequestUri != null &&
                 !response.RequestMessage.RequestUri.ToString().Contains("redirector.php"))
@@ -273,7 +288,10 @@ public sealed class YtDlpResolverBackend : IResolverBackend
                 if (fm.Success) return fm.Groups[1].Value.Replace("\\", "");
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("YtDlpResolverBackend.ResolveRedirectorAsync", ex);
+        }
 
         return url;
     }

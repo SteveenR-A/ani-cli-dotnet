@@ -1,7 +1,4 @@
 using LibVLCSharp.Shared;
-using System;
-using System.Threading.Tasks;
-using AniCS;
 
 namespace AniCS.Player;
 
@@ -21,7 +18,7 @@ public sealed class LibVlcBackend : IPlayerBackend
     private PlaySession?   _currentSession;
     private string         _currentUrl   = "";
     private string         _currentTitle = "";
-    private System.Threading.Timer? _progressTimer;
+    private Timer?         _progressTimer;
 
     public string BackendName => "LibVLC";
     public bool   IsAvailable => _isInitialized;
@@ -51,16 +48,16 @@ public sealed class LibVlcBackend : IPlayerBackend
             _libVlc      = new LibVLC(enableDebugLogs: false);
             _mediaPlayer = new MediaPlayer(_libVlc);
 
-            _mediaPlayer.EndReached      += OnEndReached;
+            _mediaPlayer.EndReached       += OnEndReached;
             _mediaPlayer.EncounteredError += OnError;
-            _mediaPlayer.Playing         += OnPlaying;
-            _mediaPlayer.Paused          += OnPaused;
+            _mediaPlayer.Playing          += OnPlaying;
+            _mediaPlayer.Paused           += OnPaused;
 
             _isInitialized = true;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[LibVlcBackend] Init failed: {ex.Message}");
+            AppLogger.Error("LibVlcBackend.Ctor", ex);
             _isInitialized = false;
         }
     }
@@ -104,9 +101,10 @@ public sealed class LibVlcBackend : IPlayerBackend
             }
 
             // Optimizaciones de red / caché
-            media.AddOption(":network-caching=5000");
-            media.AddOption(":live-caching=5000");
-            media.AddOption(":file-caching=5000");
+            media.AddOption(":network-caching=20000");
+            media.AddOption(":live-caching=20000");
+            media.AddOption(":file-caching=20000");
+            media.AddOption(":http-reconnect=true");
             media.AddOption(":clock-jitter=0");
             media.AddOption(":clock-synchro=0");
 
@@ -131,7 +129,7 @@ public sealed class LibVlcBackend : IPlayerBackend
         }
 
         // Timer de progreso — cada 1 segundo
-        _progressTimer = new System.Threading.Timer(
+        _progressTimer = new Timer(
             OnProgressTick, null,
             TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
 
@@ -168,7 +166,8 @@ public sealed class LibVlcBackend : IPlayerBackend
         {
             Task.Run(() =>
             {
-                try { mp.Stop(); } catch { }
+                try { mp.Stop(); }
+                catch (Exception ex) { AppLogger.Error("LibVlcBackend.Stop", ex); }
             });
         }
     }
@@ -198,13 +197,13 @@ public sealed class LibVlcBackend : IPlayerBackend
     public double Duration => (_mediaPlayer?.Length ?? 0) / 1000.0;
     public double Position => (_mediaPlayer?.Time ?? 0) / 1000.0;
 
-    private double _bufferPercentage = 0.0;
-    private uint _videoWidth = 0;
-    private uint _videoHeight = 0;
+    private double _bufferPercentage;
+    private uint   _videoWidth;
+    private uint   _videoHeight;
     // Tracks whether video has actually started playing (used to distinguish
     // start-up errors from mid-playback errors when deciding to auto-recover)
-    private bool _hasStartedPlaying = false;
-    private double _lastKnownPosition = 0.0;
+    private bool   _hasStartedPlaying;
+    private double _lastKnownPosition;
 
     private void OnProgressTick(object? _)
     {
@@ -240,10 +239,13 @@ public sealed class LibVlcBackend : IPlayerBackend
         {
             try
             {
-                var history = new AniCS.History.WatchHistory();
+                var history = new History.WatchHistory();
                 history.UpdateProgress(_currentUrl, pos, dur, isCompleted);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Error("LibVlcBackend.WatchHistoryUpdate", ex);
+            }
         }
     }
 
@@ -262,7 +264,10 @@ public sealed class LibVlcBackend : IPlayerBackend
                 return;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("LibVlcBackend.UpdateMediaInfo", ex.Message);
+        }
 
         if (_mediaPlayer.Media != null)
         {
@@ -304,10 +309,13 @@ public sealed class LibVlcBackend : IPlayerBackend
 
         try
         {
-            var history = new AniCS.History.WatchHistory();
+            var history = new History.WatchHistory();
             history.UpdateProgress(_currentUrl, dur, dur, true);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("LibVlcBackend.OnEndReachedHistory", ex);
+        }
     }
 
     private void OnError(object? sender, EventArgs e)
@@ -346,7 +354,8 @@ public sealed class LibVlcBackend : IPlayerBackend
     public void Dispose()
     {
         _progressTimer?.Dispose();
-        try { _mediaPlayer?.Stop(); } catch { }
+        try { _mediaPlayer?.Stop(); }
+        catch (Exception ex) { AppLogger.Error("LibVlcBackend.Dispose", ex); }
         _mediaPlayer?.Dispose();
         _libVlc?.Dispose();
         _mediaPlayer = null;

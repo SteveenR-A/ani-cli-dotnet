@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -189,7 +187,6 @@ public partial class AndroidMainView : UserControl, INavigableHost
             var banner = this.FindControl<Border>("OfflineBanner");
             if (banner != null) banner.IsVisible = false;
             MainActivity.Instance?.EnableImmersiveMode();
-            MainActivity.Instance?.EnableKeepScreenOn();
         }
         else
         {

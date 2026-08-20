@@ -23,7 +23,7 @@
         </StackPanel>
         
         <Grid Grid.Row="1">
-            <ScrollViewer>
+            <ScrollViewer Name="DownloadsScrollViewer">
                 <StackPanel>
                     <!-- Active Downloads Section -->
                     <Border IsVisible="{Binding HasActiveDownloads, RelativeSource={RelativeSource AncestorType=views:DownloadsView}}"

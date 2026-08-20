@@ -8,9 +8,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationId>com.anics.android</ApplicationId>
-    <ApplicationVersion>6</ApplicationVersion>
-    <ApplicationDisplayVersion>1.6.4</ApplicationDisplayVersion>
-    <Version>1.6.4</Version>
+    <ApplicationVersion>7</ApplicationVersion>
+    <ApplicationDisplayVersion>1.6.5</ApplicationDisplayVersion>
+    <Version>1.6.5</Version>
     <!-- Required for ExoPlayer via NativeControlHost -->
     <AndroidLinkMode>SdkOnly</AndroidLinkMode>
     <!-- Embed .NET assemblies in APK so it works standalone without Fast Deployment -->

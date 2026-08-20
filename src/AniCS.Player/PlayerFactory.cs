@@ -13,7 +13,7 @@ public static class PlayerFactory
     /// </summary>
     public static IPlayerBackend Create(PlayerBackendMode mode)
     {
-        if (System.OperatingSystem.IsAndroid())
+        if (OperatingSystem.IsAndroid())
         {
             return new LibVlcBackend();
         }
@@ -34,7 +34,7 @@ public static class PlayerFactory
     /// Crea el backend según la configuración actual del usuario.
     /// </summary>
     public static IPlayerBackend CreateFromConfig()
-        => Create(AniCS.ConfigManager.Current.PlayerBackend);
+        => Create(ConfigManager.Current.PlayerBackend);
 
     private static LibVlcBackend? TryCreateLibVlc()
     {
