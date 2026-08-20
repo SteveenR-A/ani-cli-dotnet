@@ -28,6 +28,13 @@
 
 ---
 
+### 🔄 Descarga Continua y Reanudación del Actualizador (Android)
+- **Descarga con pantalla apagada (WakeLock):** La descarga de la actualización APK ahora mantiene activo el CPU del dispositivo mediante `WakeLock`, permitiendo que la descarga finalice aunque la pantalla se apague por inactividad o se bloquee el teléfono.
+- **Reanudación por HTTP Range:** Si la conexión se interrumpe, el actualizador continúa desde el punto exacto donde se quedó (`.part`) sin descargar todo el archivo desde cero.
+- **Opción de instalación manual:** Si el instalador del sistema no se abre automáticamente o el usuario lo cierra, ahora se muestra el botón *"Instalar actualización"* para abrir el instalador del APK descargado en cualquier momento sin volver a descargarlo.
+
+---
+
 ### 🎨 Mejoras Previas v1.6.4
 - **Nueva identidad visual e iconos oficiales:** Actualización completa de la iconografía de AniCS en todas las plataformas e instaladores.
 - **Descargas en carpeta pública DCIM/AniCS:** Reconocimiento inmediato por galería y apps del sistema en Android.

@@ -33,6 +33,10 @@ public static class AppInfo
         "• Migración al sistema de gestos Tapped de Avalonia para un desplazamiento táctil suave y fluido.\n\n" +
         "⚡ Sincronización en Tiempo Real del Reproductor:\n" +
         "• Nuevo evento de cambio de estado de reproducción que sincroniza al instante el botón central de Play/Pausa y la visibilidad de controles.\n\n" +
+        "🔄 Descarga Continua y Reanudación del Actualizador (Android):\n" +
+        "• La descarga del APK ahora continúa sin interrupciones aunque se apague la pantalla (WakeLock).\n" +
+        "• Soporte de reanudación automática (HTTP Range) para no tener que reiniciar la descarga desde 0 si se interrumpe la conexión.\n" +
+        "• Botón de instalación manual disponible si el instalador automático se cierra o no se abre.\n\n" +
         "🎨 Mejoras Previas v1.6.4:\n" +
         "• Nueva identidad visual e iconos oficiales de AniCS.\n" +
         "• Almacenamiento en carpeta pública del sistema DCIM/AniCS en Android.\n" +

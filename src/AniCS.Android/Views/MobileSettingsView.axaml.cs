@@ -126,7 +126,21 @@ public partial class MobileSettingsView : UserControl
             if (update != null)
             {
                 _availableUpdate = update;
-                UpdateStatusText.Text = $"¡Nueva versión disponible: v{update.Version}!\n{update.ReleaseNotes}";
+                if (AndroidUpdateService.IsApkReady(MainActivity.Instance, update.Version))
+                {
+                    DownloadUpdateBtn.Content = "Instalar actualización";
+                    UpdateStatusText.Text = $"¡Nueva versión v{update.Version} lista!\nEl paquete ya está descargado en tu dispositivo.";
+                }
+                else if (AndroidUpdateService.HasPartialDownload(MainActivity.Instance, update.Version))
+                {
+                    DownloadUpdateBtn.Content = "Reanudar descarga";
+                    UpdateStatusText.Text = $"¡Nueva versión disponible: v{update.Version}!\nHay una descarga previa lista para reanudar.";
+                }
+                else
+                {
+                    DownloadUpdateBtn.Content = "Descargar e Instalar APK";
+                    UpdateStatusText.Text = $"¡Nueva versión disponible: v{update.Version}!\n{update.ReleaseNotes}";
+                }
                 UpdateStatusText.Foreground = Brushes.LightGreen;
                 DownloadUpdateBtn.IsVisible = true;
             }
@@ -151,16 +165,27 @@ public partial class MobileSettingsView : UserControl
     {
         if (_availableUpdate == null || MainActivity.Instance == null) return;
 
+        // Si el APK ya está descargado completamente, lanzar la instalación directamente
+        if (AndroidUpdateService.IsApkReady(MainActivity.Instance, _availableUpdate.Version))
+        {
+            UpdateStatusText.Text = "Abriendo instalador del sistema...";
+            UpdateStatusText.Foreground = Brushes.LightGreen;
+            AndroidUpdateService.TriggerInstall(MainActivity.Instance, _availableUpdate.Version);
+            return;
+        }
+
         DownloadUpdateBtn.IsEnabled = false;
         UpdateProgress.IsVisible = true;
         UpdateProgressText.IsVisible = true;
-        UpdateStatusText.Text = "Descargando e instalando APK...";
+        UpdateStatusText.Text = "Descargando actualización (continuará aunque apagues la pantalla)...";
+        UpdateStatusText.Foreground = (IBrush)this.FindResource("AppSubtextColor")!;
 
         try
         {
-            await AndroidUpdateService.DownloadAndInstallAsync(
+            bool success = await AndroidUpdateService.DownloadAndInstallAsync(
                 MainActivity.Instance,
                 _availableUpdate.ApkUrl,
+                _availableUpdate.Version,
                 pct =>
                 {
                     Dispatcher.UIThread.Post(() =>
@@ -169,15 +194,30 @@ public partial class MobileSettingsView : UserControl
                         UpdateProgressText.Text = $"{pct * 100:F0}%";
                     });
                 });
+
+            if (success)
+            {
+                DownloadUpdateBtn.Content = "Instalar actualización";
+                UpdateStatusText.Text = "Descarga completada.\nSi el instalador no se abrió automáticamente, pulsa 'Instalar actualización'.";
+                UpdateStatusText.Foreground = Brushes.LightGreen;
+            }
+            else
+            {
+                DownloadUpdateBtn.Content = "Reanudar descarga";
+                UpdateStatusText.Text = "Descarga pausada o interrumpida. Pulsa 'Reanudar descarga' para continuar.";
+                UpdateStatusText.Foreground = Brushes.Salmon;
+            }
         }
         catch (Exception ex)
         {
-            UpdateStatusText.Text = $"Error al instalar: {ex.Message}";
+            UpdateStatusText.Text = $"Error al descargar: {ex.Message}";
             UpdateStatusText.Foreground = Brushes.Salmon;
+            DownloadUpdateBtn.Content = "Reanudar descarga";
         }
         finally
         {
             DownloadUpdateBtn.IsEnabled = true;
+            DownloadUpdateBtn.IsVisible = true;
         }
     }
 
