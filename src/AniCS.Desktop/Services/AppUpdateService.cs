@@ -50,11 +50,40 @@ public sealed class AppUpdateService : IDisposable
 
     private readonly HttpClient _http = new();
 
+    public AppUpdateService()
+    {
+        // Limpieza automática al iniciar: borra instaladores o logs residuales de sesiones anteriores
+        CleanOldUpdates();
+    }
+
     public string CurrentVersion =>
         AppInfo.CurrentVersion;
 
     public string UpdatesDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AniCS", "updates");
+
+    /// <summary>
+    /// Deletes all leftover update installers (.msi), logs and batch scripts from %LocalAppData%/AniCS/updates.
+    /// </summary>
+    public void CleanOldUpdates(string? keepFileName = null)
+    {
+        try
+        {
+            if (!Directory.Exists(UpdatesDir)) return;
+            var dir = new DirectoryInfo(UpdatesDir);
+            foreach (var file in dir.GetFiles())
+            {
+                if (keepFileName != null && file.Name.Equals(keepFileName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                try { file.Delete(); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AppUpdateService.CleanOldUpdates", ex);
+        }
+    }
 
     /// <summary>Latest non-draft/non-prerelease release from GitHub, or null on failure.</summary>
     public async Task<GitHubRelease?> FetchLatestReleaseAsync(CancellationToken ct = default)
@@ -120,6 +149,7 @@ public sealed class AppUpdateService : IDisposable
         try
         {
             Directory.CreateDirectory(UpdatesDir);
+            CleanOldUpdates(asset.Name);
             var target = Path.Combine(UpdatesDir, asset.Name);
 
             using var resp = await _http.GetAsync(asset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
@@ -162,18 +192,21 @@ public sealed class AppUpdateService : IDisposable
 
             Directory.CreateDirectory(UpdatesDir);
 
-            // Script para esperar cierre, ejecutar msiexec con elevación UAC permitida (/passive) y abrir la versión actualizada
+            // Script para esperar cierre, ejecutar msiexec con elevación UAC permitida (/passive), limpiar residuos y relanzar la app
             var scriptLines = new[]
             {
                 "@echo off",
                 "timeout /t 2 /nobreak >nul",
                 $"msiexec.exe /i \"{msiPath}\" /passive /norestart /lv \"{logPath}\"",
                 "timeout /t 1 /nobreak >nul",
+                $"del /f /q \"{msiPath}\" >nul 2>&1",
+                $"del /f /q \"{logPath}\" >nul 2>&1",
                 $"if exist \"{programFilesExe}\" (",
                 $"    start \"\" \"{programFilesExe}\"",
                 ") else (",
                 $"    start \"\" \"{currentExe}\"",
-                ")"
+                ")",
+                "(goto) 2>nul & del \"%~f0\""
             };
 
             File.WriteAllLines(scriptPath, scriptLines);

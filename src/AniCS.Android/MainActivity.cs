@@ -39,6 +39,9 @@ public class MainActivity : AvaloniaMainActivity
         Instance = this;
         base.OnCreate(savedInstanceState);
 
+        // Limpieza en segundo plano de APKs residuales de actualizaciones anteriores
+        System.Threading.Tasks.Task.Run(() => AndroidUpdateService.CleanOldUpdates(this));
+
         // 1. AndroidX OnBackPressedDispatcher callback
         try
         {

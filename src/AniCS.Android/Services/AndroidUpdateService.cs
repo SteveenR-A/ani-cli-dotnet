@@ -83,6 +83,37 @@ public class AndroidUpdateService
     }
 
     /// <summary>
+    /// Deletes all leftover update APKs or partial downloads in cache, except optionally the specified target version.
+    /// </summary>
+    public static void CleanOldUpdates(Activity? activity, string? keepVersion = null)
+    {
+        if (activity == null) return;
+        try
+        {
+            var cacheDir = activity.CacheDir?.AbsolutePath ?? activity.FilesDir?.AbsolutePath;
+            if (string.IsNullOrEmpty(cacheDir) || !System.IO.Directory.Exists(cacheDir)) return;
+
+            var keepApkName = keepVersion != null ? Path.GetFileName(GetApkPath(activity, keepVersion)) : null;
+            var keepPartName = keepVersion != null ? Path.GetFileName(GetPartPath(activity, keepVersion)) : null;
+
+            var dir = new DirectoryInfo(cacheDir);
+            foreach (var file in dir.GetFiles("AniCS-update*"))
+            {
+                if (keepApkName != null && file.Name.Equals(keepApkName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (keepPartName != null && file.Name.Equals(keepPartName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                try { file.Delete(); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            AniCS.AppLogger.Error("AndroidUpdateService.CleanOldUpdates", ex);
+        }
+    }
+
+    /// <summary>
     /// Returns info about the latest release, or null if already up to date / error.
     /// </summary>
     public static async Task<UpdateInfo?> CheckAsync(string currentVersion)
@@ -97,7 +128,15 @@ public class AndroidUpdateService
             var latestVersion = tag.TrimStart('v');
             var notes = root.GetProperty("body").GetString() ?? string.Empty;
 
-            if (!IsNewer(latestVersion, currentVersion)) return null;
+            if (!IsNewer(latestVersion, currentVersion))
+            {
+                // La app ya está en la versión más reciente: limpiar cualquier residuo de APK anterior
+                CleanOldUpdates(MainActivity.Instance);
+                return null;
+            }
+
+            // Limpiar versiones viejas conservando solo la última disponible si existiera
+            CleanOldUpdates(MainActivity.Instance, latestVersion);
 
             // Find the APK asset
             foreach (var asset in root.GetProperty("assets").EnumerateArray())
