@@ -302,6 +302,12 @@ public class MainActivity : AvaloniaMainActivity
         {
             if (Window == null) return;
 
+            // 0. Extender en recortes de pantalla (Notch / Cámaras) para centrado simétrico
+            if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.P && Window.Attributes != null)
+            {
+                Window.Attributes.LayoutInDisplayCutoutMode = global::Android.Views.LayoutInDisplayCutoutMode.ShortEdges;
+            }
+
             // 1. AndroidX WindowCompat (Moderno, Android 11+ / API 30+)
             WindowCompat.SetDecorFitsSystemWindows(Window, false);
             var insetsController = WindowCompat.GetInsetsController(Window, Window.DecorView);
@@ -336,6 +342,12 @@ public class MainActivity : AvaloniaMainActivity
             try
             {
                 if (Window == null) return;
+
+                // 0. Restablecer modo de recorte
+                if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.P && Window.Attributes != null)
+                {
+                    Window.Attributes.LayoutInDisplayCutoutMode = global::Android.Views.LayoutInDisplayCutoutMode.Default;
+                }
 
                 // 1. AndroidX WindowCompat
                 WindowCompat.SetDecorFitsSystemWindows(Window, true);

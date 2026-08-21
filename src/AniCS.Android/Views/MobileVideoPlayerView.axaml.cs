@@ -215,6 +215,8 @@ public partial class MobileVideoPlayerView : UserControl
                 _nativePlayer = new AndroidVideoPlayerControl();
                 _nativePlayer.SetInfo(_title, !string.IsNullOrEmpty(_quality) ? _quality : "Nativo");
                 _nativePlayer.BackRequested += (_, _) => ClosePlayer();
+                _nativePlayer.PreviousEpisodeRequested += (_, _) => OnPrevEpisodeClicked(null, null!);
+                _nativePlayer.NextEpisodeRequested += (_, _) => OnNextEpisodeClicked(null, null!);
                 _nativePlayer.PlaybackError += OnNativePlaybackError;
                 _nativePlayer.PlaybackStateChanged += OnNativePlaybackStateChanged;
                 _nativePlayer.ProgressChanged += (_, ev) => UpdatePlaybackWatchHistory(ev.Position, ev.Duration);
@@ -231,6 +233,8 @@ public partial class MobileVideoPlayerView : UserControl
             {
                 _nativePlayer.SetInfo(_title, !string.IsNullOrEmpty(_quality) ? _quality : "Nativo");
             }
+
+            _nativePlayer.SetNavigationState(PreviousEpisodeAction != null, NextEpisodeAction != null);
 
             _nativePlayer.Play(url, _serverUrl, resumePositionMsec);
 
@@ -392,6 +396,7 @@ public partial class MobileVideoPlayerView : UserControl
     {
         if (PrevEpisodeBtn != null) PrevEpisodeBtn.IsEnabled = PreviousEpisodeAction != null;
         if (NextEpisodeBtn != null) NextEpisodeBtn.IsEnabled = NextEpisodeAction != null;
+        _nativePlayer?.SetNavigationState(PreviousEpisodeAction != null, NextEpisodeAction != null);
     }
 
     private async void OnPrevEpisodeClicked(object? sender, RoutedEventArgs e)

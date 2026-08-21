@@ -28,9 +28,11 @@ public class AndroidVideoPlayerControl : NativeControlHost
     private TextView? _statusBadge;
     private TextView? _qualityText;
     private LinearLayout? _centerControls;
+    private ImageView? _prevEpisodeBtn;
     private ImageView? _playPauseCenterBtn;
     private ImageView? _rewindBtn;
     private ImageView? _forwardBtn;
+    private ImageView? _nextEpisodeBtn;
     private LinearLayout? _bottomBar;
     private TextView? _timeText;
     private SeekBar? _seekBar;
@@ -59,6 +61,8 @@ public class AndroidVideoPlayerControl : NativeControlHost
     public event EventHandler? PlaybackCompleted;
     public event EventHandler<string>? PlaybackError;
     public event EventHandler? BackRequested;
+    public event EventHandler? PreviousEpisodeRequested;
+    public event EventHandler? NextEpisodeRequested;
     public event EventHandler<(int Position, int Duration)>? ProgressChanged;
     public event EventHandler<bool>? PlaybackStateChanged;
 
@@ -66,6 +70,23 @@ public class AndroidVideoPlayerControl : NativeControlHost
     {
         _autoHideAction = () => HideControls();
         _progressUpdateAction = UpdateProgressLoop;
+    }
+
+    public void SetNavigationState(bool hasPrevious, bool hasNext)
+    {
+        _handler.Post(() =>
+        {
+            if (_prevEpisodeBtn != null)
+            {
+                _prevEpisodeBtn.Enabled = hasPrevious;
+                _prevEpisodeBtn.Alpha = hasPrevious ? 1.0f : 0.35f;
+            }
+            if (_nextEpisodeBtn != null)
+            {
+                _nextEpisodeBtn.Enabled = hasNext;
+                _nextEpisodeBtn.Alpha = hasNext ? 1.0f : 0.35f;
+            }
+        });
     }
 
     public void SetInfo(string title, string quality)
@@ -581,7 +602,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
 
         overlay.AddView(_topBar);
 
-        // ── B. Center Controls (Replay 10s, Play/Pause, Forward 10s) ──
+        // ── B. Center Controls (Prev Ep, Replay 10s, Play/Pause, Forward 10s, Next Ep) ──
         _centerControls = new LinearLayout(context)
         {
             Orientation = Orientation.Horizontal,
@@ -593,6 +614,30 @@ public class AndroidVideoPlayerControl : NativeControlHost
             }
         };
         _centerControls.SetGravity(GravityFlags.Center);
+
+        // Episodio Anterior (Skip Previous)
+        _prevEpisodeBtn = new ImageView(context)
+        {
+            LayoutParameters = new LinearLayout.LayoutParams(DpToPx(48), DpToPx(48))
+            {
+                RightMargin = DpToPx(14)
+            },
+            Enabled = false,
+            Alpha = 0.35f
+        };
+        var prevBg = new GradientDrawable();
+        prevBg.SetShape(ShapeType.Oval);
+        prevBg.SetColor(Color.Argb(80, 0, 0, 0));
+        prevBg.SetStroke(DpToPx(1), Color.Argb(35, 255, 255, 255));
+        _prevEpisodeBtn.Background = prevBg;
+        _prevEpisodeBtn.SetPadding(DpToPx(12), DpToPx(12), DpToPx(12), DpToPx(12));
+        _prevEpisodeBtn.SetImageDrawable(PlayerIconHelper.CreateSkipPreviousDrawable(24, Color.White));
+        _prevEpisodeBtn.Click += (_, _) =>
+        {
+            PreviousEpisodeRequested?.Invoke(this, EventArgs.Empty);
+            ScheduleAutoHide();
+        };
+        _centerControls.AddView(_prevEpisodeBtn);
 
         // Retroceder 10s (Icono replay_10 circular integrado)
         _rewindBtn = new ImageView(context)
@@ -619,8 +664,8 @@ public class AndroidVideoPlayerControl : NativeControlHost
         _playPauseCenterBtn = new ImageView(context);
         var playParams = new LinearLayout.LayoutParams(DpToPx(64), DpToPx(64))
         {
-            LeftMargin = DpToPx(24),
-            RightMargin = DpToPx(24)
+            LeftMargin = DpToPx(20),
+            RightMargin = DpToPx(20)
         };
         var playBtnBg = new GradientDrawable();
         playBtnBg.SetShape(ShapeType.Oval);
@@ -655,6 +700,30 @@ public class AndroidVideoPlayerControl : NativeControlHost
             ScheduleAutoHide();
         };
         _centerControls.AddView(_forwardBtn);
+
+        // Siguiente Episodio (Skip Next)
+        _nextEpisodeBtn = new ImageView(context)
+        {
+            LayoutParameters = new LinearLayout.LayoutParams(DpToPx(48), DpToPx(48))
+            {
+                LeftMargin = DpToPx(14)
+            },
+            Enabled = false,
+            Alpha = 0.35f
+        };
+        var nextBg = new GradientDrawable();
+        nextBg.SetShape(ShapeType.Oval);
+        nextBg.SetColor(Color.Argb(80, 0, 0, 0));
+        nextBg.SetStroke(DpToPx(1), Color.Argb(35, 255, 255, 255));
+        _nextEpisodeBtn.Background = nextBg;
+        _nextEpisodeBtn.SetPadding(DpToPx(12), DpToPx(12), DpToPx(12), DpToPx(12));
+        _nextEpisodeBtn.SetImageDrawable(PlayerIconHelper.CreateSkipNextDrawable(24, Color.White));
+        _nextEpisodeBtn.Click += (_, _) =>
+        {
+            NextEpisodeRequested?.Invoke(this, EventArgs.Empty);
+            ScheduleAutoHide();
+        };
+        _centerControls.AddView(_nextEpisodeBtn);
 
         overlay.AddView(_centerControls);
 
@@ -854,7 +923,14 @@ public class AndroidVideoPlayerControl : NativeControlHost
 
     private void ToggleControls()
     {
-        if (_isControlsVisible) HideControls(); else ShowControls();
+        if (_isControlsVisible)
+        {
+            HideControls(force: true);
+        }
+        else
+        {
+            ShowControls();
+        }
     }
 
     private void ShowControls()
@@ -866,9 +942,9 @@ public class AndroidVideoPlayerControl : NativeControlHost
         ScheduleAutoHide();
     }
 
-    private void HideControls()
+    private void HideControls(bool force = false)
     {
-        if (!IsPlaying) return; // Mantener controles visibles si está pausado
+        if (!force && !IsPlaying) return; // En auto-hide por temporizador, mantener visibles si está pausado
 
         _isControlsVisible = false;
         if (_topBar != null) _topBar.Visibility = ViewStates.Gone;
@@ -1231,6 +1307,76 @@ public static class PlayerIconHelper
         p2.LineTo(cx - r * 0.707f + AndroidVideoPlayerControl.DpToPx(2), cy + r * 0.707f - AndroidVideoPlayerControl.DpToPx(4));
         p2.Close();
         canvas.DrawPath(p2, paint);
+
+        return new BitmapDrawable(Application.Context.Resources, bitmap);
+    }
+
+    public static Drawable CreateSkipPreviousDrawable(int sizeDp, Color color)
+    {
+        int size = AndroidVideoPlayerControl.DpToPx(sizeDp);
+        var bitmap = Bitmap.CreateBitmap(size, size, Bitmap.Config.Argb8888!);
+        var canvas = new Canvas(bitmap);
+        var paint = new Paint(PaintFlags.AntiAlias)
+        {
+            Color = color
+        };
+        paint.SetStyle(Paint.Style.Fill);
+
+        float cx = size / 2f;
+        float cy = size / 2f;
+        float r = size * 0.34f;
+
+        // Barra vertical izquierda
+        float barW = AndroidVideoPlayerControl.DpToPx(3.2f);
+        float barLeft = cx - r;
+        var barRect = new RectF(barLeft, cy - r, barLeft + barW, cy + r);
+        canvas.DrawRoundRect(barRect, AndroidVideoPlayerControl.DpToPx(1.5f), AndroidVideoPlayerControl.DpToPx(1.5f), paint);
+
+        // Triángulo apuntando hacia la izquierda
+        var path = new Path();
+        path.MoveTo(cx + r, cy - r);
+        path.LineTo(barLeft + barW + AndroidVideoPlayerControl.DpToPx(2.5f), cy);
+        path.LineTo(cx + r, cy + r);
+        path.Close();
+
+        var cornerPathEffect = new CornerPathEffect(AndroidVideoPlayerControl.DpToPx(2.0f));
+        paint.SetPathEffect(cornerPathEffect);
+        canvas.DrawPath(path, paint);
+
+        return new BitmapDrawable(Application.Context.Resources, bitmap);
+    }
+
+    public static Drawable CreateSkipNextDrawable(int sizeDp, Color color)
+    {
+        int size = AndroidVideoPlayerControl.DpToPx(sizeDp);
+        var bitmap = Bitmap.CreateBitmap(size, size, Bitmap.Config.Argb8888!);
+        var canvas = new Canvas(bitmap);
+        var paint = new Paint(PaintFlags.AntiAlias)
+        {
+            Color = color
+        };
+        paint.SetStyle(Paint.Style.Fill);
+
+        float cx = size / 2f;
+        float cy = size / 2f;
+        float r = size * 0.34f;
+
+        // Barra vertical derecha
+        float barW = AndroidVideoPlayerControl.DpToPx(3.2f);
+        float barRight = cx + r;
+        var barRect = new RectF(barRight - barW, cy - r, barRight, cy + r);
+        canvas.DrawRoundRect(barRect, AndroidVideoPlayerControl.DpToPx(1.5f), AndroidVideoPlayerControl.DpToPx(1.5f), paint);
+
+        // Triángulo apuntando hacia la derecha
+        var path = new Path();
+        path.MoveTo(cx - r, cy - r);
+        path.LineTo(barRight - barW - AndroidVideoPlayerControl.DpToPx(2.5f), cy);
+        path.LineTo(cx - r, cy + r);
+        path.Close();
+
+        var cornerPathEffect = new CornerPathEffect(AndroidVideoPlayerControl.DpToPx(2.0f));
+        paint.SetPathEffect(cornerPathEffect);
+        canvas.DrawPath(path, paint);
 
         return new BitmapDrawable(Application.Context.Resources, bitmap);
     }
