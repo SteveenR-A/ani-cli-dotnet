@@ -539,7 +539,10 @@ public static class DownloadManager
                             {
                                 OnFileDownloaded?.Invoke(result.OutputPath);
                             }
-                            catch { }
+                            catch (Exception ex)
+                            {
+                                AppLogger.Debug("DownloadManager", $"OnFileDownloaded handler failed: {ex.Message}");
+                            }
 
                             OnDownloadProgressNotify?.Invoke(
                                 active.AnimeTitle,
@@ -720,7 +723,10 @@ public static class DownloadManager
                         Directory.CreateDirectory(ConfigDir);
                         File.Copy(legacyPath, DownloadsFile, true);
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Debug("DownloadManager", $"Failed to migrate legacy downloads file: {ex.Message}");
+                    }
                 }
             }
 
@@ -735,7 +741,11 @@ public static class DownloadManager
                 CleanupMissingFiles();
             }
         }
-        catch { _downloads = new(); }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("DownloadManager", $"Failed to load downloads: {ex.Message}");
+            _downloads = new();
+        }
     }
 
     private static void Save()
@@ -747,7 +757,10 @@ public static class DownloadManager
             var json = JsonSerializer.Serialize(_downloads, options);
             File.WriteAllText(DownloadsFile, json);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("DownloadManager.Save", ex);
+        }
     }
 
     private static void CleanupMissingFiles()
@@ -1027,7 +1040,10 @@ public static class DownloadManager
                             Directory.Delete(dir);
                         }
                     } 
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Debug("DownloadManager", $"Failed to delete episode file '{ep.FilePath}': {ex.Message}");
+                    }
                 }
                 anime.Episodes.Remove(ep);
                 if (anime.Episodes.Count == 0)
@@ -1052,12 +1068,12 @@ public static class DownloadManager
                 if (File.Exists(ep.FilePath))
                 {
                     dir ??= Path.GetDirectoryName(ep.FilePath);
-                    try { File.Delete(ep.FilePath); } catch { }
+                    try { File.Delete(ep.FilePath); } catch (Exception ex) { AppLogger.Debug("DownloadManager", $"Failed to delete ep file '{ep.FilePath}': {ex.Message}"); }
                 }
             }
             if (dir != null && Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
             {
-                try { Directory.Delete(dir); } catch { }
+                try { Directory.Delete(dir); } catch (Exception ex) { AppLogger.Debug("DownloadManager", $"Failed to delete anime dir '{dir}': {ex.Message}"); }
             }
             _downloads.Remove(anime);
             Save();
@@ -1247,7 +1263,10 @@ public static class DownloadManager
                 }
                 else { break; }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("DownloadManager", $"CleanupPartialFiles attempt {i + 1} failed: {ex.Message}");
+            }
             System.Threading.Thread.Sleep(500); // Wait and retry
         }
     }

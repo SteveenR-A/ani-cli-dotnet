@@ -138,9 +138,10 @@ public static class DetailsPrompt
                             needsRedraw = true;
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         if (token.IsCancellationRequested) return;
+                        AppLogger.Debug("DetailsPrompt", $"Failed to load synopsis: {ex.Message}");
                         if (items[selectedIndex] == itemCopy)
                         {
                             activeSynopsis = "Sinopsis no disponible.";
@@ -182,9 +183,9 @@ public static class DetailsPrompt
                                 needsRedraw = true;
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Ignore image download errors
+                            AppLogger.Debug("DetailsPrompt", $"Failed to download image: {ex.Message}");
                         }
                     }, token);
                 }
@@ -392,9 +393,9 @@ public static class DetailsPrompt
                                             Console.Write($"\x1b_Ga=t,i={id},q=2,f=100;{base64}\x1b\\");
                                             imageId = id;
                                         }
-                                        catch
+                                        catch (Exception ex)
                                         {
-                                            // Ignore transmission errors
+                                            AppLogger.Debug("DetailsPrompt", $"Kitty transmission error: {ex.Message}");
                                         }
                                     }
                                 }

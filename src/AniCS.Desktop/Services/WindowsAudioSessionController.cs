@@ -64,7 +64,10 @@ public sealed class WindowsAudioSessionController : IAudioMixerController
                 if (_endpoint != null)
                     return (int)Math.Round(_endpoint.MasterVolumeLevelScalar * 100f);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("WindowsAudioSessionController", $"Get Volume failed: {ex.Message}");
+            }
             return 100;
         }
         set
@@ -74,7 +77,10 @@ public sealed class WindowsAudioSessionController : IAudioMixerController
                 if (_endpoint != null)
                     _endpoint.MasterVolumeLevelScalar = Math.Clamp(value, 0, 100) / 100f;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("WindowsAudioSessionController", $"Set Volume failed: {ex.Message}");
+            }
         }
     }
 
@@ -83,12 +89,19 @@ public sealed class WindowsAudioSessionController : IAudioMixerController
         get
         {
             try { return _endpoint?.Mute ?? false; }
-            catch { return false; }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("WindowsAudioSessionController", $"Get IsMuted failed: {ex.Message}");
+                return false;
+            }
         }
         set
         {
             try { if (_endpoint != null) _endpoint.Mute = value; }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("WindowsAudioSessionController", $"Set IsMuted failed: {ex.Message}");
+            }
         }
     }
 
@@ -118,10 +131,13 @@ public sealed class WindowsAudioSessionController : IAudioMixerController
             if (_endpoint != null)
                 _endpoint.OnVolumeNotification -= OnEndpointVolumeChanged;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("WindowsAudioSessionController", $"Dispose endpoint handler failed: {ex.Message}");
+        }
 
-        try { _device?.Dispose();     } catch { }
-        try { _enumerator?.Dispose(); } catch { }
+        try { _device?.Dispose();     } catch (Exception ex) { AppLogger.Debug("WindowsAudioSessionController", $"Dispose device failed: {ex.Message}"); }
+        try { _enumerator?.Dispose(); } catch (Exception ex) { AppLogger.Debug("WindowsAudioSessionController", $"Dispose enumerator failed: {ex.Message}"); }
 
         _endpoint   = null;
         _device     = null;

@@ -202,7 +202,10 @@ public partial class AnimeDetailsView : UserControl
         {
             await Task.WhenAll(detailsTask, episodesTask);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AniCS.AppLogger.Warn("AnimeDetailsView", $"Task.WhenAll details/episodes failed: {ex.Message}");
+        }
 
         // Aplicar información de detalles
         try

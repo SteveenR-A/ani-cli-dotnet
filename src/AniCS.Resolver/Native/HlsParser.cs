@@ -161,7 +161,11 @@ public static class HlsParser
             resp.EnsureSuccessStatusCode();
             return await resp.Content.ReadAsStringAsync(ct);
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("HlsParser", $"FetchTextAsync failed for '{url}': {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>Resuelve una URL relativa usando la URL base del manifiesto.</summary>
@@ -172,7 +176,11 @@ public static class HlsParser
             return url;
 
         try { return new Uri(new Uri(baseUrl), url).ToString(); }
-        catch { return url; }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("HlsParser", $"ResolveUrl failed for '{url}' with base '{baseUrl}': {ex.Message}");
+            return url;
+        }
     }
 
     private static long ParseTagLong(string tag, string key)

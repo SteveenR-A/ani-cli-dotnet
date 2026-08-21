@@ -76,7 +76,7 @@ public sealed class AppUpdateService : IDisposable
                 if (keepFileName != null && file.Name.Equals(keepFileName, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                try { file.Delete(); } catch { }
+                try { file.Delete(); } catch (Exception ex) { AppLogger.Debug("AppUpdateService", $"Failed to delete old file '{file.Name}': {ex.Message}"); }
             }
         }
         catch (Exception ex)
@@ -171,8 +171,9 @@ public sealed class AppUpdateService : IDisposable
 
             return target;
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("AppUpdateService", $"DownloadMsiAsync failed for '{asset.Name}': {ex.Message}");
             return null;
         }
     }

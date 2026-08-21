@@ -295,8 +295,9 @@ public partial class SettingsView : UserControl
             UpdateProgress.IsVisible = false;
             _updater.ApplyAndRelaunch(msiPath);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Error("SettingsView.OnDownloadUpdateClicked", ex);
             UpdateStatusText.Text = "Ocurrió un error durante la actualización.";
             ResetUpdateSection();
         }

@@ -284,7 +284,10 @@ public class MundoDonghuaExtractor : BaseExtractor
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("MundoDonghuaExtractor", $"Failed to unpack script: {ex.Message}");
+            }
         }
 
         // Fallback for direct iframes if any
@@ -404,7 +407,10 @@ public class MundoDonghuaExtractor : BaseExtractor
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("MundoDonghuaExtractor", $"Failed to resolve redirector URL '{url}': {ex.Message}");
+            }
         }
 
         return url;
@@ -436,7 +442,10 @@ public class MundoDonghuaExtractor : BaseExtractor
                     if (fMatch.Success) return fMatch.Groups[1].Value.Replace("\\", "");
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("MundoDonghuaExtractor", $"Failed mnemonic player extraction for '{url}': {ex.Message}");
+            }
         }
 
         // 4. Descargar la página embed (VidHide, StreamWish, EmbedWish, etc.) y extraer el stream m3u8 o mp4
@@ -470,7 +479,10 @@ public class MundoDonghuaExtractor : BaseExtractor
                             return fileMatch.Groups[1].Value.Replace("\\", "");
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Debug("MundoDonghuaExtractor", $"Failed unpacking eval in ResolveVideoUrlAsync: {ex.Message}");
+                    }
                 }
 
                 // B. Buscar directamente en el HTML crudo
@@ -487,7 +499,10 @@ public class MundoDonghuaExtractor : BaseExtractor
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("MundoDonghuaExtractor", $"Failed to resolve video URL for '{url}': {ex.Message}");
+        }
 
         // Si nada de lo anterior extrajo un m3u8 específico, devolver la URL como fallback
         return url;

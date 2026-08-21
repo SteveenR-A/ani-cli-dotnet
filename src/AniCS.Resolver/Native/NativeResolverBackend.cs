@@ -170,7 +170,11 @@ public sealed class NativeResolverBackend : IResolverBackend, IDisposable
         long existingBytes = 0;
         if (File.Exists(finalPath))
         {
-            try { existingBytes = new FileInfo(finalPath).Length; } catch { }
+            try { existingBytes = new FileInfo(finalPath).Length; }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("NativeResolverBackend", $"Failed to get file length for '{finalPath}': {ex.Message}");
+            }
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Get, media.DirectUrl);
@@ -298,7 +302,10 @@ public sealed class NativeResolverBackend : IResolverBackend, IDisposable
                 RegexOptions.IgnoreCase);
             if (sourceTag.Success) return sourceTag.Groups[1].Value;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("NativeResolverBackend", $"ExtractFromPageAsync failed for '{pageUrl}': {ex.Message}");
+        }
 
         return null;
     }
@@ -342,7 +349,10 @@ public sealed class NativeResolverBackend : IResolverBackend, IDisposable
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("NativeResolverBackend", $"ResolveRedirectorAsync failed for '{url}': {ex.Message}");
+        }
 
         return url;
     }
@@ -392,17 +402,26 @@ public sealed class NativeResolverBackend : IResolverBackend, IDisposable
         if (!string.IsNullOrEmpty(media.Referer))
         {
             try { _client.DefaultRequestHeaders.Referrer = new Uri(media.Referer); }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("NativeResolverBackend", $"Failed to set Referrer '{media.Referer}': {ex.Message}");
+            }
         }
         else if (!string.IsNullOrEmpty(media.DirectUrl) && (media.DirectUrl.Contains("jkanime") || media.DirectUrl.Contains("jkmedia")))
         {
             try { _client.DefaultRequestHeaders.Referrer = new Uri("https://jkanime.net/"); }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("NativeResolverBackend", $"Failed to set JKAnime Referrer: {ex.Message}");
+            }
         }
         else if (!string.IsNullOrEmpty(media.DirectUrl) && (media.DirectUrl.Contains("mundodonghua") || media.DirectUrl.Contains("mdplayer") || media.DirectUrl.Contains("mdmnemonicplayer")))
         {
             try { _client.DefaultRequestHeaders.Referrer = new Uri("https://www.mundodonghua.com/"); }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("NativeResolverBackend", $"Failed to set MundoDonghua Referrer: {ex.Message}");
+            }
         }
     }
 

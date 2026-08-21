@@ -43,6 +43,10 @@ public static class PlayerFactory
             var backend = new LibVlcBackend();
             return backend.IsAvailable ? backend : null;
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("PlayerFactory", $"TryCreateLibVlc failed: {ex.Message}");
+            return null;
+        }
     }
 }

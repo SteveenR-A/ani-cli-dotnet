@@ -18,8 +18,8 @@ public static class DesktopPlayer
 
     static DesktopPlayer()
     {
-        AppDomain.CurrentDomain.ProcessExit += (s, e) => KillAll();
-        Console.CancelKeyPress += (s, e) => KillAll();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => KillAll();
+        Console.CancelKeyPress += (_, _) => KillAll();
     }
 
     private static void KillAll()
@@ -32,7 +32,10 @@ public static class DesktopPlayer
                 {
                     if (!p.HasExited) p.Kill(true);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    AppLogger.Debug("DesktopPlayer", $"Failed to kill process {p.Id}: {ex.Message}");
+                }
             }
             _activeProcesses.Clear();
         }
@@ -51,7 +54,10 @@ public static class DesktopPlayer
                 _activeAudioProcess.Kill(true);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("DesktopPlayer", $"StopAudio failed: {ex.Message}");
+        }
         finally
         {
             _activeAudioProcess = null;
@@ -70,7 +76,10 @@ public static class DesktopPlayer
                 UseShellExecute = true
             });
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("DesktopPlayer", $"Failed to open URL in browser '{url}': {ex.Message}");
+        }
     }
 
     public static void PlayAudio(string url, string title, string? referer = null)
@@ -114,7 +123,7 @@ public static class DesktopPlayer
 
             var p = new Process { StartInfo = startInfo };
             p.EnableRaisingEvents = true;
-            p.Exited += (s, e) =>
+            p.Exited += (_, _) =>
             {
                 lock (_activeProcesses) _activeProcesses.Remove(p);
                 if (_activeAudioProcess == p)
@@ -129,15 +138,19 @@ public static class DesktopPlayer
                         OpenInBrowser(url);
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    AppLogger.Debug("DesktopPlayer", $"Audio process exit handling failed: {ex.Message}");
+                }
             };
             lock (_activeProcesses) _activeProcesses.Add(p);
             _activeAudioProcess = p;
             p.Start();
             AudioStateChanged?.Invoke();
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("DesktopPlayer", $"PlayAudio failed, falling back to browser: {ex.Message}");
             OpenInBrowser(url);
         }
     }

@@ -33,7 +33,11 @@ public partial class App : Application
 
         _ = System.Threading.Tasks.Task.Run(() =>
         {
-            try { LibVLCSharp.Shared.Core.Initialize(); } catch { }
+            try { LibVLCSharp.Shared.Core.Initialize(); }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("App", $"LibVLCSharp initialization failed: {ex.Message}");
+            }
         });
 
         var services = new ServiceCollection();

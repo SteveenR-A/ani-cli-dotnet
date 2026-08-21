@@ -104,7 +104,7 @@ public class AndroidUpdateService
                 if (keepPartName != null && file.Name.Equals(keepPartName, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                try { file.Delete(); } catch { }
+                try { file.Delete(); } catch (Exception ex) { AppLogger.Debug("AndroidUpdateService", $"Failed to delete '{file.Name}': {ex.Message}"); }
             }
         }
         catch (Exception ex)
@@ -260,7 +260,10 @@ public class AndroidUpdateService
                     wakeLock.Release();
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("AndroidUpdateService", $"Release WakeLock failed: {ex.Message}");
+            }
         }
     }
 
