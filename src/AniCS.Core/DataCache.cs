@@ -64,7 +64,10 @@ public static class DataCache
                 File.SetLastAccessTimeUtc(filePath, DateTime.UtcNow);
                 return bytes;
             }
-            catch { /* Corrupted file or locked */ }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("DataCache", $"Failed to read cached image '{filePath}': {ex.Message}");
+            }
         }
 
         try
@@ -80,9 +83,17 @@ public static class DataCache
             await File.WriteAllBytesAsync(targetPath, bytes, cancellationToken);
             return bytes;
         }
-        catch
+        catch (Exception ex)
         {
-            try { if (File.Exists(filePath)) File.Delete(filePath); } catch {}
+            AppLogger.Debug("DataCache", $"Failed to download image '{url}': {ex.Message}");
+            try
+            {
+                if (File.Exists(filePath)) File.Delete(filePath);
+            }
+            catch (IOException ioEx)
+            {
+                AppLogger.Debug("DataCache", $"Failed to delete corrupted image file '{filePath}': {ioEx.Message}");
+            }
             return [];
         }
     }
@@ -140,9 +151,9 @@ public static class DataCache
                 Directory.Delete(CacheDir, true);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore directory deletion errors
+            AppLogger.Warn("DataCache", $"Failed to clear cache directory: {ex.Message}");
         }
     }
 
@@ -160,7 +171,10 @@ public static class DataCache
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("DataCache", $"Failed to get protected hashes from history: {ex.Message}");
+        }
         return hashes;
     }
 
@@ -190,9 +204,15 @@ public static class DataCache
                 {
                     file.Delete();
                 }
-                catch { /* Ignore locked files */ }
+                catch (IOException ioEx)
+                {
+                    AppLogger.Debug("DataCache", $"Skipped deleting locked file '{file.FullName}': {ioEx.Message}");
+                }
             }
         }
-        catch { /* Ignore directory access errors */ }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("DataCache", $"Error during image cache cleanup: {ex.Message}");
+        }
     }
 }

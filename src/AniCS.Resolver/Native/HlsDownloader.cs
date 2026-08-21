@@ -68,7 +68,10 @@ public sealed class HlsDownloader
                     downloadedBytes = new FileInfo(targetPath).Length;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("HlsDownloader", $"Failed to read idx file '{idxPath}': {ex.Message}");
+            }
         }
 
         var fileMode = (startSegment > 0) ? FileMode.Append : FileMode.Create;
@@ -107,7 +110,10 @@ public sealed class HlsDownloader
             {
                 File.WriteAllText(idxPath, (i + 1).ToString());
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("HlsDownloader", $"Failed to write idx file '{idxPath}': {ex.Message}");
+            }
 
             if (progress != null)
             {
@@ -139,7 +145,10 @@ public sealed class HlsDownloader
         {
             if (File.Exists(idxPath)) File.Delete(idxPath);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("HlsDownloader", $"Failed to delete idx file '{idxPath}': {ex.Message}");
+        }
 
         progress?.Report(new DownloadProgress(100, FormatBytes(downloadedBytes), "", IsFinished: true));
         return targetPath;

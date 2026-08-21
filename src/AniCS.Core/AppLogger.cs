@@ -37,6 +37,17 @@ public static class AppLogger
         Write("WARN", source, message);
     }
 
+    public static void Debug(string source, Exception? exception)
+    {
+        if (exception == null) return;
+        Write("DEBUG", source, exception.ToString());
+    }
+
+    public static void Debug(string source, string message)
+    {
+        Write("DEBUG", source, message);
+    }
+
     private static void Write(string level, string source, string content)
     {
         try
@@ -58,7 +69,10 @@ public static class AppLogger
                         method?.Invoke(null, new object[] { $"AniCS:{source}", content });
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    System.Console.Error.WriteLine($"[AniCS] Android log invocation failed: {ex.Message}");
+                }
             }
 
             Directory.CreateDirectory(LogDir);

@@ -99,7 +99,10 @@ public partial class VideoPlayerControl : UserControl
                 ConfigManager.Current.Volume = vol;
                 ConfigManager.Save(ConfigManager.Current);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("VideoPlayerControl", $"Failed to save volume config: {ex.Message}");
+            }
         };
 
         // Debounce para cierre del Popup: evita que el daemon de Lenovo Vantage

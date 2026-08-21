@@ -104,8 +104,9 @@ public static class NetworkService
                 using var res = await _pingClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                 reachable = res.IsSuccessStatusCode || (int)res.StatusCode < 500;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Debug("NetworkService", $"Primary ping to 1.1.1.1 failed: {ex.Message}");
                 // Fallback a google si 1.1.1.1 está bloqueado en ciertas redes
                 try
                 {
@@ -114,8 +115,9 @@ public static class NetworkService
                     using var res2 = await _pingClient.SendAsync(req2, HttpCompletionOption.ResponseHeadersRead, cts2.Token);
                     reachable = res2.IsSuccessStatusCode || (int)res2.StatusCode < 500;
                 }
-                catch
+                catch (Exception ex2)
                 {
+                    AppLogger.Debug("NetworkService", $"Fallback ping to google.com failed: {ex2.Message}");
                     reachable = false;
                 }
             }

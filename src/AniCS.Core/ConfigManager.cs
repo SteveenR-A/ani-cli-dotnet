@@ -39,9 +39,9 @@ public static class ConfigManager
                     return config;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to default
+                AppLogger.Warn("ConfigManager", $"Failed to load config: {ex.Message}");
             }
         }
         
@@ -66,9 +66,9 @@ public static class ConfigManager
             File.WriteAllText(ConfigPath, json);
             Current = config;
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore write errors for now
+            AppLogger.Error("ConfigManager", ex);
         }
     }
 }

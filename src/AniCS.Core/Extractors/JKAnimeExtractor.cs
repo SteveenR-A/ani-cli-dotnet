@@ -55,8 +55,9 @@ public class JKAnimeExtractor : BaseExtractor
                 var uri = new Uri(BaseUrl);
                 return uri.Host;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Debug("JKAnimeExtractor", $"Failed to parse Domain from BaseUrl '{BaseUrl}': {ex.Message}");
                 return "jkanime.net";
             }
         }
@@ -191,7 +192,10 @@ public class JKAnimeExtractor : BaseExtractor
                     }
                 }
             }
-            catch { /* Ignore parse errors */ }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("JKAnimeExtractor", $"Failed to parse directory JSON: {ex.Message}");
+            }
         }
 
         return pageResult;
@@ -236,7 +240,10 @@ public class JKAnimeExtractor : BaseExtractor
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("JKAnimeExtractor", $"Failed to fetch genres dynamically: {ex.Message}");
+        }
 
         // Fallback completo con los géneros oficiales de JKAnime
         _cachedGenres = new List<GenreItem>
@@ -408,8 +415,9 @@ public class JKAnimeExtractor : BaseExtractor
                 var baseUri = new Uri(BaseUrl);
                 return new Uri(baseUri, uri.PathAndQuery).ToString();
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Debug("JKAnimeExtractor", $"NormalizeUrl Uri parse error for '{url}': {ex.Message}");
                 return url;
             }
         }
@@ -706,7 +714,10 @@ public class JKAnimeExtractor : BaseExtractor
                     }
                 }
             }
-            catch { /* Ignore parsing errors */ }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("JKAnimeExtractor", $"Failed to parse external servers JSON: {ex.Message}");
+            }
         }
 
         // Fallback if no servers found but there is an iframe
@@ -911,7 +922,11 @@ public class JKAnimeExtractor : BaseExtractor
             var cookies = string.Join("; ", cookieHeaders);
             return (html, cookies);
         }
-        catch { return (string.Empty, string.Empty); }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("JKAnimeExtractor", $"DownloadWithCookiesAsync failed for '{url}': {ex.Message}");
+            return (string.Empty, string.Empty);
+        }
     }
 
     private string ExtractSlug(string url)
@@ -928,7 +943,10 @@ public class JKAnimeExtractor : BaseExtractor
                 var uri = new Uri(url);
                 path = uri.AbsolutePath;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Debug("JKAnimeExtractor", $"ExtractSlug Uri parse error for '{url}': {ex.Message}");
+            }
         }
 
         path = Regex.Replace(path, @"^/(?:v|ajax|episodes)/", "/", RegexOptions.IgnoreCase);

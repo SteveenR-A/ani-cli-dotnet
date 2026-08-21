@@ -14,8 +14,8 @@ public class WindowsPlayerService : IPlayerService
 
     public WindowsPlayerService()
     {
-        AppDomain.CurrentDomain.ProcessExit += (s, e) => KillAll();
-        Console.CancelKeyPress += (s, e) => KillAll();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => KillAll();
+        Console.CancelKeyPress += (_, _) => KillAll();
     }
 
     private void KillAll()
@@ -28,7 +28,10 @@ public class WindowsPlayerService : IPlayerService
                 {
                     if (!p.HasExited) p.Kill(true);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    AppLogger.Debug("WindowsPlayerService", $"Failed to kill process {p.Id}: {ex.Message}");
+                }
             }
             _activeProcesses.Clear();
         }
@@ -115,8 +118,9 @@ public class WindowsPlayerService : IPlayerService
 
             return string.Empty;
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("WindowsPlayerService", $"ResolveVideoUrlWithYtDlpAsync failed: {ex.Message}");
             return string.Empty;
         }
     }
@@ -191,7 +195,7 @@ public class WindowsPlayerService : IPlayerService
 
             var p = new Process { StartInfo = startInfo };
             p.EnableRaisingEvents = true;
-            p.Exited += (s, e) =>
+            p.Exited += (_, _) =>
             {
                 lock (_activeProcesses) _activeProcesses.Remove(p);
             };
@@ -201,6 +205,7 @@ public class WindowsPlayerService : IPlayerService
         }
         catch (Exception ex)
         {
+            AppLogger.Error("WindowsPlayerService", ex);
             throw new Exception($"Error al iniciar el reproductor: {ex.Message}", ex);
         }
     }
@@ -239,6 +244,7 @@ public class WindowsPlayerService : IPlayerService
         }
         catch (Exception ex)
         {
+            AppLogger.Error("WindowsPlayerService", ex);
             Console.WriteLine($"Error al descargar: {ex.Message}");
         }
     }

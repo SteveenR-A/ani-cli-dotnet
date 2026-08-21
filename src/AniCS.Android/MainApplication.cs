@@ -62,9 +62,9 @@ public class MainApplication : AvaloniaAndroidApplication<App>
                 LibVLCSharp.Shared.Core.Initialize();
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore LibVLC init errors
+            AppLogger.Debug("MainApplication", $"LibVLC init failed: {ex.Message}");
         }
 
         // ── 3. Register Android dedicated view factory ──────────────────

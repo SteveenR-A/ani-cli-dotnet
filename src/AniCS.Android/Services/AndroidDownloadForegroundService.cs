@@ -42,7 +42,10 @@ public class AndroidDownloadForegroundService : Service
             var intent = new Intent(context, typeof(AndroidDownloadForegroundService));
             context.StopService(intent);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("AndroidDownloadForegroundService", $"Stop service failed: {ex.Message}");
+        }
     }
 
     public override IBinder? OnBind(Intent? intent) => null;
@@ -120,7 +123,10 @@ public class AndroidDownloadForegroundService : Service
                 _wakeLock = null;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("AndroidDownloadForegroundService", $"ReleaseWakeLock failed: {ex.Message}");
+        }
     }
 
     private Notification BuildNotification(string title, string content, int progress = -1)
@@ -159,6 +165,9 @@ public class AndroidDownloadForegroundService : Service
             var manager = (NotificationManager?)_instance.GetSystemService(NotificationService);
             manager?.Notify(NotificationId, notification);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Debug("AndroidDownloadForegroundService", $"UpdateNotification failed: {ex.Message}");
+        }
     }
 }

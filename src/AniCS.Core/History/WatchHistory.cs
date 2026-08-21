@@ -48,7 +48,11 @@ public class WatchHistory
                 _entries = JsonSerializer.Deserialize(json, WatchHistoryContext.Default.ListWatchEntry) ?? [];
             }
         }
-        catch { _entries = []; }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("WatchHistory", $"Failed to load history: {ex.Message}");
+            _entries = [];
+        }
     }
 
     private void Save()
@@ -61,7 +65,10 @@ public class WatchHistory
             var json = JsonSerializer.Serialize(_entries, context.ListWatchEntry);
             File.WriteAllText(HistoryFile, json);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Error("WatchHistory", ex);
+        }
     }
 
     public void Record(string title, string animeUrl, string thumbnailUrl, string episodeNumber, string episodeUrl, double lastPositionSeconds = 0, double totalDurationSeconds = 0, bool isCompleted = false)
