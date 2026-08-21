@@ -602,132 +602,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
 
         overlay.AddView(_topBar);
 
-        // ── B. Center Controls (Prev Ep, Replay 10s, Play/Pause, Forward 10s, Next Ep) ──
-        _centerControls = new LinearLayout(context)
-        {
-            Orientation = Orientation.Horizontal,
-            LayoutParameters = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WrapContent,
-                ViewGroup.LayoutParams.WrapContent)
-            {
-                Gravity = GravityFlags.Center
-            }
-        };
-        _centerControls.SetGravity(GravityFlags.Center);
-
-        // Episodio Anterior (Skip Previous)
-        _prevEpisodeBtn = new ImageView(context)
-        {
-            LayoutParameters = new LinearLayout.LayoutParams(DpToPx(48), DpToPx(48))
-            {
-                RightMargin = DpToPx(14)
-            },
-            Enabled = false,
-            Alpha = 0.35f
-        };
-        var prevBg = new GradientDrawable();
-        prevBg.SetShape(ShapeType.Oval);
-        prevBg.SetColor(Color.Argb(80, 0, 0, 0));
-        prevBg.SetStroke(DpToPx(1), Color.Argb(35, 255, 255, 255));
-        _prevEpisodeBtn.Background = prevBg;
-        _prevEpisodeBtn.SetPadding(DpToPx(12), DpToPx(12), DpToPx(12), DpToPx(12));
-        _prevEpisodeBtn.SetImageDrawable(PlayerIconHelper.CreateSkipPreviousDrawable(24, Color.White));
-        _prevEpisodeBtn.Click += (_, _) =>
-        {
-            PreviousEpisodeRequested?.Invoke(this, EventArgs.Empty);
-            ScheduleAutoHide();
-        };
-        _centerControls.AddView(_prevEpisodeBtn);
-
-        // Retroceder 10s (Icono replay_10 circular integrado)
-        _rewindBtn = new ImageView(context)
-        {
-            LayoutParameters = new LinearLayout.LayoutParams(DpToPx(52), DpToPx(52))
-        };
-        var rewindBg = new GradientDrawable();
-        rewindBg.SetShape(ShapeType.Oval);
-        rewindBg.SetColor(Color.Argb(80, 0, 0, 0));
-        rewindBg.SetStroke(DpToPx(1), Color.Argb(35, 255, 255, 255));
-        _rewindBtn.Background = rewindBg;
-        _rewindBtn.SetPadding(DpToPx(11), DpToPx(11), DpToPx(11), DpToPx(11));
-        _rewindBtn.SetImageDrawable(PlayerIconHelper.CreateReplay10Drawable(30, Color.White));
-        _rewindBtn.Click += (_, _) =>
-        {
-            int target = Math.Max(0, CurrentPosition - 10000);
-            SeekTo(target);
-            ShowToast("-10s");
-            ScheduleAutoHide();
-        };
-        _centerControls.AddView(_rewindBtn);
-
-        // Play / Pause Central (Icono circular grande con borde suave)
-        _playPauseCenterBtn = new ImageView(context);
-        var playParams = new LinearLayout.LayoutParams(DpToPx(64), DpToPx(64))
-        {
-            LeftMargin = DpToPx(20),
-            RightMargin = DpToPx(20)
-        };
-        var playBtnBg = new GradientDrawable();
-        playBtnBg.SetShape(ShapeType.Oval);
-        playBtnBg.SetColor(Color.Argb(100, 0, 0, 0));
-        playBtnBg.SetStroke(DpToPx(1.2f), Color.Argb(55, 255, 255, 255));
-        _playPauseCenterBtn.Background = playBtnBg;
-        _playPauseCenterBtn.SetPadding(DpToPx(16), DpToPx(16), DpToPx(16), DpToPx(16));
-        _playPauseCenterBtn.SetImageDrawable(PlayerIconHelper.CreatePauseDrawable(32, Color.White));
-        _playPauseCenterBtn.Click += (_, _) =>
-        {
-            if (IsPlaying) Pause(); else Resume();
-        };
-        _centerControls.AddView(_playPauseCenterBtn, playParams);
-
-        // Adelantar 10s (Icono forward_10 circular integrado)
-        _forwardBtn = new ImageView(context)
-        {
-            LayoutParameters = new LinearLayout.LayoutParams(DpToPx(52), DpToPx(52))
-        };
-        var forwardBg = new GradientDrawable();
-        forwardBg.SetShape(ShapeType.Oval);
-        forwardBg.SetColor(Color.Argb(80, 0, 0, 0));
-        forwardBg.SetStroke(DpToPx(1), Color.Argb(35, 255, 255, 255));
-        _forwardBtn.Background = forwardBg;
-        _forwardBtn.SetPadding(DpToPx(11), DpToPx(11), DpToPx(11), DpToPx(11));
-        _forwardBtn.SetImageDrawable(PlayerIconHelper.CreateForward10Drawable(30, Color.White));
-        _forwardBtn.Click += (_, _) =>
-        {
-            int target = Math.Min(Duration, CurrentPosition + 10000);
-            SeekTo(target);
-            ShowToast("+10s");
-            ScheduleAutoHide();
-        };
-        _centerControls.AddView(_forwardBtn);
-
-        // Siguiente Episodio (Skip Next)
-        _nextEpisodeBtn = new ImageView(context)
-        {
-            LayoutParameters = new LinearLayout.LayoutParams(DpToPx(48), DpToPx(48))
-            {
-                LeftMargin = DpToPx(14)
-            },
-            Enabled = false,
-            Alpha = 0.35f
-        };
-        var nextBg = new GradientDrawable();
-        nextBg.SetShape(ShapeType.Oval);
-        nextBg.SetColor(Color.Argb(80, 0, 0, 0));
-        nextBg.SetStroke(DpToPx(1), Color.Argb(35, 255, 255, 255));
-        _nextEpisodeBtn.Background = nextBg;
-        _nextEpisodeBtn.SetPadding(DpToPx(12), DpToPx(12), DpToPx(12), DpToPx(12));
-        _nextEpisodeBtn.SetImageDrawable(PlayerIconHelper.CreateSkipNextDrawable(24, Color.White));
-        _nextEpisodeBtn.Click += (_, _) =>
-        {
-            NextEpisodeRequested?.Invoke(this, EventArgs.Empty);
-            ScheduleAutoHide();
-        };
-        _centerControls.AddView(_nextEpisodeBtn);
-
-        overlay.AddView(_centerControls);
-
-        // ── C. Bottom Bar (Seekbar + Time + Speed) ────────────────────
+        // ── B. Bottom Bar (Seekbar + Playback Controls Row underneath, identical to PC) ──
         _bottomBar = new LinearLayout(context)
         {
             Orientation = Orientation.Vertical,
@@ -739,14 +614,14 @@ public class AndroidVideoPlayerControl : NativeControlHost
                 Gravity = GravityFlags.Bottom
             }
         };
-        _bottomBar.SetPadding(DpToPx(14), DpToPx(14), DpToPx(14), DpToPx(12));
+        _bottomBar.SetPadding(DpToPx(14), DpToPx(16), DpToPx(14), DpToPx(14));
 
         var botGrad = new GradientDrawable(
             GradientDrawable.Orientation.BottomTop,
             new int[] { Color.Argb(220, 0, 0, 0), Color.Argb(0, 0, 0, 0) });
         _bottomBar.Background = botGrad;
 
-        // SeekBar
+        // 1. SeekBar (Barra de progreso)
         _seekBar = new SeekBar(context)
         {
             Max = 1000,
@@ -755,7 +630,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
                 ViewGroup.LayoutParams.WrapContent)
         };
         _seekBar.Progress = 0;
-        _seekBar.SetPadding(DpToPx(8), DpToPx(4), DpToPx(8), DpToPx(4));
+        _seekBar.SetPadding(DpToPx(8), DpToPx(2), DpToPx(8), DpToPx(4));
 
         _seekBar.StartTrackingTouch += (_, _) =>
         {
@@ -785,15 +660,143 @@ public class AndroidVideoPlayerControl : NativeControlHost
 
         _bottomBar.AddView(_seekBar);
 
-        // Bottom Info Row: Time + Speed + Aspect
-        var bottomInfoRow = new LinearLayout(context)
+        // 2. Fila Inferior de Controles (Estilo PC debajo de la barra de progreso)
+        var bottomControlsRow = new LinearLayout(context)
         {
             Orientation = Orientation.Horizontal,
             LayoutParameters = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.WrapContent)
+            {
+                TopMargin = DpToPx(6)
+            }
         };
+        bottomControlsRow.SetGravity(GravityFlags.CenterVertical);
 
+        // Panel Izquierdo: [⏮] [⏪10] [▶/⏸] [⏩10] [⏭] [Tiempo]
+        var leftControls = new LinearLayout(context)
+        {
+            Orientation = Orientation.Horizontal,
+            LayoutParameters = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1.0f)
+        };
+        leftControls.SetGravity(GravityFlags.CenterVertical);
+
+        // ⏮ Episodio Anterior
+        _prevEpisodeBtn = new ImageView(context)
+        {
+            LayoutParameters = new LinearLayout.LayoutParams(DpToPx(38), DpToPx(38))
+            {
+                RightMargin = DpToPx(4)
+            },
+            Enabled = false,
+            Alpha = 0.35f
+        };
+        var prevBg = new GradientDrawable();
+        prevBg.SetShape(ShapeType.Oval);
+        prevBg.SetColor(Color.Argb(80, 0, 0, 0));
+        prevBg.SetStroke(DpToPx(1), Color.Argb(35, 255, 255, 255));
+        _prevEpisodeBtn.Background = prevBg;
+        _prevEpisodeBtn.SetPadding(DpToPx(8), DpToPx(8), DpToPx(8), DpToPx(8));
+        _prevEpisodeBtn.SetImageDrawable(PlayerIconHelper.CreateSkipPreviousDrawable(22, Color.White));
+        _prevEpisodeBtn.Click += (_, _) =>
+        {
+            PreviousEpisodeRequested?.Invoke(this, EventArgs.Empty);
+            ScheduleAutoHide();
+        };
+        leftControls.AddView(_prevEpisodeBtn);
+
+        // ⏪10 Retroceder 10s
+        _rewindBtn = new ImageView(context)
+        {
+            LayoutParameters = new LinearLayout.LayoutParams(DpToPx(38), DpToPx(38))
+            {
+                RightMargin = DpToPx(4)
+            }
+        };
+        var rewindBg = new GradientDrawable();
+        rewindBg.SetShape(ShapeType.Oval);
+        rewindBg.SetColor(Color.Argb(80, 0, 0, 0));
+        rewindBg.SetStroke(DpToPx(1), Color.Argb(35, 255, 255, 255));
+        _rewindBtn.Background = rewindBg;
+        _rewindBtn.SetPadding(DpToPx(7), DpToPx(7), DpToPx(7), DpToPx(7));
+        _rewindBtn.SetImageDrawable(PlayerIconHelper.CreateReplay10Drawable(24, Color.White));
+        _rewindBtn.Click += (_, _) =>
+        {
+            int target = Math.Max(0, CurrentPosition - 10000);
+            SeekTo(target);
+            ShowToast("-10s");
+            ScheduleAutoHide();
+        };
+        leftControls.AddView(_rewindBtn);
+
+        // ▶ / ⏸ Play/Pause
+        _playPauseCenterBtn = new ImageView(context);
+        var playParams = new LinearLayout.LayoutParams(DpToPx(42), DpToPx(42))
+        {
+            RightMargin = DpToPx(4)
+        };
+        var playBtnBg = new GradientDrawable();
+        playBtnBg.SetShape(ShapeType.Oval);
+        playBtnBg.SetColor(Color.Argb(110, 0, 0, 0));
+        playBtnBg.SetStroke(DpToPx(1.2f), Color.Argb(55, 255, 255, 255));
+        _playPauseCenterBtn.Background = playBtnBg;
+        _playPauseCenterBtn.SetPadding(DpToPx(9), DpToPx(9), DpToPx(9), DpToPx(9));
+        _playPauseCenterBtn.SetImageDrawable(PlayerIconHelper.CreatePauseDrawable(24, Color.White));
+        _playPauseCenterBtn.Click += (_, _) =>
+        {
+            if (IsPlaying) Pause(); else Resume();
+        };
+        leftControls.AddView(_playPauseCenterBtn, playParams);
+
+        // ⏩10 Adelantar 10s
+        _forwardBtn = new ImageView(context)
+        {
+            LayoutParameters = new LinearLayout.LayoutParams(DpToPx(38), DpToPx(38))
+            {
+                RightMargin = DpToPx(4)
+            }
+        };
+        var forwardBg = new GradientDrawable();
+        forwardBg.SetShape(ShapeType.Oval);
+        forwardBg.SetColor(Color.Argb(80, 0, 0, 0));
+        forwardBg.SetStroke(DpToPx(1), Color.Argb(35, 255, 255, 255));
+        _forwardBtn.Background = forwardBg;
+        _forwardBtn.SetPadding(DpToPx(7), DpToPx(7), DpToPx(7), DpToPx(7));
+        _forwardBtn.SetImageDrawable(PlayerIconHelper.CreateForward10Drawable(24, Color.White));
+        _forwardBtn.Click += (_, _) =>
+        {
+            int target = Math.Min(Duration, CurrentPosition + 10000);
+            SeekTo(target);
+            ShowToast("+10s");
+            ScheduleAutoHide();
+        };
+        leftControls.AddView(_forwardBtn);
+
+        // ⏭ Siguiente Episodio
+        _nextEpisodeBtn = new ImageView(context)
+        {
+            LayoutParameters = new LinearLayout.LayoutParams(DpToPx(38), DpToPx(38))
+            {
+                RightMargin = DpToPx(10)
+            },
+            Enabled = false,
+            Alpha = 0.35f
+        };
+        var nextBg = new GradientDrawable();
+        nextBg.SetShape(ShapeType.Oval);
+        nextBg.SetColor(Color.Argb(80, 0, 0, 0));
+        nextBg.SetStroke(DpToPx(1), Color.Argb(35, 255, 255, 255));
+        _nextEpisodeBtn.Background = nextBg;
+        _nextEpisodeBtn.SetPadding(DpToPx(8), DpToPx(8), DpToPx(8), DpToPx(8));
+        _nextEpisodeBtn.SetImageDrawable(PlayerIconHelper.CreateSkipNextDrawable(22, Color.White));
+        _nextEpisodeBtn.Click += (_, _) =>
+        {
+            NextEpisodeRequested?.Invoke(this, EventArgs.Empty);
+            ScheduleAutoHide();
+        };
+        leftControls.AddView(_nextEpisodeBtn);
+
+        // Tiempo (0:00 / 0:00)
         _timeText = new TextView(context)
         {
             Text = "0:00 / 0:00",
@@ -801,27 +804,39 @@ public class AndroidVideoPlayerControl : NativeControlHost
             Typeface = Typeface.DefaultBold
         };
         _timeText.SetTextColor(Color.White);
-        var timeParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1.0f)
+        var timeParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent)
         {
             Gravity = GravityFlags.CenterVertical,
-            LeftMargin = DpToPx(6)
+            LeftMargin = DpToPx(4)
         };
-        bottomInfoRow.AddView(_timeText, timeParams);
+        leftControls.AddView(_timeText, timeParams);
+
+        bottomControlsRow.AddView(leftControls);
+
+        // Panel Derecho: [Velocidad]
+        var rightControls = new LinearLayout(context)
+        {
+            Orientation = Orientation.Horizontal,
+            LayoutParameters = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WrapContent,
+                ViewGroup.LayoutParams.WrapContent)
+        };
+        rightControls.SetGravity(GravityFlags.CenterVertical);
 
         // Speed Toggle Button
         _speedBtn = new Button(context)
         {
             Text = "1.0x",
-            TextSize = 12,
+            TextSize = 11,
             Typeface = Typeface.DefaultBold
         };
         _speedBtn.SetTextColor(Color.White);
         var speedBg = new GradientDrawable();
         speedBg.SetColor(Color.Argb(100, 0, 0, 0));
         speedBg.SetStroke(DpToPx(1), Color.Argb(40, 255, 255, 255));
-        speedBg.SetCornerRadius(DpToPx(10));
+        speedBg.SetCornerRadius(DpToPx(8));
         _speedBtn.Background = speedBg;
-        _speedBtn.SetPadding(DpToPx(12), DpToPx(4), DpToPx(12), DpToPx(4));
+        _speedBtn.SetPadding(DpToPx(10), DpToPx(4), DpToPx(10), DpToPx(4));
         _speedBtn.Click += (_, _) =>
         {
             float nextSpeed = _currentSpeed switch
@@ -834,9 +849,11 @@ public class AndroidVideoPlayerControl : NativeControlHost
             SetSpeed(nextSpeed);
             ScheduleAutoHide();
         };
-        bottomInfoRow.AddView(_speedBtn);
+        rightControls.AddView(_speedBtn);
 
-        _bottomBar.AddView(bottomInfoRow);
+        bottomControlsRow.AddView(rightControls);
+        _bottomBar.AddView(bottomControlsRow);
+
         overlay.AddView(_bottomBar);
 
         // ── D. Center Feedback Toast ─────────────────────────────────
@@ -874,8 +891,8 @@ public class AndroidVideoPlayerControl : NativeControlHost
         if (_playPauseCenterBtn != null)
         {
             _playPauseCenterBtn.SetImageDrawable(isPlaying
-                ? PlayerIconHelper.CreatePauseDrawable(32, Color.White)
-                : PlayerIconHelper.CreatePlayDrawable(32, Color.White));
+                ? PlayerIconHelper.CreatePauseDrawable(24, Color.White)
+                : PlayerIconHelper.CreatePlayDrawable(24, Color.White));
         }
 
         if (_statusBadge != null)
