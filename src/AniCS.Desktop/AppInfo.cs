@@ -29,10 +29,15 @@ public static class AppInfo
         "• Nuevos botones visuales de Episodio Anterior (⏮) y Siguiente (⏭) en los reproductores de PC y Android.\n" +
         "• Atajos de teclado en PC: tecla 'P' para el capítulo anterior y tecla 'N' para el capítulo siguiente.\n" +
         "• Cambio fluido de episodio sin necesidad de cerrar la ventana del reproductor ni recargar la vista.\n\n" +
+        "🎬 Acceso Directo al Anime desde Descargas (Android):\n" +
+        "• Pulsa directamente en el título o cabecera de cualquier anime descargado para abrir su ficha completa y continuar descargando más episodios.\n\n" +
+        "⚡ Carga Instantánea en Descargas (PC & Android):\n" +
+        "• Apertura inmediata sin bloqueos ('No responde'); el escaneo de archivos huérfanos ahora se ejecuta en segundo plano.\n\n" +
         "🔔 Mejoras en Notificaciones de Descarga (Android):\n" +
         "• Notificaciones enriquecidas con progreso detallado de la descarga en segundo plano.\n" +
         "• Notificación de finalización que informa al usuario cuando todos los capítulos en cola se han descargado con éxito.\n\n" +
-        "🛠️ Estabilidad y Optimización de Memoria:\n" +
+        "🛠️ Refactorización Clean Code y Optimización:\n" +
+        "• Manejo estructurado de logs en excepciones y eliminación integral de código muerto en todos los proyectos.\n" +
         "• Corrección de fugas de eventos en LibVLC y reutilización de caché en el historial de visualización.\n" +
         "• Soporte completo de control IPC para MPV (Pausa, Reanudar, Búsqueda temporal y Volumen).\n" +
         "• Reanudación limpia y determinista en el reproductor nativo de Android sin demoras arbitrarias.\n\n" +
