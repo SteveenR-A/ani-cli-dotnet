@@ -461,8 +461,9 @@ public class AndroidVideoPlayerControl : NativeControlHost
                 ViewGroup.LayoutParams.MatchParent)
         };
 
-        // Touch Listener to Toggle Controls
-        overlay.Click += (_, _) => ToggleControls();
+        // Gesture Detector: Single tap to toggle controls, Double tap on left/right edges to seek -10s/+10s
+        var gestureDetector = new GestureDetector(context, new VideoGestureListener(this));
+        overlay.SetOnTouchListener(new CustomTouchListener(gestureDetector));
 
         // ── A. Top Bar (Gradient Background) ─────────────────────────
         _topBar = new LinearLayout(context)
@@ -1109,6 +1110,75 @@ public class AndroidVideoPlayerControl : NativeControlHost
         public bool OnSurfaceTextureDestroyed(SurfaceTexture surface) => _owner.OnSurfaceTextureDestroyed(surface);
         public void OnSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) => _owner.OnSurfaceTextureSizeChanged(surface, width, height);
         public void OnSurfaceTextureUpdated(SurfaceTexture surface) => _owner.OnSurfaceTextureUpdated(surface);
+    }
+
+    private class VideoGestureListener : GestureDetector.SimpleOnGestureListener
+    {
+        private readonly AndroidVideoPlayerControl _player;
+
+        public VideoGestureListener(AndroidVideoPlayerControl player)
+        {
+            _player = player;
+        }
+
+        public override bool OnSingleTapConfirmed(MotionEvent e)
+        {
+            _player.ToggleControls();
+            return true;
+        }
+
+        public override bool OnDoubleTap(MotionEvent e)
+        {
+            if (_player._rootLayout == null || _player._rootLayout.Width <= 0) return false;
+            float x = e.GetX();
+            int width = _player._rootLayout.Width;
+
+            if (x < width * 0.38f)
+            {
+                // Doble toque a la orilla izquierda: Retroceder 10s
+                int target = Math.Max(0, _player.CurrentPosition - 10000);
+                _player.SeekTo(target);
+                _player.ShowToast("⏪ -10s");
+                _player.ScheduleAutoHide();
+                return true;
+            }
+            else if (x > width * 0.62f)
+            {
+                // Doble toque a la orilla derecha: Adelantar 10s
+                int target = Math.Min(_player.Duration, _player.CurrentPosition + 10000);
+                _player.SeekTo(target);
+                _player.ShowToast("⏩ +10s");
+                _player.ScheduleAutoHide();
+                return true;
+            }
+            else
+            {
+                // Doble toque en el centro: Play / Pausa
+                if (_player.IsPlaying) _player.Pause(); else _player.Resume();
+                return true;
+            }
+        }
+
+        public override bool OnDown(MotionEvent e) => true;
+    }
+
+    private class CustomTouchListener : Java.Lang.Object, View.IOnTouchListener
+    {
+        private readonly GestureDetector _detector;
+
+        public CustomTouchListener(GestureDetector detector)
+        {
+            _detector = detector;
+        }
+
+        public bool OnTouch(View? v, MotionEvent? e)
+        {
+            if (e != null && _detector.OnTouchEvent(e))
+            {
+                return true;
+            }
+            return false;
+        }
     }
 
     #endregion
