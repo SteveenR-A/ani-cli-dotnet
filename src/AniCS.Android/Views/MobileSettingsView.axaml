@@ -85,6 +85,12 @@
 
                         <Separator Background="{DynamicResource AppSubtextColor}" Opacity="0.2"/>
 
+                        <TextBlock Text="Descargas Simultáneas" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource AppTitleColor}"/>
+                        <TextBlock Text="Cantidad de capítulos a descargar a la vez en la cola." FontSize="11" Foreground="{DynamicResource AppSubtextColor}"/>
+                        <NumericUpDown Name="MaxConcurrentDownloadsInput" Minimum="1" Maximum="5" FormatString="0" />
+
+                        <Separator Background="{DynamicResource AppSubtextColor}" Opacity="0.2"/>
+
                         <TextBlock Text="Ubicación de Descargas" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource AppTitleColor}"/>
                         <TextBlock Text="Carpeta donde se almacenan los animes descargados." FontSize="11" Foreground="{DynamicResource AppSubtextColor}"/>
                         <TextBox Name="DownloadDirectoryInput" PlaceholderText="Ruta de descargas" />

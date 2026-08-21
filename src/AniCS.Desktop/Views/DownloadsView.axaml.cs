@@ -3,12 +3,13 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using AniCS.Desktop.Services;
 using AniCS.Models;
 using System.ComponentModel;
-
+using System.Threading.Tasks;
 using AniCS.Player;
 using AniCS.Resolver;
 
@@ -38,8 +39,15 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
         DownloadManager.DownloadsChanged += OnDownloadsChanged;
         _playerBackend.SessionChanged -= OnPlayerSessionChanged;
         _playerBackend.SessionChanged += OnPlayerSessionChanged;
-        DownloadManager.ScanDiskDownloads();
+        
+        // Renderizar inmediatamente la UI con los datos en memoria para respuesta instantánea
         LoadData();
+
+        // Escanear disco en segundo plano sin congelar la UI
+        _ = Task.Run(() =>
+        {
+            DownloadManager.ScanDiskDownloads();
+        });
     }
     
     private void OnUnloaded(object? sender, RoutedEventArgs e)
@@ -69,13 +77,15 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
         Dispatcher.UIThread.InvokeAsync(LoadData);
     }
 
-    private void OnReloadClicked(object? sender, RoutedEventArgs e)
+    private async void OnReloadClicked(object? sender, RoutedEventArgs e)
     {
-        // 1. Escanear el disco en busca de archivos huérfanos (no registrados)
-        int found = DownloadManager.ScanDiskDownloads();
+        StatusText.IsVisible = true;
+        StatusText.Text = "Escaneando disco en busca de descargas...";
 
-        // 2. Recargar la UI (ScanDiskDownloads ya llama DownloadsChanged si hay cambios,
-        //    pero llamamos LoadData igualmente para refrescar aunque no haya nada nuevo)
+        // 1. Escanear el disco en segundo plano en busca de archivos huérfanos
+        int found = await Task.Run(() => DownloadManager.ScanDiskDownloads());
+
+        // 2. Recargar la UI
         LoadData();
 
         // 3. Mostrar feedback breve
@@ -257,7 +267,7 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
     {
         _currentAnime = anime;
         _currentEpisode = episode;
-        _nextEpisode = DownloadManager.GetNextEpisode(anime.Url, episode.EpisodeNumber);
+        _nextEpisode = DownloadManager.GetNextEpisode(anime, episode);
 
         // Si estaba sin ver, marcarlo como en progreso al reproducir
         if (episode.Status == EpisodeWatchStatus.Unwatched)
@@ -279,18 +289,69 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
 
         if (currentBackend is LibVlcBackend libVlcForPlay)
         {
-            // Para archivos locales el resolver simplemente devuelve la ruta fija;
-            // el auto-recover no aplica, pero el constructor lo requiere.
+            PlayerWindow? playerWindow = null;
+
+            Func<Task>? buildPrevAction(DownloadedEpisode currentEp)
+            {
+                var prev = DownloadManager.GetPreviousEpisode(anime, currentEp);
+                if (prev == null || !File.Exists(prev.FilePath)) return null;
+                return async () =>
+                {
+                    _currentEpisode = prev;
+                    _nextEpisode = DownloadManager.GetNextEpisode(anime, prev);
+                    UpdateQuickControlBar();
+                    var pAction = buildPrevAction(prev);
+                    var nAction = buildNextAction(prev);
+                    if (playerWindow != null)
+                    {
+                        await playerWindow.ChangeEpisodeAsync(
+                            $"AniCS - {anime.Title} - {prev.EpisodeTitle}",
+                            () => Task.FromResult(prev.FilePath),
+                            "",
+                            "Mejor",
+                            pAction,
+                            nAction);
+                    }
+                };
+            }
+
+            Func<Task>? buildNextAction(DownloadedEpisode currentEp)
+            {
+                var next = DownloadManager.GetNextEpisode(anime, currentEp);
+                if (next == null || !File.Exists(next.FilePath)) return null;
+                return async () =>
+                {
+                    _currentEpisode = next;
+                    _nextEpisode = DownloadManager.GetNextEpisode(anime, next);
+                    UpdateQuickControlBar();
+                    var pAction = buildPrevAction(next);
+                    var nAction = buildNextAction(next);
+                    if (playerWindow != null)
+                    {
+                        await playerWindow.ChangeEpisodeAsync(
+                            $"AniCS - {anime.Title} - {next.EpisodeTitle}",
+                            () => Task.FromResult(next.FilePath),
+                            "",
+                            "Mejor",
+                            pAction,
+                            nAction);
+                    }
+                };
+            }
+
             var filePath = episode.FilePath;
             Func<System.Threading.Tasks.Task<string>> localResolver =
                 () => System.Threading.Tasks.Task.FromResult(filePath);
 
-            var playerWindow = new PlayerWindow(
+            playerWindow = new PlayerWindow(
                 libVlcForPlay,
                 localResolver,
                 $"AniCS - {anime.Title} - {episode.EpisodeTitle}",
                 "",
-                "Mejor");
+                "Mejor",
+                buildPrevAction(episode),
+                buildNextAction(episode));
+
             var ownerWin = TopLevel.GetTopLevel(this) as Window;
             if (ownerWin != null)
                 playerWindow.Show(ownerWin);
@@ -324,15 +385,22 @@ public partial class DownloadsView : UserControl, INotifyPropertyChanged
 
     private void OnPlayNextEpisodeClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is DownloadedEpisode episode)
+        if (_currentAnime != null && _nextEpisode != null)
+        {
+            if (_currentEpisode != null)
+            {
+                DownloadManager.UpdateEpisodeStatus(_currentAnime.Url, _currentEpisode.EpisodeNumber, EpisodeWatchStatus.Completed);
+            }
+            PlayEpisodeWithQuickControl(_currentAnime, _nextEpisode);
+        }
+        else if (sender is Button btn && btn.Tag is DownloadedEpisode episode)
         {
             var parentExpander = btn.GetVisualAncestors().OfType<Expander>().FirstOrDefault();
             if (parentExpander?.DataContext is DownloadedAnime anime)
             {
-                var nextEp = DownloadManager.GetNextEpisode(anime.Url, episode.EpisodeNumber);
+                var nextEp = DownloadManager.GetNextEpisode(anime, episode);
                 if (nextEp != null)
                 {
-                    // Marcar el actual como completado y reproducir el siguiente
                     DownloadManager.UpdateEpisodeStatus(anime.Url, episode.EpisodeNumber, EpisodeWatchStatus.Completed);
                     PlayEpisodeWithQuickControl(anime, nextEp);
                 }

@@ -39,6 +39,12 @@ public partial class MobileSettingsView : UserControl
         // Cache limit
         CacheLimitInput.Value = cfg.MaxImageCacheCount;
 
+        // Descargas simultáneas
+        if (MaxConcurrentDownloadsInput != null)
+        {
+            MaxConcurrentDownloadsInput.Value = cfg.MaxConcurrentDownloads;
+        }
+
         // Ubicación de descargas
         if (DownloadDirectoryInput != null)
         {
@@ -289,6 +295,11 @@ public partial class MobileSettingsView : UserControl
         cfg.CustomJkAnimeBaseUrl = CustomJkAnimeUrlInput.Text?.Trim() ?? "https://jkanime.net";
         cfg.MaxImageCacheCount = (int)(CacheLimitInput.Value ?? 100);
 
+        if (MaxConcurrentDownloadsInput != null)
+        {
+            cfg.MaxConcurrentDownloads = Math.Clamp((int)(MaxConcurrentDownloadsInput.Value ?? 2), 1, 5);
+        }
+
         if (DownloadDirectoryInput != null)
         {
             var customDir = DownloadDirectoryInput.Text?.Trim() ?? string.Empty;
@@ -301,6 +312,7 @@ public partial class MobileSettingsView : UserControl
         }
 
         ConfigManager.Save(cfg);
+        Desktop.Services.DownloadManager.ProcessQueue();
         ShowStatus("¡Configuración guardada correctamente!", Brushes.LightGreen);
     }
 

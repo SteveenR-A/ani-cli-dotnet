@@ -18,6 +18,12 @@ public partial class PlayerWindow : Window
     private string _quality   = "";
     private IAudioMixerController? _mixer;
 
+    // Callbacks de navegación entre episodios (Streaming o Descargas)
+    public Func<Task>? PreviousEpisodeAction { get; set; }
+    public Func<Task>? NextEpisodeAction { get; set; }
+    public bool HasPreviousEpisode => PreviousEpisodeAction != null;
+    public bool HasNextEpisode => NextEpisodeAction != null;
+
     // Auto-recover state
     private bool   _isRecovering   = false;
     private int    _recoverAttempts = 0;
@@ -37,15 +43,19 @@ public partial class PlayerWindow : Window
         Func<Task<string>> urlResolver,
         string             title,
         string             serverUrl,
-        string             quality)
+        string             quality,
+        Func<Task>?        prevEpisodeAction = null,
+        Func<Task>?        nextEpisodeAction = null)
     {
         InitializeComponent();
 
-        _playerBackend = playerBackend;
-        _urlResolver   = urlResolver;
-        _title         = title;
-        _serverUrl     = serverUrl;
-        _quality       = quality;
+        _playerBackend        = playerBackend;
+        _urlResolver          = urlResolver;
+        _title                = title;
+        _serverUrl            = serverUrl;
+        _quality              = quality;
+        PreviousEpisodeAction = prevEpisodeAction;
+        NextEpisodeAction     = nextEpisodeAction;
 
         Title = title;
 
@@ -73,10 +83,13 @@ public partial class PlayerWindow : Window
                 libVlcBackend.RecoverRequested += OnRecoverRequested;
             }
 
-            EmbeddedVideoPlayer.BackRequested  += OnCloseRequested;
-            EmbeddedVideoPlayer.CloseRequested += OnCloseRequested;
+            EmbeddedVideoPlayer.BackRequested            += OnCloseRequested;
+            EmbeddedVideoPlayer.CloseRequested           += OnCloseRequested;
+            EmbeddedVideoPlayer.PreviousEpisodeRequested += OnPreviousEpisodeRequested;
+            EmbeddedVideoPlayer.NextEpisodeRequested     += OnNextEpisodeRequested;
             EmbeddedVideoPlayer.Focus();
 
+            UpdateNavigationButtons();
             await StartPlaybackAsync();
         }
         catch (Exception ex)
@@ -87,8 +100,10 @@ public partial class PlayerWindow : Window
 
     private void OnUnloaded(object? sender, RoutedEventArgs e)
     {
-        EmbeddedVideoPlayer.BackRequested  -= OnCloseRequested;
-        EmbeddedVideoPlayer.CloseRequested -= OnCloseRequested;
+        EmbeddedVideoPlayer.BackRequested            -= OnCloseRequested;
+        EmbeddedVideoPlayer.CloseRequested           -= OnCloseRequested;
+        EmbeddedVideoPlayer.PreviousEpisodeRequested -= OnPreviousEpisodeRequested;
+        EmbeddedVideoPlayer.NextEpisodeRequested     -= OnNextEpisodeRequested;
         EmbeddedVideoPlayer.SetMixer(null);
         EmbeddedVideoPlayer.Detach();
 
@@ -99,6 +114,60 @@ public partial class PlayerWindow : Window
         _mixer = null;
 
         Task.Run(() => _playerBackend?.Stop());
+    }
+
+    public void UpdateNavigationButtons()
+    {
+        EmbeddedVideoPlayer.SetNavigationState(HasPreviousEpisode, HasNextEpisode);
+    }
+
+    public async Task ChangeEpisodeAsync(
+        string title,
+        Func<Task<string>> urlResolver,
+        string serverUrl,
+        string quality,
+        Func<Task>? prevEpisodeAction,
+        Func<Task>? nextEpisodeAction)
+    {
+        _title                = title;
+        _urlResolver          = urlResolver;
+        _serverUrl            = serverUrl;
+        _quality              = quality;
+        PreviousEpisodeAction = prevEpisodeAction;
+        NextEpisodeAction     = nextEpisodeAction;
+        Title                 = title;
+        _recoverAttempts      = 0;
+
+        UpdateNavigationButtons();
+        await StartPlaybackAsync(0);
+    }
+
+    private async void OnPreviousEpisodeRequested(object? sender, EventArgs e)
+    {
+        if (PreviousEpisodeAction == null) return;
+        EmbeddedVideoPlayer.ShowLoading("Cargando episodio anterior...");
+        try
+        {
+            await PreviousEpisodeAction();
+        }
+        catch (Exception ex)
+        {
+            EmbeddedVideoPlayer.ShowLoading($"Error al cargar episodio anterior: {ex.Message}");
+        }
+    }
+
+    private async void OnNextEpisodeRequested(object? sender, EventArgs e)
+    {
+        if (NextEpisodeAction == null) return;
+        EmbeddedVideoPlayer.ShowLoading("Cargando siguiente episodio...");
+        try
+        {
+            await NextEpisodeAction();
+        }
+        catch (Exception ex)
+        {
+            EmbeddedVideoPlayer.ShowLoading($"Error al cargar siguiente episodio: {ex.Message}");
+        }
     }
 
     // ── Playback ──────────────────────────────────────────────────────────────
@@ -115,8 +184,6 @@ public partial class PlayerWindow : Window
         catch (Exception ex)
         {
             EmbeddedVideoPlayer.HideLoading();
-            // Show error inline using the player's own error overlay
-            // (triggers via ErrorOccurred event from the backend - nothing to do here)
             System.Diagnostics.Debug.WriteLine($"[PlayerWindow] URL resolver failed: {ex.Message}");
             return;
         }
@@ -185,3 +252,4 @@ public partial class PlayerWindow : Window
         Close();
     }
 }
+

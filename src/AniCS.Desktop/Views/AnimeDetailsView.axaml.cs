@@ -11,6 +11,7 @@ using AniCS.Models;
 using AniCS.Desktop.Converters;
 using AniCS.Desktop.Controls;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AniCS.Player;
 using AniCS.Player.Controls;
@@ -564,6 +565,74 @@ public partial class AnimeDetailsView : UserControl
         }
     }
 
+    private async System.Threading.Tasks.Task<(string VideoUrl, string ServerUrl, string Quality, Func<System.Threading.Tasks.Task<string>> Resolver)?> ResolveEpisodeStreamAsync(EpisodeViewModel targetVm)
+    {
+        try
+        {
+            var extractor = ExtractorFactory.GetExtractorForUrl(_anime.Url);
+            var servers = await extractor.GetVideoServersAsync(targetVm.Url);
+            if (servers.Count == 0) return null;
+
+            var chosenServer = servers[0];
+            string chosenQuality = AniCS.ConfigManager.Current.PreferredQuality;
+            var serverUrl = chosenServer.Url;
+
+            Func<System.Threading.Tasks.Task<string>> urlResolver = async () =>
+            {
+                var freshUrl = await extractor.ResolveVideoUrlAsync(serverUrl);
+
+                if (!string.IsNullOrEmpty(freshUrl) && !chosenServer.IsDirectPlaySupported
+                    && !freshUrl.Contains(".m3u8") && !freshUrl.Contains(".mp4"))
+                {
+                    var resolved = await _resolverBackend.ResolveAsync(freshUrl,
+                        new ResolveOptions { Referer = serverUrl });
+
+                    if (resolved.Type != MediaType.Unknown)
+                        freshUrl = resolved.DirectUrl;
+                    else if (_ytdlpFallback.IsAvailable)
+                    {
+                        var fb = await ResolveWithYtDlpFallbackAsync(freshUrl, serverUrl);
+                        if (string.IsNullOrEmpty(fb))
+                            fb = await ResolveWithYtDlpFallbackAsync(targetVm.Url, _anime.Url);
+                        if (!string.IsNullOrEmpty(fb))
+                            freshUrl = fb;
+                    }
+                }
+                else if (string.IsNullOrEmpty(freshUrl))
+                {
+                    var resolved = await _resolverBackend.ResolveAsync(serverUrl,
+                        new ResolveOptions { Referer = serverUrl });
+
+                    if (resolved.Type != MediaType.Unknown)
+                        freshUrl = resolved.DirectUrl;
+                    else if (_ytdlpFallback.IsAvailable)
+                    {
+                        var fb = await ResolveWithYtDlpFallbackAsync(serverUrl, serverUrl);
+                        if (string.IsNullOrEmpty(fb))
+                            fb = await ResolveWithYtDlpFallbackAsync(targetVm.Url, _anime.Url);
+                        if (!string.IsNullOrEmpty(fb))
+                            freshUrl = fb;
+                    }
+                    
+                    if (string.IsNullOrEmpty(freshUrl))
+                        freshUrl = serverUrl;
+                }
+
+                return freshUrl ?? string.Empty;
+            };
+
+            var videoUrl = await urlResolver();
+            if (string.IsNullOrEmpty(videoUrl)) return null;
+
+            return (videoUrl, serverUrl, chosenQuality, urlResolver);
+        }
+        catch (Exception ex)
+        {
+            AniCS.AppLogger.Error("AnimeDetailsView.ResolveEpisodeStreamAsync", ex);
+            return null;
+        }
+    }
+
     private async System.Threading.Tasks.Task ProceedWithPlay(Button btn, EpisodeViewModel vm, Window? ownerWindow, bool useHud)
     {
         StatusText.Text = $"Cargando servidores: {vm.Title}...";
@@ -683,6 +752,64 @@ public partial class AnimeDetailsView : UserControl
                 {
                     StatusText.IsVisible = false;
 
+                    PlayerWindow? playerWindow = null;
+
+                    Func<Task>? buildPrevAction(EpisodeViewModel currentVm)
+                    {
+                        var list = (EpisodesList.ItemsSource as IEnumerable<EpisodeViewModel>)?.ToList();
+                        if (list == null) return null;
+                        int idx = list.IndexOf(currentVm);
+                        if (idx <= 0) return null;
+                        var prevVm = list[idx - 1];
+
+                        return async () =>
+                        {
+                            var res = await ResolveEpisodeStreamAsync(prevVm);
+                            if (res != null && playerWindow != null)
+                            {
+                                _nowPlayingVm = prevVm;
+                                var (vUrl, sUrl, q, resolver) = res.Value;
+                                var pAction = buildPrevAction(prevVm);
+                                var nAction = buildNextAction(prevVm);
+                                await playerWindow.ChangeEpisodeAsync(
+                                    $"{_anime.Title} — {prevVm.Title}",
+                                    resolver,
+                                    sUrl,
+                                    q,
+                                    pAction,
+                                    nAction);
+                            }
+                        };
+                    }
+
+                    Func<Task>? buildNextAction(EpisodeViewModel currentVm)
+                    {
+                        var list = (EpisodesList.ItemsSource as IEnumerable<EpisodeViewModel>)?.ToList();
+                        if (list == null) return null;
+                        int idx = list.IndexOf(currentVm);
+                        if (idx < 0 || idx + 1 >= list.Count) return null;
+                        var nextVm = list[idx + 1];
+
+                        return async () =>
+                        {
+                            var res = await ResolveEpisodeStreamAsync(nextVm);
+                            if (res != null && playerWindow != null)
+                            {
+                                _nowPlayingVm = nextVm;
+                                var (vUrl, sUrl, q, resolver) = res.Value;
+                                var pAction = buildPrevAction(nextVm);
+                                var nAction = buildNextAction(nextVm);
+                                await playerWindow.ChangeEpisodeAsync(
+                                    $"{_anime.Title} — {nextVm.Title}",
+                                    resolver,
+                                    sUrl,
+                                    q,
+                                    pAction,
+                                    nAction);
+                            }
+                        };
+                    }
+
                     string initialResolvedUrl = videoUrl;
                     Func<System.Threading.Tasks.Task<string>> safeResolver = async () =>
                     {
@@ -695,12 +822,15 @@ public partial class AnimeDetailsView : UserControl
                         return await urlResolver();
                     };
 
-                    var playerWindow = new PlayerWindow(
+                    playerWindow = new PlayerWindow(
                         libVlcForPlay,
                         safeResolver,
                         $"{_anime.Title} — {vm.Title}",
                         serverUrl,
-                        quality);
+                        quality,
+                        buildPrevAction(vm),
+                        buildNextAction(vm));
+
                     var ownerWin = TopLevel.GetTopLevel(this) as Window;
                     if (ownerWin != null)
                         playerWindow.Show(ownerWin);

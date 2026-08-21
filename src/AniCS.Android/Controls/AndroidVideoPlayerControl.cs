@@ -46,6 +46,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
     private int _videoWidth;
     private int _videoHeight;
     private int _bufferPercentage;
+    private int _targetStartPositionMs;
     private bool _isPrepared;
     private bool _isControlsVisible = true;
     private bool _isUserSeeking;
@@ -75,25 +76,27 @@ public class AndroidVideoPlayerControl : NativeControlHost
         if (_qualityText != null) _qualityText.Text = quality;
     }
 
-    public void Play(string url, string? referer = null)
+    public void Play(string url, string? referer = null, int startPositionMs = 0)
     {
         _pendingUrl = url;
         _pendingReferer = referer;
+        _targetStartPositionMs = startPositionMs;
 
         if (_surface == null)
         {
             return;
         }
 
-        StartPlaybackInternal(url, referer);
+        StartPlaybackInternal(url, referer, startPositionMs);
     }
 
-    private void StartPlaybackInternal(string url, string? referer)
+    private void StartPlaybackInternal(string url, string? referer, int startPositionMs)
     {
         try
         {
             _isPrepared = false;
             _bufferPercentage = 0;
+            _targetStartPositionMs = startPositionMs;
 
             if (_mediaPlayer == null)
             {
@@ -168,6 +171,20 @@ public class AndroidVideoPlayerControl : NativeControlHost
                         _qualityText.Text = $"{_videoHeight}p";
                     }
                     AdjustAspectRatio();
+
+                    if (_targetStartPositionMs > 0)
+                    {
+                        try
+                        {
+                            _mediaPlayer.SeekTo(_targetStartPositionMs);
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLogger.Warn("AndroidVideoPlayerControl.SeekOnPrepared", ex.Message);
+                        }
+                        _targetStartPositionMs = 0;
+                    }
+
                     _mediaPlayer.Start();
                     SetKeepScreenOnState(true);
                     UpdatePlayPauseUi(true);
@@ -187,14 +204,13 @@ public class AndroidVideoPlayerControl : NativeControlHost
 
             var context = Application.Context;
             var headers = new Dictionary<string, string>();
-            if (url.Contains("mundodonghua") || url.Contains("mdplayer") || url.Contains("mdmnemonicplayer") || (referer != null && referer.Contains("mundodonghua")))
-            {
-                headers["Referer"] = "https://www.mundodonghua.com/";
-                headers["Origin"] = "https://www.mundodonghua.com";
-            }
-            else if (!string.IsNullOrEmpty(referer))
+            if (!string.IsNullOrEmpty(referer))
             {
                 headers["Referer"] = referer;
+                if (Uri.TryCreate(referer, UriKind.Absolute, out var parsedRef))
+                {
+                    headers["Origin"] = parsedRef.GetLeftPart(UriPartial.Authority);
+                }
             }
             headers["User-Agent"] = ConfigManager.Current.RandomUserAgent;
 
@@ -958,7 +974,7 @@ public class AndroidVideoPlayerControl : NativeControlHost
         }
         else if (!string.IsNullOrEmpty(_pendingUrl))
         {
-            StartPlaybackInternal(_pendingUrl, _pendingReferer);
+            StartPlaybackInternal(_pendingUrl, _pendingReferer, _targetStartPositionMs);
         }
     }
 

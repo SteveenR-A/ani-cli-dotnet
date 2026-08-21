@@ -94,6 +94,9 @@ public class AppConfig
 
     /// <summary>Ruta personalizada de almacenamiento y descargas (vacío = por defecto según plataforma).</summary>
     public string CustomDownloadDirectory { get; set; } = string.Empty;
+
+    /// <summary>Límite de descargas simultáneas activas en la cola (1-10, por defecto 2).</summary>
+    public int MaxConcurrentDownloads { get; set; } = 2;
 }
 
 [System.Text.Json.Serialization.JsonSerializable(typeof(AppConfig))]

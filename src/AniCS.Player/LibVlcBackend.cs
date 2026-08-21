@@ -19,6 +19,7 @@ public sealed class LibVlcBackend : IPlayerBackend
     private string         _currentUrl   = "";
     private string         _currentTitle = "";
     private Timer?         _progressTimer;
+    private readonly History.WatchHistory _watchHistory = new();
 
     public string BackendName => "LibVLC";
     public bool   IsAvailable => _isInitialized;
@@ -111,11 +112,17 @@ public sealed class LibVlcBackend : IPlayerBackend
             if (opts.StartPosition > 0)
             {
                 long startMs = (long)(opts.StartPosition * 1000);
-                _mediaPlayer.Playing += (_, _) =>
+                EventHandler<EventArgs>? onPlaying = null;
+                onPlaying = (_, _) =>
                 {
-                    if (_mediaPlayer.Length > 0 && startMs > 0)
-                        _mediaPlayer.Time = startMs;
+                    if (_mediaPlayer != null)
+                    {
+                        _mediaPlayer.Playing -= onPlaying;
+                        if (startMs > 0)
+                            _mediaPlayer.Time = startMs;
+                    }
                 };
+                _mediaPlayer.Playing += onPlaying;
             }
 
             _mediaPlayer.Buffering -= OnBuffering; // evitar acumulación de handlers en reproducciones consecutivas
@@ -239,8 +246,7 @@ public sealed class LibVlcBackend : IPlayerBackend
         {
             try
             {
-                var history = new History.WatchHistory();
-                history.UpdateProgress(_currentUrl, pos, dur, isCompleted);
+                _watchHistory.UpdateProgress(_currentUrl, pos, dur, isCompleted);
             }
             catch (Exception ex)
             {
@@ -309,8 +315,7 @@ public sealed class LibVlcBackend : IPlayerBackend
 
         try
         {
-            var history = new History.WatchHistory();
-            history.UpdateProgress(_currentUrl, dur, dur, true);
+            _watchHistory.UpdateProgress(_currentUrl, dur, dur, true);
         }
         catch (Exception ex)
         {

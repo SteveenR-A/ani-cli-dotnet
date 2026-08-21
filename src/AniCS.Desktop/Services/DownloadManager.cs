@@ -88,20 +88,20 @@ public class ActiveDownload : INotifyPropertyChanged
 
     public string StatusText => State switch
     {
-        DownloadState.Pending => "Iniciando descarga...",
+        DownloadState.Pending => "En cola para descargar...",
         DownloadState.Downloading => string.IsNullOrWhiteSpace(SizeText)
             ? $"Descargando... {Progress:F1}%"
             : $"Descargando... {SizeText} ({Progress:F1}%)",
         DownloadState.Completed => "Descargado",
-        DownloadState.Error => "Error",
+        DownloadState.Error => string.IsNullOrWhiteSpace(SizeText) ? "Error" : SizeText,
         DownloadState.Cancelled => "Cancelado",
         DownloadState.Paused => "Pausado",
         _ => State.ToString()
     };
 
-
     public string StatusIcon => State switch
     {
+        DownloadState.Pending => "ClockOutline",
         DownloadState.Downloading => "Download",
         DownloadState.Completed => "Check",
         DownloadState.Error => "Close",
@@ -114,28 +114,33 @@ public class ActiveDownload : INotifyPropertyChanged
 
     public void Pause()
     {
-        if (State == DownloadState.Downloading)
+        if (State == DownloadState.Downloading || State == DownloadState.Pending)
         {
             State = DownloadState.Paused;
             CancellationTokenSource.Cancel();
+            DownloadManager.ProcessQueue();
         }
     }
 
     public void Resume()
     {
-        if (State == DownloadState.Paused)
+        if (State == DownloadState.Paused || State == DownloadState.Error)
         {
-            State = DownloadState.Downloading;
+            State = DownloadState.Pending;
+            RetryAttempt = 0;
+            CancellationTokenSource?.Dispose();
             CancellationTokenSource = new CancellationTokenSource();
+            DownloadManager.ProcessQueue();
         }
     }
 
     public void Cancel()
     {
-        if (State == DownloadState.Downloading || State == DownloadState.Paused)
+        if (State == DownloadState.Downloading || State == DownloadState.Paused || State == DownloadState.Pending)
         {
             State = DownloadState.Cancelled;
             CancellationTokenSource.Cancel();
+            DownloadManager.ProcessQueue();
         }
     }
 
@@ -368,20 +373,49 @@ public static class DownloadManager
 
     public static void StartOrResumeDownloadAsync(ActiveDownload active)
     {
-        lock (_runningLock)
-        {
-            if (_runningDownloads.Contains(active))
-                return;
-            _runningDownloads.Add(active);
-        }
-
-        active.State = DownloadState.Downloading;
+        active.RetryAttempt = 0;
+        active.State = DownloadState.Pending;
         active.CancellationTokenSource?.Dispose();
         active.CancellationTokenSource = new CancellationTokenSource();
-        var token = active.CancellationTokenSource.Token;
 
         AddActiveDownload(active);
-        OnDownloadsStarted?.Invoke();
+        ProcessQueue();
+    }
+
+    public static void ProcessQueue()
+    {
+        lock (_runningLock)
+        {
+            int maxConcurrent = Math.Max(1, ConfigManager.Current.MaxConcurrentDownloads);
+
+            int runningCount = _runningDownloads.Count;
+            if (runningCount >= maxConcurrent)
+                return;
+
+            var pendingItems = ActiveDownloads
+                .Where(d => d.State == DownloadState.Pending && !_runningDownloads.Contains(d))
+                .ToList();
+
+            foreach (var item in pendingItems)
+            {
+                if (_runningDownloads.Count >= maxConcurrent)
+                    break;
+
+                _runningDownloads.Add(item);
+                item.State = DownloadState.Downloading;
+                StartDownloadWorker(item);
+            }
+
+            if (_runningDownloads.Count > 0)
+            {
+                OnDownloadsStarted?.Invoke();
+            }
+        }
+    }
+
+    private static void StartDownloadWorker(ActiveDownload active)
+    {
+        var token = active.CancellationTokenSource.Token;
 
         var baseDir = DefaultDownloadDirectory;
         var safeTitle = string.Join("_", active.AnimeTitle.Split(Path.GetInvalidFileNameChars())).Trim();
@@ -403,7 +437,7 @@ public static class DownloadManager
             {
                 var resolverBackend = ResolverFactory.CreateFromConfig();
 
-                while (active.RetryAttempt <= ActiveDownload.MaxRetries && !token.IsCancellationRequested)
+                while (active.RetryAttempt <= ActiveDownload.MaxRetries && !token.IsCancellationRequested && active.State == DownloadState.Downloading)
                 {
                     try
                     {
@@ -571,7 +605,7 @@ public static class DownloadManager
                     }
                     catch (Exception ex)
                     {
-                        if (token.IsCancellationRequested)
+                        if (token.IsCancellationRequested || active.State == DownloadState.Paused)
                         {
                             if (active.State == DownloadState.Paused)
                             {
@@ -589,8 +623,6 @@ public static class DownloadManager
                         active.RetryAttempt++;
                         if (active.RetryAttempt <= ActiveDownload.MaxRetries)
                         {
-                            // Backoff progresivo escalonado hasta ~3 minutos en 5 intentos:
-                            // Intento 1: 3-5s | Intento 2: 10-15s | Intento 3: 25-35s | Intento 4: 50-65s | Intento 5: 70-85s
                             (int minDelay, int maxDelay) = active.RetryAttempt switch
                             {
                                 1 => (3000, 5000),
@@ -630,7 +662,9 @@ public static class DownloadManager
                     _runningDownloads.Remove(active);
                 }
 
-                if (ActiveDownloads.All(d => d.State != DownloadState.Downloading))
+                ProcessQueue();
+
+                if (ActiveDownloads.All(d => d.State != DownloadState.Downloading && d.State != DownloadState.Pending))
                 {
                     OnDownloadsFinished?.Invoke();
                 }
@@ -883,7 +917,7 @@ public static class DownloadManager
                 ActiveDownloads.Remove(existing);
             }
             
-            ActiveDownloads.Insert(0, download);
+            ActiveDownloads.Add(download);
             DownloadsChanged?.Invoke(null, EventArgs.Empty);
         });
     }
@@ -1071,19 +1105,117 @@ public static class DownloadManager
         }
     }
 
-    public static DownloadedEpisode? GetNextEpisode(string animeUrl, string currentEpisodeNumber)
+    public static DownloadedEpisode? GetNextEpisode(string? animeUrl, string currentEpisodeNumber, string? animeTitle = null)
     {
         EnsureLoaded();
-        var anime = _downloads.FirstOrDefault(a => a.Url == animeUrl);
-        if (anime != null && anime.Episodes.Count > 0)
+        var anime = _downloads.FirstOrDefault(a => 
+            (!string.IsNullOrEmpty(animeUrl) && a.Url == animeUrl) ||
+            (!string.IsNullOrEmpty(animeTitle) && string.Equals(a.Title, animeTitle, StringComparison.OrdinalIgnoreCase)));
+        return anime != null ? GetNextEpisode(anime, currentEpisodeNumber) : null;
+    }
+
+    public static DownloadedEpisode? GetPreviousEpisode(string? animeUrl, string currentEpisodeNumber, string? animeTitle = null)
+    {
+        EnsureLoaded();
+        var anime = _downloads.FirstOrDefault(a => 
+            (!string.IsNullOrEmpty(animeUrl) && a.Url == animeUrl) ||
+            (!string.IsNullOrEmpty(animeTitle) && string.Equals(a.Title, animeTitle, StringComparison.OrdinalIgnoreCase)));
+        return anime != null ? GetPreviousEpisode(anime, currentEpisodeNumber) : null;
+    }
+
+    public static DownloadedEpisode? GetNextEpisode(DownloadedAnime anime, DownloadedEpisode currentEpisode)
+    {
+        return GetNextEpisode(anime, currentEpisode.EpisodeNumber, currentEpisode.FilePath);
+    }
+
+    public static DownloadedEpisode? GetPreviousEpisode(DownloadedAnime anime, DownloadedEpisode currentEpisode)
+    {
+        return GetPreviousEpisode(anime, currentEpisode.EpisodeNumber, currentEpisode.FilePath);
+    }
+
+    public static DownloadedEpisode? GetNextEpisode(DownloadedAnime anime, string currentEpisodeNumber, string? currentFilePath = null)
+    {
+        if (anime?.Episodes == null || anime.Episodes.Count == 0) return null;
+        SortEpisodes(anime);
+
+        var list = anime.RegularEpisodes.Where(e => File.Exists(e.FilePath)).ToList();
+        if (list.Count == 0) list = anime.Episodes.Where(e => File.Exists(e.FilePath)).ToList();
+        if (list.Count == 0) return null;
+
+        int idx = -1;
+        if (!string.IsNullOrEmpty(currentFilePath))
         {
-            SortEpisodes(anime);
-            int idx = anime.Episodes.FindIndex(e => e.EpisodeNumber == currentEpisodeNumber);
-            if (idx >= 0 && idx + 1 < anime.Episodes.Count)
+            idx = list.FindIndex(e => string.Equals(e.FilePath, currentFilePath, StringComparison.OrdinalIgnoreCase));
+        }
+        if (idx < 0)
+        {
+            idx = list.FindIndex(e => string.Equals(e.EpisodeNumber, currentEpisodeNumber, StringComparison.OrdinalIgnoreCase));
+        }
+        if (idx < 0)
+        {
+            double curNum = ParseEpisodeNumber(currentEpisodeNumber);
+            if (curNum < double.MaxValue)
             {
-                return anime.Episodes[idx + 1];
+                idx = list.FindIndex(e => ParseEpisodeNumber(e.EpisodeNumber) == curNum);
             }
         }
+
+        if (idx >= 0 && idx + 1 < list.Count)
+        {
+            return list[idx + 1];
+        }
+        else if (idx < 0)
+        {
+            double curNum = ParseEpisodeNumber(currentEpisodeNumber);
+            if (curNum < double.MaxValue)
+            {
+                return list.FirstOrDefault(e => ParseEpisodeNumber(e.EpisodeNumber) > curNum);
+            }
+        }
+
+        return null;
+    }
+
+    public static DownloadedEpisode? GetPreviousEpisode(DownloadedAnime anime, string currentEpisodeNumber, string? currentFilePath = null)
+    {
+        if (anime?.Episodes == null || anime.Episodes.Count == 0) return null;
+        SortEpisodes(anime);
+
+        var list = anime.RegularEpisodes.Where(e => File.Exists(e.FilePath)).ToList();
+        if (list.Count == 0) list = anime.Episodes.Where(e => File.Exists(e.FilePath)).ToList();
+        if (list.Count == 0) return null;
+
+        int idx = -1;
+        if (!string.IsNullOrEmpty(currentFilePath))
+        {
+            idx = list.FindIndex(e => string.Equals(e.FilePath, currentFilePath, StringComparison.OrdinalIgnoreCase));
+        }
+        if (idx < 0)
+        {
+            idx = list.FindIndex(e => string.Equals(e.EpisodeNumber, currentEpisodeNumber, StringComparison.OrdinalIgnoreCase));
+        }
+        if (idx < 0)
+        {
+            double curNum = ParseEpisodeNumber(currentEpisodeNumber);
+            if (curNum < double.MaxValue)
+            {
+                idx = list.FindIndex(e => ParseEpisodeNumber(e.EpisodeNumber) == curNum);
+            }
+        }
+
+        if (idx > 0)
+        {
+            return list[idx - 1];
+        }
+        else if (idx < 0)
+        {
+            double curNum = ParseEpisodeNumber(currentEpisodeNumber);
+            if (curNum < double.MaxValue)
+            {
+                return list.LastOrDefault(e => ParseEpisodeNumber(e.EpisodeNumber) < curNum);
+            }
+        }
+
         return null;
     }
 

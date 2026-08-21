@@ -31,8 +31,15 @@ public partial class MobileDownloadsView : UserControl
     {
         DownloadManager.DownloadsChanged -= OnDownloadsChanged;
         DownloadManager.DownloadsChanged += OnDownloadsChanged;
-        DownloadManager.ScanDiskDownloads();
+
+        // Cargar inmediatamente desde memoria
         LoadDownloads();
+
+        // Escanear disco en segundo plano
+        _ = Task.Run(() =>
+        {
+            DownloadManager.ScanDiskDownloads();
+        });
     }
 
     private void OnUnloaded(object? sender, RoutedEventArgs e)
@@ -45,9 +52,9 @@ public partial class MobileDownloadsView : UserControl
         Dispatcher.UIThread.Post(LoadDownloads);
     }
 
-    private void OnReloadClicked(object? sender, RoutedEventArgs e)
+    private async void OnReloadClicked(object? sender, RoutedEventArgs e)
     {
-        DownloadManager.ScanDiskDownloads();
+        await Task.Run(() => DownloadManager.ScanDiskDownloads());
         LoadDownloads();
     }
 
@@ -251,7 +258,55 @@ public partial class MobileDownloadsView : UserControl
             var anime = DownloadManager.GetAll().FirstOrDefault(a => a.Episodes.Any(ep => ep.FilePath == episode.FilePath));
             var title = anime != null ? $"{anime.Title} — {episode.EpisodeTitle}" : episode.EpisodeTitle;
 
-            var playerView = new MobileVideoPlayerView(
+            MobileVideoPlayerView? playerView = null;
+
+            Func<Task>? buildPrevAction(DownloadedEpisode currentEp)
+            {
+                if (anime == null) return null;
+                var prev = DownloadManager.GetPreviousEpisode(anime, currentEp);
+                if (prev == null || !File.Exists(prev.FilePath)) return null;
+
+                return async () =>
+                {
+                    var pAction = buildPrevAction(prev);
+                    var nAction = buildNextAction(prev);
+                    if (playerView != null)
+                    {
+                        await playerView.ChangeEpisodeAsync(
+                            () => Task.FromResult(prev.FilePath),
+                            $"{anime.Title} — {prev.EpisodeTitle}",
+                            prev.FilePath,
+                            "Descargado (Local)",
+                            pAction,
+                            nAction);
+                    }
+                };
+            }
+
+            Func<Task>? buildNextAction(DownloadedEpisode currentEp)
+            {
+                if (anime == null) return null;
+                var next = DownloadManager.GetNextEpisode(anime, currentEp);
+                if (next == null || !File.Exists(next.FilePath)) return null;
+
+                return async () =>
+                {
+                    var pAction = buildPrevAction(next);
+                    var nAction = buildNextAction(next);
+                    if (playerView != null)
+                    {
+                        await playerView.ChangeEpisodeAsync(
+                            () => Task.FromResult(next.FilePath),
+                            $"{anime.Title} — {next.EpisodeTitle}",
+                            next.FilePath,
+                            "Descargado (Local)",
+                            pAction,
+                            nAction);
+                    }
+                };
+            }
+
+            playerView = new MobileVideoPlayerView(
                 () => Task.FromResult(episode.FilePath),
                 title,
                 episode.FilePath,
@@ -260,7 +315,9 @@ public partial class MobileDownloadsView : UserControl
                 animeUrl: anime?.Url ?? "",
                 thumbnailUrl: anime?.ThumbnailUrl ?? "",
                 episodeNumber: episode.EpisodeNumber,
-                episodeUrl: episode.FilePath);
+                episodeUrl: episode.FilePath,
+                prevEpisodeAction: buildPrevAction(episode),
+                nextEpisodeAction: buildNextAction(episode));
 
             AndroidMainView.Current?.PushPlayerView(playerView);
         }
@@ -291,6 +348,20 @@ public partial class MobileDownloadsView : UserControl
         if (sender is Button btn && btn.Tag is DownloadedAnime anime && !string.IsNullOrEmpty(anime.ThumbnailUrl))
         {
             AndroidMainView.Current?.ShowImageModal(anime.ThumbnailUrl, anime.Title);
+        }
+    }
+
+    private void OnGoToAnimeClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is DownloadedAnime anime)
+        {
+            var animeResult = new AnimeResult
+            {
+                Title = anime.Title,
+                Url = !string.IsNullOrEmpty(anime.Url) ? anime.Url : anime.Title,
+                ThumbnailUrl = anime.ThumbnailUrl
+            };
+            AndroidMainView.Current?.NavigateToAnimeDetails(animeResult);
         }
     }
 }

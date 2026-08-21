@@ -54,7 +54,10 @@
             </Border>
 
             <!-- Center Action Buttons -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="28">
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
+                <Button Name="PrevEpisodeBtn" Click="OnPrevEpisodeClicked" Background="#88000000" CornerRadius="24" Width="48" Height="48" BorderThickness="0" IsEnabled="False">
+                    <material:MaterialIcon Kind="SkipPrevious" Width="24" Height="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
                 <Button Click="OnRewindClicked" Background="#88000000" CornerRadius="26" Width="52" Height="52" BorderThickness="0">
                     <material:MaterialIcon Kind="Rewind10" Width="26" Height="26" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Button>
@@ -63,6 +66,9 @@
                 </Button>
                 <Button Click="OnForwardClicked" Background="#88000000" CornerRadius="26" Width="52" Height="52" BorderThickness="0">
                     <material:MaterialIcon Kind="FastForward10" Width="26" Height="26" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+                <Button Name="NextEpisodeBtn" Click="OnNextEpisodeClicked" Background="#88000000" CornerRadius="24" Width="48" Height="48" BorderThickness="0" IsEnabled="False">
+                    <material:MaterialIcon Kind="SkipNext" Width="24" Height="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Button>
             </StackPanel>
 

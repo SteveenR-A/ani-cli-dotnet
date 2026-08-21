@@ -78,6 +78,7 @@ public class MainActivity : AvaloniaMainActivity
             AniCS.Desktop.Services.DownloadManager.OnDownloadsFinished = () =>
             {
                 AndroidDownloadForegroundService.Stop(this);
+                AndroidDownloadForegroundService.ShowCompletedNotification(this, "Descargas completadas", "Todos los capítulos en cola se han descargado con éxito.");
             };
 
             AniCS.Desktop.Services.DownloadManager.OnDownloadProgressNotify = (title, content, progress) =>

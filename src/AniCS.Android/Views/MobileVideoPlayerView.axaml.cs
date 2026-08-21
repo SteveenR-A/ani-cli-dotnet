@@ -10,16 +10,16 @@ namespace AniCS.Android.Views;
 
 public partial class MobileVideoPlayerView : UserControl
 {
-    private readonly Func<Task<string>>? _urlResolver;
-    private readonly string _title;
-    private readonly string _serverUrl;
-    private readonly string _quality;
+    private Func<Task<string>>? _urlResolver;
+    private string _title;
+    private string _serverUrl;
+    private string _quality;
 
-    private readonly string _animeTitle;
-    private readonly string _animeUrl;
-    private readonly string _thumbnailUrl;
-    private readonly string _episodeNumber;
-    private readonly string _episodeUrl;
+    private string _animeTitle;
+    private string _animeUrl;
+    private string _thumbnailUrl;
+    private string _episodeNumber;
+    private string _episodeUrl;
 
     private AndroidVideoPlayerControl? _nativePlayer;
     private DispatcherTimer? _progressTimer;
@@ -33,9 +33,35 @@ public partial class MobileVideoPlayerView : UserControl
     private const int MaxRecoverAttempts = 3;
     private bool _hasMarkedCompleted;
 
+    public Func<Task>? PreviousEpisodeAction { get; set; }
+    public Func<Task>? NextEpisodeAction { get; set; }
+
     public bool IsPlaying => _nativePlayer?.IsPlaying ?? false;
     public void Pause() => _nativePlayer?.Pause();
     public void Resume() => _nativePlayer?.Resume();
+
+    public async Task ChangeEpisodeAsync(
+        Func<Task<string>> urlResolver,
+        string title,
+        string serverUrl,
+        string quality,
+        Func<Task>? prevEpisodeAction = null,
+        Func<Task>? nextEpisodeAction = null)
+    {
+        _urlResolver          = urlResolver;
+        _title                = title;
+        _serverUrl            = serverUrl;
+        _quality              = quality;
+        PreviousEpisodeAction = prevEpisodeAction;
+        NextEpisodeAction     = nextEpisodeAction;
+        _recoverAttempts      = 0;
+
+        TitleLabel.Text   = _title;
+        QualityBadge.Text = !string.IsNullOrEmpty(_quality) ? _quality : "Nativo";
+        UpdateNavigationButtons();
+
+        await StartPlaybackAsync(0);
+    }
 
     public MobileVideoPlayerView()
     {
@@ -59,7 +85,9 @@ public partial class MobileVideoPlayerView : UserControl
         string animeUrl = "",
         string thumbnailUrl = "",
         string episodeNumber = "",
-        string episodeUrl = "")
+        string episodeUrl = "",
+        Func<Task>? prevEpisodeAction = null,
+        Func<Task>? nextEpisodeAction = null)
     {
         InitializeComponent();
         _urlResolver = urlResolver;
@@ -71,6 +99,8 @@ public partial class MobileVideoPlayerView : UserControl
         _thumbnailUrl = thumbnailUrl;
         _episodeNumber = episodeNumber;
         _episodeUrl = episodeUrl;
+        PreviousEpisodeAction = prevEpisodeAction;
+        NextEpisodeAction = nextEpisodeAction;
 
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
@@ -80,6 +110,7 @@ public partial class MobileVideoPlayerView : UserControl
     {
         TitleLabel.Text = _title;
         QualityBadge.Text = !string.IsNullOrEmpty(_quality) ? _quality : "Nativo";
+        UpdateNavigationButtons();
 
         // Abrir automáticamente en modo Horizontal al reproducir video y pantalla completa inmersiva
         MainActivity.Instance?.SetOrientationLandscape();
@@ -201,15 +232,7 @@ public partial class MobileVideoPlayerView : UserControl
                 _nativePlayer.SetInfo(_title, !string.IsNullOrEmpty(_quality) ? _quality : "Nativo");
             }
 
-            _nativePlayer.Play(url, _serverUrl);
-
-            if (resumePositionMsec > 0)
-            {
-                Task.Delay(1000).ContinueWith(_ =>
-                {
-                    Dispatcher.UIThread.Invoke(() => _nativePlayer?.SeekTo(resumePositionMsec));
-                });
-            }
+            _nativePlayer.Play(url, _serverUrl, resumePositionMsec);
 
             _progressTimer?.Start();
             _osdTimer?.Start();
@@ -363,6 +386,44 @@ public partial class MobileVideoPlayerView : UserControl
 
         _osdTimer?.Stop();
         _osdTimer?.Start();
+    }
+
+    public void UpdateNavigationButtons()
+    {
+        if (PrevEpisodeBtn != null) PrevEpisodeBtn.IsEnabled = PreviousEpisodeAction != null;
+        if (NextEpisodeBtn != null) NextEpisodeBtn.IsEnabled = NextEpisodeAction != null;
+    }
+
+    private async void OnPrevEpisodeClicked(object? sender, RoutedEventArgs e)
+    {
+        if (PreviousEpisodeAction == null) return;
+        StatusText.Text = "Cargando episodio anterior...";
+        LoadingPanel.IsVisible = true;
+        _osdTimer?.Stop();
+        try
+        {
+            await PreviousEpisodeAction();
+        }
+        catch (Exception ex)
+        {
+            HandlePlaybackFailure($"Error: {ex.Message}");
+        }
+    }
+
+    private async void OnNextEpisodeClicked(object? sender, RoutedEventArgs e)
+    {
+        if (NextEpisodeAction == null) return;
+        StatusText.Text = "Cargando siguiente episodio...";
+        LoadingPanel.IsVisible = true;
+        _osdTimer?.Stop();
+        try
+        {
+            await NextEpisodeAction();
+        }
+        catch (Exception ex)
+        {
+            HandlePlaybackFailure($"Error: {ex.Message}");
+        }
     }
 
     private void OnRewindClicked(object? sender, RoutedEventArgs e)

@@ -77,7 +77,7 @@ public class AndroidDownloadForegroundService : Service
         base.OnDestroy();
     }
 
-    private void CreateNotificationChannel()
+    private static void EnsureChannelCreated(Context context)
     {
         if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
         {
@@ -88,9 +88,14 @@ public class AndroidDownloadForegroundService : Service
             {
                 Description = "Notificaciones de progreso para descargas de anime"
             };
-            var manager = (NotificationManager?)GetSystemService(NotificationService);
+            var manager = (NotificationManager?)context.GetSystemService(NotificationService);
             manager?.CreateNotificationChannel(channel);
         }
+    }
+
+    private void CreateNotificationChannel()
+    {
+        EnsureChannelCreated(this);
     }
 
     private void AcquireWakeLock()
@@ -160,5 +165,36 @@ public class AndroidDownloadForegroundService : Service
             manager?.Notify(NotificationId, notification);
         }
         catch { }
+    }
+
+    public static void ShowCompletedNotification(Context context, string title, string message)
+    {
+        try
+        {
+            EnsureChannelCreated(context);
+            var pkg = context.PackageName ?? "com.anics.android";
+            var launchIntent = context.PackageManager?.GetLaunchIntentForPackage(pkg);
+            var pendingIntent = launchIntent != null
+                ? PendingIntent.GetActivity(context, 0, launchIntent, PendingIntentFlags.Immutable | PendingIntentFlags.UpdateCurrent)
+                : null;
+
+            var builder = new NotificationCompat.Builder(context, ChannelId);
+            builder.SetContentTitle(title);
+            builder.SetContentText(message);
+            builder.SetSmallIcon(global::Android.Resource.Drawable.StatSysDownloadDone);
+            builder.SetOngoing(false);
+            builder.SetAutoCancel(true);
+            if (pendingIntent != null)
+            {
+                builder.SetContentIntent(pendingIntent);
+            }
+
+            var manager = (NotificationManager?)context.GetSystemService(NotificationService);
+            manager?.Notify(NotificationId + 1, builder.Build()!);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("AndroidDownloadForegroundService.ShowCompletedNotification", ex);
+        }
     }
 }

@@ -406,7 +406,66 @@ public partial class MobileAnimeDetailsView : UserControl
         if (AndroidMainView.Current != null)
         {
             StatusText.IsVisible = false;
-            var playerView = new MobileVideoPlayerView(
+
+            MobileVideoPlayerView? playerView = null;
+
+            Func<Task>? buildPrevAction(EpisodeViewModel currentVm)
+            {
+                var list = (EpisodesList.ItemsSource as IEnumerable<EpisodeViewModel>)?.ToList();
+                if (list == null) return null;
+                int idx = list.IndexOf(currentVm);
+                if (idx <= 0) return null;
+                var prevVm = list[idx - 1];
+
+                return async () =>
+                {
+                    var res = await ResolveEpisodeStreamAsync(prevVm);
+                    if (res != null && playerView != null)
+                    {
+                        _nowPlayingVm = prevVm;
+                        var (sUrl, q, resolver) = res.Value;
+                        var pAction = buildPrevAction(prevVm);
+                        var nAction = buildNextAction(prevVm);
+                        await playerView.ChangeEpisodeAsync(
+                            resolver,
+                            $"{_anime.Title} — {prevVm.Title}",
+                            sUrl,
+                            q,
+                            pAction,
+                            nAction);
+                    }
+                };
+            }
+
+            Func<Task>? buildNextAction(EpisodeViewModel currentVm)
+            {
+                var list = (EpisodesList.ItemsSource as IEnumerable<EpisodeViewModel>)?.ToList();
+                if (list == null) return null;
+                int idx = list.IndexOf(currentVm);
+                if (idx < 0 || idx + 1 >= list.Count) return null;
+                var nextVm = list[idx + 1];
+
+                return async () =>
+                {
+                    var res = await ResolveEpisodeStreamAsync(nextVm);
+                    if (res != null && playerView != null)
+                    {
+                        _nowPlayingVm = nextVm;
+                        var (sUrl, q, resolver) = res.Value;
+                        var pAction = buildPrevAction(nextVm);
+                        var nAction = buildNextAction(nextVm);
+                        await playerView.ChangeEpisodeAsync(
+                            resolver,
+                            $"{_anime.Title} — {nextVm.Title}",
+                            sUrl,
+                            q,
+                            pAction,
+                            nAction);
+                    }
+                };
+            }
+
+            playerView = new MobileVideoPlayerView(
                 urlResolver,
                 $"{_anime.Title} — {vm.Title}",
                 chosenServer.Url,
@@ -415,9 +474,44 @@ public partial class MobileAnimeDetailsView : UserControl
                 animeUrl: _anime.Url,
                 thumbnailUrl: _anime.ThumbnailUrl,
                 episodeNumber: vm.EpisodeNumber,
-                episodeUrl: vm.Url);
+                episodeUrl: vm.Url,
+                prevEpisodeAction: buildPrevAction(vm),
+                nextEpisodeAction: buildNextAction(vm));
 
             AndroidMainView.Current.PushPlayerView(playerView);
+        }
+    }
+
+    private async Task<(string ServerUrl, string Quality, Func<Task<string>> Resolver)?> ResolveEpisodeStreamAsync(EpisodeViewModel targetVm)
+    {
+        try
+        {
+            var extractor = ExtractorFactory.GetExtractorForUrl(_anime.Url);
+            var servers = await extractor.GetVideoServersAsync(targetVm.Url);
+            if (servers.Count == 0) return null;
+
+            var chosenServer = servers[0];
+            string chosenQuality = ConfigManager.Current.PreferredQuality;
+            var serverUrl = chosenServer.Url;
+
+            Func<Task<string>> urlResolver = async () =>
+            {
+                var freshUrl = await extractor.ResolveVideoUrlAsync(serverUrl);
+                if (string.IsNullOrEmpty(freshUrl))
+                {
+                    var resolved = await _resolverBackend.ResolveAsync(serverUrl, new ResolveOptions { Referer = serverUrl });
+                    if (resolved.Type != MediaType.Unknown)
+                        freshUrl = resolved.DirectUrl;
+                }
+                return freshUrl ?? string.Empty;
+            };
+
+            return (serverUrl, chosenQuality, urlResolver);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("MobileAnimeDetailsView.ResolveEpisodeStreamAsync", ex);
+            return null;
         }
     }
 

@@ -184,12 +184,12 @@
                         <StackPanel Grid.Column="0" Orientation="Horizontal"
                                     Spacing="2" VerticalAlignment="Center">
 
-                            <!-- ▶ / ⏸ Play/Pause -->
-                            <Button x:Name="PlayPauseBtn" Classes="PlayerBtn"
-                                    Padding="8,6"
-                                    Click="OnPlayPauseClicked"
-                                    ToolTip.Tip="Pausar / Continuar (Espacio)">
-                                <material:MaterialIcon x:Name="PlayPauseIcon" Kind="Pause" Width="20" Height="20" Foreground="#DDDDDD"/>
+                            <!-- ⏮ Episodio Anterior -->
+                            <Button x:Name="PrevEpisodeBtn" Classes="PlayerBtn" Padding="6,6"
+                                    Click="OnPrevEpisodeClicked"
+                                    ToolTip.Tip="Episodio Anterior (P)"
+                                    IsEnabled="False">
+                                <material:MaterialIcon Kind="SkipPrevious" Width="20" Height="20" Foreground="#DDDDDD"/>
                             </Button>
 
                             <!-- ⏪10 Retroceder -->
@@ -199,11 +199,27 @@
                                 <material:MaterialIcon Kind="Rewind10" Width="22" Height="22" Foreground="#DDDDDD"/>
                             </Button>
 
+                            <!-- ▶ / ⏸ Play/Pause -->
+                            <Button x:Name="PlayPauseBtn" Classes="PlayerBtn"
+                                    Padding="8,6"
+                                    Click="OnPlayPauseClicked"
+                                    ToolTip.Tip="Pausar / Continuar (Espacio)">
+                                <material:MaterialIcon x:Name="PlayPauseIcon" Kind="Pause" Width="20" Height="20" Foreground="#DDDDDD"/>
+                            </Button>
+
                             <!-- ⏩10 Adelantar -->
                             <Button Classes="PlayerBtn" Padding="6,6"
                                     Click="OnForwardClicked"
                                     ToolTip.Tip="Adelantar 10 segundos (→)">
                                 <material:MaterialIcon Kind="FastForward10" Width="22" Height="22" Foreground="#DDDDDD"/>
+                            </Button>
+
+                            <!-- ⏭ Episodio Siguiente -->
+                            <Button x:Name="NextEpisodeBtn" Classes="PlayerBtn" Padding="6,6"
+                                    Click="OnNextEpisodeClicked"
+                                    ToolTip.Tip="Episodio Siguiente (N)"
+                                    IsEnabled="False">
+                                <material:MaterialIcon Kind="SkipNext" Width="20" Height="20" Foreground="#DDDDDD"/>
                             </Button>
 
                             <!-- Separador -->

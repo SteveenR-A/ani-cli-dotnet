@@ -14,33 +14,27 @@ public static class AppInfo
     /// <summary>Official project slogan.</summary>
     public static string Slogan => "Siente la fluidez hacia tus historias favoritas";
 
-    /// <summary>Version of the currently running assembly (e.g. "1.6.5").</summary>
+    /// <summary>Version of the currently running assembly (e.g. "1.6.6").</summary>
     public static string CurrentVersion =>
-        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.5";
+        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.6";
 
     /// <summary>Local fallback notes, shown when the GitHub release has no body.</summary>
     public static string LatestChangelog { get; set; } =
-        "✨ ¡Novedades y Mejoras de la versión 1.6.5!\n\n" +
-        "💡 Sincronización Inteligente de Pantalla Activa (Android):\n" +
-        "• La pantalla se mantiene encendida exclusivamente mientras el video se encuentra en reproducción activa.\n" +
-        "• Al pausar el video, el sistema ahora atenúa y suspende la pantalla normalmente según el tiempo de inactividad del dispositivo.\n" +
-        "• Al pasar la app a segundo plano o bloquear la pantalla, la reproducción se pausa y se liberan inmediatamente las banderas de pantalla activa.\n\n" +
-        "📥 Corrección de Scroll y Estado en Descargas (PC & Móvil):\n" +
-        "• Cambiar manualmente el estado de progreso (Sin ver / En progreso / Terminado) ya no recarga la lista completa ni reinicia la posición del scroll hacia arriba.\n" +
-        "• Actualización reactiva e instantánea de badges y conservación del estado desplegado de los animes.\n\n" +
-        "👆 Corrección de Desplazamiento en Top Animes y Ver Más (Android):\n" +
-        "• Solución integral al conflicto donde arrastrar o deslizar para hacer scroll en la lista de Top Animes y Ver Más abría accidentalmente el anime seleccionado.\n" +
-        "• Migración al sistema de gestos Tapped de Avalonia para un desplazamiento táctil suave y fluido.\n\n" +
-        "⚡ Sincronización en Tiempo Real del Reproductor:\n" +
-        "• Nuevo evento de cambio de estado de reproducción que sincroniza al instante el botón central de Play/Pausa y la visibilidad de controles.\n\n" +
-        "🔄 Descarga Continua y Reanudación del Actualizador (Android):\n" +
-        "• La descarga del APK ahora continúa sin interrupciones aunque se apague la pantalla (WakeLock).\n" +
-        "• Soporte de reanudación automática (HTTP Range) para no tener que reiniciar la descarga desde 0 si se interrumpe la conexión.\n" +
-        "• Botón de instalación manual disponible si el instalador automático se cierra o no se abre.\n\n" +
-        "🎨 Mejoras Previas v1.6.4:\n" +
-        "• Nueva identidad visual e iconos oficiales de AniCS.\n" +
-        "• Almacenamiento en carpeta pública del sistema DCIM/AniCS en Android.\n" +
-        "• Modo pantalla completa inmersivo 100% sin barra de estado.\n" +
-        "• Personalización de carpeta de descargas en PC y Móvil.\n\n" +
+        "✨ ¡Novedades y Mejoras de la versión 1.6.6!\n\n" +
+        "📥 Control de Descargas Simultáneas y Cola Ordenada (FIFO):\n" +
+        "• Nuevo sistema de cola organizada para descargas múltiples: los episodios se descargan progresivamente en orden según el límite configurado sin saturar el ancho de banda.\n" +
+        "• Ajuste configurable de descargas simultáneas en la sección de Configuración (1 a 10 en PC, 1 a 5 en Android).\n" +
+        "• Auto-avance instantáneo en la cola cuando un capítulo se completa, se pausa o se cancela.\n\n" +
+        "⏮️ Navegación de Capítulos en el Reproductor (Streaming & Descargas):\n" +
+        "• Nuevos botones visuales de Episodio Anterior (⏮) y Siguiente (⏭) en los reproductores de PC y Android.\n" +
+        "• Atajos de teclado en PC: tecla 'P' para el capítulo anterior y tecla 'N' para el capítulo siguiente.\n" +
+        "• Cambio fluido de episodio sin necesidad de cerrar la ventana del reproductor ni recargar la vista.\n\n" +
+        "🔔 Mejoras en Notificaciones de Descarga (Android):\n" +
+        "• Notificaciones enriquecidas con progreso detallado de la descarga en segundo plano.\n" +
+        "• Notificación de finalización que informa al usuario cuando todos los capítulos en cola se han descargado con éxito.\n\n" +
+        "🛠️ Estabilidad y Optimización de Memoria:\n" +
+        "• Corrección de fugas de eventos en LibVLC y reutilización de caché en el historial de visualización.\n" +
+        "• Soporte completo de control IPC para MPV (Pausa, Reanudar, Búsqueda temporal y Volumen).\n" +
+        "• Reanudación limpia y determinista en el reproductor nativo de Android sin demoras arbitrarias.\n\n" +
         "¡Gracias por disfrutar de AniCS!";
 }

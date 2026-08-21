@@ -13,6 +13,10 @@ public sealed class MpvBackend : IPlayerBackend
     private readonly List<Process> _activeProcesses = new();
     private PlaySession? _currentSession;
     private string? _cachedMpvPath;
+    private string? _currentPipeName;
+    private readonly SemaphoreSlim _pipeLock = new(1, 1);
+    private readonly History.WatchHistory _watchHistory = new();
+    private int _volume = 100;
 
     public string BackendName => "mpv";
 
@@ -43,27 +47,43 @@ public sealed class MpvBackend : IPlayerBackend
         return Task.CompletedTask;
     }
 
-    public Task PauseAsync()
+    public async Task PauseAsync()
     {
-        // mpv no tiene IPC de pausa en el MpvBackend básico (el IPC lo hace DesktopPlayer).
-        return Task.CompletedTask;
+        await SendMpvCommandAsync("set_property", "pause", true);
     }
 
-    public Task ResumeAsync() => Task.CompletedTask;
-
-    public Task SeekAsync(double seconds)
+    public async Task ResumeAsync()
     {
-        return Task.CompletedTask;
+        await SendMpvCommandAsync("set_property", "pause", false);
     }
 
-    public int Volume { get; set; } = 100;
+    public async Task SeekAsync(double seconds)
+    {
+        await SendMpvCommandAsync("seek", seconds, "absolute");
+    }
+
+    public int Volume
+    {
+        get => _volume;
+        set
+        {
+            _volume = Math.Clamp(value, 0, 200);
+            _ = SendMpvCommandAsync("set_property", "volume", _volume);
+        }
+    }
 
     public void Stop()
     {
+        _currentPipeName = null;
         KillAll();
     }
 
-    public void Dispose() => KillAll();
+    public void Dispose()
+    {
+        _currentPipeName = null;
+        _pipeLock.Dispose();
+        KillAll();
+    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // Implementación interna (migrada de DesktopPlayer.cs)
@@ -81,6 +101,7 @@ public sealed class MpvBackend : IPlayerBackend
         var args = BuildMpvArgs(url, referer, quality);
 
         var pipeName = "anics_mpv_" + Guid.NewGuid().ToString("N");
+        _currentPipeName = pipeName;
         args.Add("--save-position-on-quit");
         args.Add($"--input-ipc-server=\\\\.\\pipe\\{pipeName}");
         args.Add($"--title={title}");
@@ -194,24 +215,32 @@ public sealed class MpvBackend : IPlayerBackend
         {
             try
             {
-                using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut);
-                await pipe.ConnectAsync(1000);
+                await _pipeLock.WaitAsync();
+                try
+                {
+                    using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut);
+                    await pipe.ConnectAsync(600);
 
-                using var writer = new StreamWriter(pipe, System.Text.Encoding.UTF8, leaveOpen: true);
-                writer.AutoFlush = true;
-                using var reader = new StreamReader(pipe, System.Text.Encoding.UTF8, leaveOpen: true);
+                    using var writer = new StreamWriter(pipe, System.Text.Encoding.UTF8, leaveOpen: true);
+                    writer.AutoFlush = true;
+                    using var reader = new StreamReader(pipe, System.Text.Encoding.UTF8, leaveOpen: true);
 
-                await writer.WriteLineAsync("{\"command\": [\"get_property\", \"time-pos\"]}");
-                var posResp = await reader.ReadLineAsync();
+                    await writer.WriteLineAsync("{\"command\": [\"get_property\", \"time-pos\"]}");
+                    var posResp = await reader.ReadLineAsync();
 
-                await writer.WriteLineAsync("{\"command\": [\"get_property\", \"duration\"]}");
-                var durResp = await reader.ReadLineAsync();
+                    await writer.WriteLineAsync("{\"command\": [\"get_property\", \"duration\"]}");
+                    var durResp = await reader.ReadLineAsync();
 
-                double pos = ParseMpvNumber(posResp);
-                double dur = ParseMpvNumber(durResp);
+                    double pos = ParseMpvNumber(posResp);
+                    double dur = ParseMpvNumber(durResp);
 
-                if (pos > 0) lastPosition = pos;
-                if (dur > 0) lastDuration = dur;
+                    if (pos > 0) lastPosition = pos;
+                    if (dur > 0) lastDuration = dur;
+                }
+                finally
+                {
+                    _pipeLock.Release();
+                }
 
                 if (lastDuration > 0)
                     isCompleted = (lastPosition / lastDuration >= 0.88) || (lastDuration - lastPosition <= 90);
@@ -225,8 +254,7 @@ public sealed class MpvBackend : IPlayerBackend
 
                     try
                     {
-                        var history = new History.WatchHistory();
-                        history.UpdateProgress(mediaUrl, lastPosition, lastDuration, isCompleted);
+                        _watchHistory.UpdateProgress(mediaUrl, lastPosition, lastDuration, isCompleted);
                     }
                     catch (Exception ex)
                     {
@@ -256,13 +284,40 @@ public sealed class MpvBackend : IPlayerBackend
 
             try
             {
-                var history = new History.WatchHistory();
-                history.UpdateProgress(mediaUrl, lastPosition, lastDuration, isCompleted);
+                _watchHistory.UpdateProgress(mediaUrl, lastPosition, lastDuration, isCompleted);
             }
             catch (Exception ex)
             {
                 AppLogger.Error("MpvBackend.FinalWatchHistoryUpdate", ex);
             }
+        }
+    }
+
+    private async Task SendMpvCommandAsync(params object[] args)
+    {
+        var pipeName = _currentPipeName;
+        if (string.IsNullOrEmpty(pipeName)) return;
+
+        await _pipeLock.WaitAsync();
+        try
+        {
+            using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut);
+            await pipe.ConnectAsync(400);
+
+            using var writer = new StreamWriter(pipe, System.Text.Encoding.UTF8, leaveOpen: false);
+            writer.AutoFlush = true;
+
+            var commandObj = new { command = args };
+            string json = JsonSerializer.Serialize(commandObj);
+            await writer.WriteLineAsync(json);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("MpvBackend.SendCommand", ex.Message);
+        }
+        finally
+        {
+            _pipeLock.Release();
         }
     }
 

@@ -62,6 +62,9 @@ public partial class VideoPlayerControl : UserControl
     public event EventHandler? BackRequested;
     // Compatibilidad con código anterior que usa CloseRequested
     public event EventHandler? CloseRequested;
+    // Eventos para navegación entre episodios (Anterior / Siguiente)
+    public event EventHandler? PreviousEpisodeRequested;
+    public event EventHandler? NextEpisodeRequested;
 
     // ──────────────────────────────────────────────────────────────────────────
     // Constructor
@@ -236,6 +239,12 @@ public partial class VideoPlayerControl : UserControl
     public void SetTitle(string title)
     {
         TitleLabel.Text = title;
+    }
+
+    public void SetNavigationState(bool hasPrevious, bool hasNext)
+    {
+        if (PrevEpisodeBtn != null) PrevEpisodeBtn.IsEnabled = hasPrevious;
+        if (NextEpisodeBtn != null) NextEpisodeBtn.IsEnabled = hasNext;
     }
 
     public void SetStreamInfo(string info)
@@ -484,6 +493,20 @@ public partial class VideoPlayerControl : UserControl
         ShowOsd("+10s");
     }
 
+    private void OnPrevEpisodeClicked(object? sender, RoutedEventArgs e)
+    {
+        if (PrevEpisodeBtn != null && !PrevEpisodeBtn.IsEnabled) return;
+        ShowControls();
+        PreviousEpisodeRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnNextEpisodeClicked(object? sender, RoutedEventArgs e)
+    {
+        if (NextEpisodeBtn != null && !NextEpisodeBtn.IsEnabled) return;
+        ShowControls();
+        NextEpisodeRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     /// <summary>
     /// Botón "Volver" — restaura el estado de la ventana (sale de fullscreen si aplica)
     /// y luego dispara BackRequested para que el host navegue atrás.
@@ -623,6 +646,8 @@ public partial class VideoPlayerControl : UserControl
             case Key.Space: await TogglePlayPause(); e.Handled = true; break;
             case Key.Left:  OnRewindClicked(null, null!); e.Handled = true; break;
             case Key.Right: OnForwardClicked(null, null!); e.Handled = true; break;
+            case Key.P:     OnPrevEpisodeClicked(null, null!); e.Handled = true; break;
+            case Key.N:     OnNextEpisodeClicked(null, null!); e.Handled = true; break;
             case Key.M:     OnMuteClicked(null, null!); e.Handled = true; break;
             case Key.F:     OnFullscreenClicked(null, null!); e.Handled = true; break;
             case Key.Escape:

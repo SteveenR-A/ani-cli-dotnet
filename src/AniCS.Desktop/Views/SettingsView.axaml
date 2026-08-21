@@ -66,6 +66,10 @@
                             <Button Name="BrowseDownloadDirBtn" Grid.Column="1" Content="Examinar..." Margin="0,0,8,0" Click="OnBrowseDownloadDirClicked"/>
                             <Button Name="ResetDownloadDirBtn" Grid.Column="2" Content="Restablecer" Click="OnResetDownloadDirClicked"/>
                         </Grid>
+
+                        <TextBlock Text="Descargas Simultáneas Máximas" FontWeight="Bold" Foreground="{DynamicResource AppTitleColor}"/>
+                        <TextBlock Text="Cantidad de episodios que se descargarán al mismo tiempo. Los demás esperarán en orden en la cola de descarga." FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                        <NumericUpDown Name="MaxConcurrentDownloadsInput" Minimum="1" Maximum="10" FormatString="0" />
                     </StackPanel>
                 </Border>
 

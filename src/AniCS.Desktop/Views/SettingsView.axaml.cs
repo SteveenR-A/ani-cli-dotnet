@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using AniCS.Models;
@@ -48,6 +49,9 @@ public partial class SettingsView : UserControl
 
         RefreshThemeList(config);
         RefreshParadigmList(config);
+
+        if (MaxConcurrentDownloadsInput != null)
+            MaxConcurrentDownloadsInput.Value = config.MaxConcurrentDownloads;
 
         UseSpatialHudToggle.IsChecked = config.UseSpatialHud;
         CustomJkAnimeUrlInput.Text = config.CustomJkAnimeBaseUrl;
@@ -180,7 +184,13 @@ public partial class SettingsView : UserControl
                 config.ResolverBackend = resolverMode;
         }
 
+        if (MaxConcurrentDownloadsInput != null)
+        {
+            config.MaxConcurrentDownloads = Math.Clamp((int)(MaxConcurrentDownloadsInput.Value ?? 2), 1, 10);
+        }
+
         ConfigManager.Save(config);
+        Services.DownloadManager.ProcessQueue();
         DataCache.ClearRamCache();
 
         StatusMessage.Text = "¡Configuración guardada exitosamente!";

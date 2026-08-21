@@ -129,10 +129,25 @@
                                                 <Image converters:AsyncImageLoader.SourceUrl="{Binding ThumbnailUrl}" Stretch="UniformToFill"/>
                                             </Border>
                                         </Button>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource AppTitleColor}" TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding Episodes.Count, StringFormat='{}{0} episodios descargados'}" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
-                                        </StackPanel>
+                                        <!-- Anime Title (Clickable to open Anime Details) -->
+                                        <Button Grid.Column="1"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="0"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                Click="OnGoToAnimeClicked"
+                                                Tag="{Binding}"
+                                                ToolTip.Tip="Ver detalles del anime">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource AppTitleColor}" TextTrimming="CharacterEllipsis"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <TextBlock Text="{Binding Episodes.Count, StringFormat='{}{0} episodios descargados'}" FontSize="12" Foreground="{DynamicResource AppSubtextColor}"/>
+                                                    <material:MaterialIcon Kind="ChevronRight" Width="14" Height="14" Foreground="{DynamicResource AppPrimaryColor}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Button>
                                         <Button Grid.Column="2" Background="Transparent" Foreground="{DynamicResource AppDangerColor}" Click="OnDeleteAnimeClicked" Tag="{Binding}" ToolTip.Tip="Eliminar todo">
                                             <material:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" />
                                         </Button>
